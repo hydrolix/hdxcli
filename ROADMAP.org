@@ -1,0 +1,15 @@
+#+title: Roadmap
+* TODO set active project and table to apply commands on (pinning)
+* TODO hdx-cli resource cp command
+- [ ] Flexible copying of transforms
+  - [ ] copy a transform from project, table and hostname into another project,
+  table and hostname. As url or as parameters
+  - [ ] post transform from local filename
+* Deployment vehicle and packaging for cli
+- [ ] Probably try with Nuitka
+* Other
+- [ ] re-prompt on password failure
+- [ ] When set-active-profile is executed, refresh token via login if needed
+* Built-in transforms package for easy application from hdx-cli
+* Bugs
+- Cannot list help for commands with required arguments

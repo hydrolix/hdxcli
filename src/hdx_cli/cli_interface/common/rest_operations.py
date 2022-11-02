@@ -1,0 +1,152 @@
+from typing import Tuple
+import json
+
+import requests
+import click
+
+from ...library_api.common.exceptions import (HdxCliException,
+                                              ResourceNotFoundException,
+                                              LogicException)
+from ...library_api.common import auth as api_auth
+from ...library_api.common import rest_operations as rest_ops
+from ...library_api.utility.decorators import (report_error_and_exit,
+                                               confirmation_prompt)
+from .cached_operations import *
+
+@click.command(help='Create resource.')
+@click.option('--body-from-file', '-f',
+              help='Create will use as body for request the file contents.'
+              "'name' key from the body will be replaced by the given 'resource_name'.",
+              default=None)
+@click.argument('resource_name')
+@click.option('--sql', '-s',
+              help="Create will use as 'sql' field the contents of the sql string",
+                default=None)
+@click.pass_context
+@report_error_and_exit(exctype=HdxCliException)
+def create(ctx: click.Context,
+           resource_name: str,
+           body_from_file,
+           sql):
+    resource_path = ctx.parent.obj['resource_path']
+    profile = ctx.parent.obj['usercontext']
+    username = profile.username
+    hostname = profile.hostname
+    url = f'https://{hostname}{resource_path}'
+    body = {}
+    if body_from_file:
+        with open(body_from_file, 'r') as input_body:
+            body = json.load(input_body)
+            body['name'] = f'{resource_name}'
+    elif sql:
+        body['name'] = f'{resource_name}'
+        body['sql'] = sql
+    else:
+        body = {'name': f'{resource_name}',
+                'description': 'Created with hdx-cli tool'}
+    token = profile.auth
+    headers = {'Authorization': f'{token.token_type} {token.token}',
+               'Accept': 'application/json'}
+    rest_ops.create(url, body=body, headers=headers)
+    print(f'Created {resource_name}.')
+
+
+@click.command(help='Delete resource.')
+@click.argument('resource_name')
+@click.pass_context
+@report_error_and_exit(exctype=HdxCliException)
+@confirmation_prompt(prompt="Please type 'delete this resource' to delete: ",
+                     confirmation_message='delete this resource',
+                     fail_message='Incorrect prompt input: resource was not deleted')
+def delete(ctx: click.Context, resource_name: str):
+    resource_path = ctx.parent.obj['resource_path']
+    profile = ctx.parent.obj['usercontext']
+    username = profile.username
+    hostname = profile.hostname
+    list_url = f'https://{hostname}{resource_path}'
+    auth = profile.auth
+    headers = {'Authorization': f'{auth.token_type} {auth.token}',
+               'Accept': 'application/json'}
+    resources = rest_ops.list(list_url, headers=headers)
+    url = None
+    for a_resource in resources:
+        if a_resource['name'] == resource_name:
+            url = a_resource['url']
+            break
+    if not url:
+        print(f'Could not delete {ctx.parent.command.name} {resource_name}. Not found.')
+    else:
+        rest_ops.delete(url, headers=headers)
+        print(f'Deleted {resource_name}')
+
+
+@click.command(help='List resources.')
+@click.pass_context
+@report_error_and_exit(exctype=HdxCliException)
+def list(ctx: click.Context):
+    resource_path = ctx.parent.obj['resource_path']
+    profile = ctx.parent.obj['usercontext']
+    username = profile.username
+    hostname = profile.hostname
+    list_url = f'https://{hostname}{resource_path}'
+    auth_info : AuthInfo = profile.auth
+    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
+               'Accept': 'application/json'}
+    resources = rest_ops.list(list_url, headers=headers)
+    for resource in resources:
+        print(resource['name'], end='')
+        if (settings := resource.get('settings')) and (is_default := settings.get('is_default')):
+            print(' (default)', end='')
+        print()
+
+
+
+def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
+    """Returns plural and singular names for resource kind given a resource path.
+       If it is a nested resource
+    For example:
+
+          - /config/.../tables/ -> ('tables', 'table')
+          - /config/.../projects/ -> ('projects', 'project')
+          - /config/.../jobs/batch/ -> ('batch', 'batch')
+    """
+    split_path = resource_path.split("/")
+    plural = split_path[-2]
+    singular = plural if not plural.endswith('s') else plural[0:-1]
+    return plural, singular
+
+
+@click.command(help='Show resource. If not resource_name is provided, it will show the default if there is one.')
+@click.option('--show-all', '-s',
+              is_flag=True,
+              required=False,
+              default=False)
+@click.pass_context
+@report_error_and_exit(exctype=HdxCliException)
+def show(ctx: click.Context,
+         # TODO: all commands should support an optional resource name that overrides the prefix-style ---someresourcetype-name
+         # It seems there are good use cases for it...
+         # resource_name,
+         show_all=False):
+    resource_path = ctx.parent.obj['resource_path']
+    profile = ctx.parent.obj['usercontext']
+    username = profile.username
+    hostname = profile.hostname
+    list_url = f'https://{hostname}{resource_path}'
+    auth_info : AuthInfo = profile.auth
+    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
+               'Accept': 'application/json'}
+
+    resources = rest_ops.list(list_url, headers=headers)
+    if show_all:
+        for resource in resources:
+            print(json.dumps(resource))
+    else:
+        resource_kind_plural, resource_kind = _heuristically_get_resource_kind(resource_path)
+        resource_name = getattr(profile, f'{resource_kind}name')
+        for resource in resources:
+            if resource['name'] == resource_name:
+                print(json.dumps(resource))
+                break
+        else:
+            raise ResourceNotFoundException(f'{resource_name} not found')
