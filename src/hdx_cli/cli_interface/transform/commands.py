@@ -1,17 +1,9 @@
 """Transform resource command. It flows down url for current table"""
-import json
-import requests
-from datetime import datetime
-from functools import lru_cache
-
 import click
 
 from ...library_api.utility.decorators import report_error_and_exit
-from ...library_api.common import auth as auth_api
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.exceptions import (HdxCliException,
-                                              TransformFileNotFoundException,
-                                              LogicException,
                                               TransformNotFoundException)
 
 from ..common.rest_operations import (create as command_create,
@@ -19,18 +11,14 @@ from ..common.rest_operations import (create as command_create,
                                       list as command_list,
                                       show as command_show)
 
+from ...library_api.common.context import ProfileUserContext
 from ..common.misc_operations import settings as command_settings
 
 
 @click.group(help="Transform-related operations")
-@click.option('--transform-file', help="Transform file to read",
-              metavar='TRANSFORMFILE',
-              default=None,
-              required=False)
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
-def transform(ctx: click.Context,
-              transform_file):
+def transform(ctx: click.Context):
     profile_info : ProfileUserContext = ctx.obj['usercontext']
     project_name, table_name = profile_info.projectname, profile_info.tablename
     if not project_name:
@@ -69,8 +57,8 @@ def transform(ctx: click.Context,
         try:
             transform_name = [t['name'] for t in transforms_list if t['name'] == profile_info.transformname][0]
             profile_info.transformname = transform_name
-        except IndexError as e:
-            raise TransformNotFoundException(f'Transform not found: {profile_info.transformname}') from e
+        except IndexError as ex:
+            raise TransformNotFoundException(f'Transform not found: {profile_info.transformname}') from ex
     ctx.obj = {'resource_path':
                transforms_path,
                'usercontext': profile_info}

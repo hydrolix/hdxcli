@@ -14,6 +14,7 @@ from hdx_cli.cli_interface.transform import commands as transform
 from hdx_cli.cli_interface.job import commands as job
 from hdx_cli.cli_interface.function import commands as function
 from hdx_cli.cli_interface.dictionary import commands as dictionary
+from hdx_cli.cli_interface.profile import commands as profile
 
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
@@ -238,6 +239,7 @@ hdx_cli.add_command(job.job)
 hdx_cli.add_command(function.function)
 hdx_cli.add_command(job.purgejobs)
 hdx_cli.add_command(dictionary.dictionary)
+hdx_cli.add_command(profile.profile)
 
 
 def main():
