@@ -39,6 +39,7 @@ def load_profile(load_profile_context:
         with open(profile_config_file, 'r', encoding='utf-8') as stream:
             profile = toml.load(stream)[profile_name]
             profile['profilename'] = profile_name
+            profile['profile_config_file'] = profile_config_file
             return ProfileUserContext(**profile)
     except FileNotFoundError as ex:
         raise ProfileNotFoundException(
@@ -51,15 +52,16 @@ def load_profile(load_profile_context:
 
 def _compose_profile_cache_filename(load_ctx: ProfileLoadContext) -> Path:
     if load_ctx.profile_config_file:
-        return load_ctx.profile_config_file.parent / load_ctx.profilename
-    else:
-        return HDX_CLI_HOME_DIR / load_ctx.profilename
+        return Path(load_ctx.profile_config_file).parent / load_ctx.profilename
+    return HDX_CLI_HOME_DIR / load_ctx.profilename
 
 
 def _try_load_profile_cache_data(load_ctx: ProfileLoadContext) -> CacheDict:
+    fname = None
     try:
-        with open((fname := _compose_profile_cache_filename(load_ctx)), 'r',
+        with open((inner_fname := _compose_profile_cache_filename(load_ctx)), 'r',
         encoding='utf-8') as stream:
+            fname = inner_fname
             return CacheDict.build_from_toml_stream(stream)
     except FileNotFoundError as ex:
         raise CacheFileNotFoundException(f'Cache file not found {fname}') from ex
@@ -76,7 +78,8 @@ def try_load_profile_from_cache_data(load_ctx: ProfileLoadContext) -> ProfileUse
                  'auth': AuthInfo(cache['token']['auth_token'],
                                    cache['token']['expires_at'],
                                   cache['org_id']),
-                 'org_id': cache['org_id']}
+                 'org_id': cache['org_id'],
+                 'profile_config_file': load_ctx.profile_config_file}
     if value := cache.get('projectname'):
         user_dict['projectname'] = value
     if value := cache.get('tablename'):

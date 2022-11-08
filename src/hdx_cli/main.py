@@ -1,6 +1,7 @@
 import os
 
 from datetime import datetime
+from pathlib import Path
 import dataclasses as dc
 import functools as ft
 import sys
@@ -50,7 +51,7 @@ def _is_valid_hostname(hostname):
     return all(allowed.match(x) for x in hostname.split("."))
 
 
-def _first_time_use_config():
+def _first_time_use_config(profile_config_file):
     print('No configuration was found to access your hydrolix cluster.')
     print('A new configuration will be created now.')
     print()
@@ -68,16 +69,17 @@ def _first_time_use_config():
             username = input('Please, type the user name of your cluster: ')
             good_username = _is_valid_username(username)
         config_data = {'default': {'username': username, 'hostname': hostname}}
-        with open(PROFILE_CONFIG_FILE, 'w', encoding='utf-8') as config_file:
+        with open(profile_config_file, 'w', encoding='utf-8') as config_file:
             toml.dump(config_data, config_file)
-        print('Your configuration with profile [default] has been created at {PROFILE_CONFIG_FILE}')
+        print('Your configuration with profile [default] has been created at {profile_config_file}')
         print('This will be the profile used to perform commands against by default')
         print('You can start working with hdx-cli now')
         sys.exit(0)
     except KeyboardInterrupt:
         sys.exit(-1)
 
-def _save_profile_cache(profile: ProfileUserContext,
+
+def _save_profile_cache(a_profile: ProfileUserContext,
                         *,
                         token,
                         expiration_time: datetime,
@@ -89,9 +91,9 @@ def _save_profile_cache(profile: ProfileUserContext,
     The profile cache file is saved in cache_dir_path
     """
     os.makedirs(cache_dir_path, mode=0o700, exist_ok=True)
-    username = profile.username
-    hostname = profile.hostname
-    with open(cache_dir_path / f'{profile.profilename}', 'w', encoding='utf-8') as f:
+    username = a_profile.username
+    hostname = a_profile.hostname
+    with open(cache_dir_path / f'{a_profile.profilename}', 'w', encoding='utf-8') as f:
         CacheDict.build_from_dict({'org_id': f'{org_id}',
                                    'token':{'auth_token': token,
                                             'token_type': token_type,
@@ -114,11 +116,11 @@ def _chain_calls_ignore_exc(*funcs, **kwargs):
     on_error_return = kwargs.get('on_error_return', None)
     try:
         del kwargs['exctype']
-    except:
+    except: # pylint:disable=bare-except
         pass
     try:
         del kwargs['on_error_return']
-    except:
+    except: # pylint:disable=bare-except
         pass
 
     # Run function
@@ -175,6 +177,8 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               metavar='FUNCTIONNAME', default=None)
 @click.option('--password', help="Login password. If provided and the access token is expired, it will be used.",
               metavar='PASSWORD', default=None)
+@click.option('--profile-config-file', hidden=True, help='Used only for testing',
+              default=None)
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
 # pylint: enable=line-too-long
@@ -184,10 +188,12 @@ def hdx_cli(ctx, profile,
             transform_name,
             job_name,
             function_name,
-            password):
+            password,
+            profile_config_file):
+    try_first_time_use(_first_time_use_config, profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
     "Command-line entry point for hdx cli interface"
-    load_context = ProfileLoadContext('default' if not profile else profile)
-    user_context = None
+    load_context = ProfileLoadContext('default' if not profile else profile,
+                                      profile_config_file if profile_config_file else None)
     load_set_params = ft.partial(load_set_config_parameters,
                                  load_context=load_context)
     # Load profile from cache
@@ -206,12 +212,14 @@ def hdx_cli(ctx, profile,
         user_context.auth = auth_info
         user_context.org_id = auth_info.org_id
 
+        cache_dir_path = (Path(profile_config_file).parent
+                          if profile_config_file else HDX_CLI_HOME_DIR)
         _save_profile_cache(user_context,
                             token=auth_info.token,
                             expiration_time=auth_info.expires_at,
                             token_type=auth_info.token_type,
                             org_id=auth_info.org_id,
-                            cache_dir_path=HDX_CLI_HOME_DIR)
+                            cache_dir_path=cache_dir_path)
         user_context.auth = auth_info
 
     # Command-line overrides
@@ -243,7 +251,6 @@ hdx_cli.add_command(profile.profile)
 
 
 def main():
-    try_first_time_use(_first_time_use_config)
     hdx_cli() # pylint: disable=no-value-for-parameter
 
 

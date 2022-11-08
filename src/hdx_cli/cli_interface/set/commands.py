@@ -34,7 +34,7 @@ def set(ctx, projectname, tablename):
         profile.projectname = projectname
     if tablename:
         profile.tablename = tablename
-    _serialize_to_config_file(profile, PROFILE_CONFIG_FILE)
+    _serialize_to_config_file(profile, profile.profile_config_file)
 
 
 @click.command(help='Remove any set projects/tables')
@@ -45,4 +45,4 @@ def unset(ctx):
     profile.projectname = None
 
     print(f"Profile '{profile.profilename}' unset project and table")
-    _serialize_to_config_file(profile, PROFILE_CONFIG_FILE)
+    _serialize_to_config_file(profile, profile.profile_config_file)

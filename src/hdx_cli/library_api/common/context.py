@@ -21,6 +21,7 @@ class ProfileUserContext:
     username: str
     hostname: str
     profilename: str
+    profile_config_file: Path
     org_id: Optional[str] = None
     auth: Optional[AuthInfo] = None
     projectname : Optional[str] = None
