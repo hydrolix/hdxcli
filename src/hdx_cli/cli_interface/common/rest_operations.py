@@ -1,7 +1,7 @@
+from functools import partial
 from typing import Tuple
 import json
 
-import requests
 import click
 
 from ...library_api.common.exceptions import (HdxCliException,
@@ -10,7 +10,7 @@ from ...library_api.common.exceptions import (HdxCliException,
 from ...library_api.common import auth as api_auth
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
-                                               confirmation_prompt)
+                                               dynamic_confirmation_prompt)
 from .cached_operations import *
 
 @click.command(help='Create resource.')
@@ -51,17 +51,22 @@ def create(ctx: click.Context,
     print(f'Created {resource_name}.')
 
 
+_confirmation_prompt = partial(dynamic_confirmation_prompt,
+                        prompt="Please type 'delete this resource' to delete: ",
+                        confirmation_message='delete this resource',
+                        fail_message='Incorrect prompt input: resource was not deleted')
 @click.command(help='Delete resource.')
+@click.option('--disable-confirmation-prompt', 
+is_flag=True,
+help='Suppress confirmation to delete resource.', show_default=True, default=False)
 @click.argument('resource_name')
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
-@confirmation_prompt(prompt="Please type 'delete this resource' to delete: ",
-                     confirmation_message='delete this resource',
-                     fail_message='Incorrect prompt input: resource was not deleted')
-def delete(ctx: click.Context, resource_name: str):
+def delete(ctx: click.Context, resource_name: str,
+           disable_confirmation_prompt):
+    _confirmation_prompt(prompt_active=not disable_confirmation_prompt)
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
-    username = profile.username
     hostname = profile.hostname
     list_url = f'https://{hostname}{resource_path}'
     auth = profile.auth

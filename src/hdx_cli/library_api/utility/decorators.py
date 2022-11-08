@@ -20,14 +20,23 @@ def report_error_and_exit(exctype, exit_code=-1):
     return report_deco
 
 
+def dynamic_confirmation_prompt(prompt, confirmation_message, fail_message,
+                                *,
+                                prompt_active=False):
+    if not prompt_active:
+        return
+    the_input = input(prompt)
+    if the_input != confirmation_message:
+        raise HdxCliException(fail_message)
+
+
 def confirmation_prompt(prompt, confirmation_message,
                         fail_message):
     def confirmation_prompt_deco(func):
         @wraps(func)
         def confirm_wrapper(*args, **kwargs):
-            the_input = input(prompt)
-            if the_input != confirmation_message:
-                raise HdxCliException(fail_message)
+            dynamic_confirmation_prompt(prompt, confirmation_message,
+                                        fail_message, prompt_active=True)
             return func(*args, **kwargs)
         return confirm_wrapper
     return confirmation_prompt_deco
@@ -35,10 +44,10 @@ def confirmation_prompt(prompt, confirmation_message,
 
 _CACHE_DICT = None
 
-def _save_cache(cache_file):
+def _save_cache(cache_file_path):
     global _CACHE_DICT
-    with open(cache_file, 'wb') as f:
-        pickle.dump(_CACHE_DICT, f)
+    with open(cache_file_path, 'wb') as cache_file:
+        pickle.dump(_CACHE_DICT, cache_file)
 
 
 def _load_cache(cache_file):

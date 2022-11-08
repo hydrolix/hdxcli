@@ -1,10 +1,10 @@
 from typing import Tuple
-from pathlib import Path
-import toml
+import json
 
 import click
 
-from ...library_api.common.exceptions import LogicException
+
+from ...library_api.common.exceptions import LogicException, HdxCliException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.auth import PROFILE_CONFIG_FILE
 from ...library_api.common import rest_operations as rest_ops
@@ -15,7 +15,7 @@ from ..common.rest_operations import (create as command_create,
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                confirmation_prompt)
 from ..common.misc_operations import settings as command_settings
-from ..common.cached_operations import *
+from ..common.cached_operations import find_projects, find_tables
 
 
 @click.group(help="Job-related operations")
@@ -51,7 +51,6 @@ def purgejobs(ctx):
 @click.pass_context
 def batch(ctx):
     profileinfo = ctx.parent.obj['usercontext']
-    hostname = profileinfo.hostname
     batch_path = ctx.parent.obj['resource_path'] + 'batch/'
     ctx.obj = {'resource_path': batch_path,
                'usercontext': profileinfo}
@@ -78,7 +77,7 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     singular = plural if not plural.endswith('s') else plural[0:-1]
     return plural, singular
 
-
+# pylint:disable=line-too-long
 @click.command(help='Ingest data. The data path url can be local or point to a bucket. Your cluster '
                 ' (and not your client machine executing hdx-cli tool) *must have* permissions to access '
                 'the data bucket in case you need to ingest directly from there. If the data path is a '
@@ -87,6 +86,7 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 @click.argument('jobname_file')
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
+# pylint:enable=line-too-long
 def ingest(ctx: click.Context,
            jobname: str,
            jobname_file: str,
@@ -94,13 +94,12 @@ def ingest(ctx: click.Context,
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
 
-    username = profile.username
     hostname = profile.hostname
     url = f'https://{hostname}{resource_path}'
     token = profile.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
-    with open(jobname_file, 'r') as job_input:
+    with open(jobname_file, 'r', encoding='utf-8') as job_input:
         body = json.load(job_input)
         body['name'] = jobname
         body['settings']['source']['table'] = f'{profile.projectname}.{profile.tablename}'
@@ -117,8 +116,8 @@ def ingest(ctx: click.Context,
                                             headers=headers)
             try:
                 transformname = [t['name'] for t in transforms_list if t['settings']['is_default']][0]
-            except IndexError:
-                raise LogicException('No default transform found to apply ingest command and no --transform-name passed')
+            except IndexError as exc:
+                raise LogicException('No default transform found to apply ingest command and no --transform-name passed') from exc
         body['settings']['source']['transform'] = transformname
         rest_ops.create(url, body=body, headers=headers)
     print(f'Started job {jobname}.')
@@ -132,7 +131,6 @@ def cancel(ctx,
            job_name):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
-    username = profile.username
     hostname = profile.hostname
     list_url = f'https://{hostname}{resource_path}'
     auth = profile.auth
@@ -160,7 +158,6 @@ def retry(ctx,
            job_name):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
-    username = profile.username
     hostname = profile.hostname
     list_url = f'https://{hostname}{resource_path}'
     auth = profile.auth

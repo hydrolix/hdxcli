@@ -47,9 +47,7 @@ def _assert_test_output(result, expected_output_tpl: Tuple[ExpectedOutput, str])
         assert eval(expected_output_tpl[1], {'result': result}) # pylint:disable=eval-used
 
 
-class ApprovalTestCaseRunner:
-    @staticmethod
-    def _add_parameters_to_hdx_cli_command(cmd: str):
+def _add_parameters_to_hdx_cli_command(cmd: str):
         split_cmd = cmd.split(' ')
         idx = split_cmd.index('hdx_cli.main') + 1
         split_cmd.insert(idx, '--profile-config-file')
@@ -62,6 +60,18 @@ class ApprovalTestCaseRunner:
             split_cmd.insert(idx, HDXCLI_TESTS_CLUSTER_PASSWORD)
         return split_cmd
 
+Command = List[str]
+
+def _add_parameters_to_hdx_cli_commands(cmds: List[str]) -> List[Command]:
+    return [_add_parameters_to_hdx_cli_command(cmd) for cmd in cmds]
+
+
+def _execute_commands(commands: List[Command], check=True):
+    for command in commands:
+        sp.run(command, check=check)
+
+
+class ApprovalTestCaseRunner:
     def __init__(self, name, input_commands, expected_output_tpl: Tuple[ExpectedOutput, str],
                 *, setup_steps=None, teardown_steps=None):
         self._name = name
@@ -75,15 +85,15 @@ class ApprovalTestCaseRunner:
         self._teardown_steps = []
 
         for cmd in input_commands:
-            split_cmd = type(self)._add_parameters_to_hdx_cli_command(cmd)
+            split_cmd = _add_parameters_to_hdx_cli_command(cmd)
             self._input_commands.append(split_cmd)
 
         for cmd in setup_steps:
-            split_cmd = type(self)._add_parameters_to_hdx_cli_command(cmd)
+            split_cmd = _add_parameters_to_hdx_cli_command(cmd)
             self._setup_steps.append(split_cmd)
 
         for cmd in teardown_steps:
-            split_cmd = type(self)._add_parameters_to_hdx_cli_command(cmd)
+            split_cmd = _add_parameters_to_hdx_cli_command(cmd)
             self._teardown_steps.append(split_cmd)
 
 
@@ -152,6 +162,9 @@ def _parse_expected_output(tst):
     raise KeyError('No expected_output of any form found for test validation')
 
 
+def is_last_test(test_info):
+    return len(test_info) == 6
+
 def pytest_generate_tests(metafunc):
     """Generate all tests from tests_data"""
     def interpolate_with_profile_vars(a_str):
@@ -159,13 +172,23 @@ def pytest_generate_tests(metafunc):
         interpolated = a_str.format(**profile_dict)
         return interpolated
 
+    global_setup = THE_TESTS.get('global_setup')
+    if global_setup:
+        global_setup_cmds = _add_parameters_to_hdx_cli_commands(global_setup)
+        _execute_commands(global_setup_cmds, check=True)
     tests_array = THE_TESTS['test']
     all_tests = []
     for tst in tests_array:
         test_input_commands = [interpolate_with_profile_vars(tic)
-                               for tic in
-                               tst['input_commands']]
+                            for tic in
+                            tst['input_commands']]
         all_tests.append((test_input_commands, _parse_expected_output(tst), tst['name'], 
                           tst.get('setup', None),
                           tst.get('teardown', None)))
+
+    global_teardown = THE_TESTS.get('global_teardown')
+
+    # This is basically a trick: add a final test as the teardown test
+    # bc pytest_generate_tests seems to not support global teardown
+    all_tests.append((['python3 -m hdx_cli.main'], (ExpectedOutput.REGEX, '.*'), 'teardown', None, global_teardown))
     metafunc.parametrize("test_data", all_tests)

@@ -190,8 +190,9 @@ def hdx_cli(ctx, profile,
             function_name,
             password,
             profile_config_file):
-    try_first_time_use(_first_time_use_config, profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
     "Command-line entry point for hdx cli interface"
+
+    try_first_time_use(_first_time_use_config, (profile_config_file if profile_config_file else PROFILE_CONFIG_FILE))
     load_context = ProfileLoadContext('default' if not profile else profile,
                                       profile_config_file if profile_config_file else None)
     load_set_params = ft.partial(load_set_config_parameters,
