@@ -9,13 +9,13 @@ import sys
 import click
 import toml
 
-from hdx_cli.cli_interface.project import commands as project
-from hdx_cli.cli_interface.table import commands as table
-from hdx_cli.cli_interface.transform import commands as transform
-from hdx_cli.cli_interface.job import commands as job
-from hdx_cli.cli_interface.function import commands as function
-from hdx_cli.cli_interface.dictionary import commands as dictionary
-from hdx_cli.cli_interface.profile import commands as profile
+from hdx_cli.cli_interface.project import commands as project_
+from hdx_cli.cli_interface.table import commands as table_
+from hdx_cli.cli_interface.transform import commands as transform_
+from hdx_cli.cli_interface.job import commands as job_
+from hdx_cli.cli_interface.function import commands as function_
+from hdx_cli.cli_interface.dictionary import commands as dictionary_
+from hdx_cli.cli_interface.profile import commands as profile_
 
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
@@ -162,19 +162,22 @@ def fail_if_token_expired(user_context: ProfileUserContext):
              ' to perform operations on different profiles and sets of projects and tables.')
 @click.option('--profile', help="Perform operation with a different profile. (Default profile is 'default')",
               metavar='PROFILENAME', default=None)
-@click.option('--project-name', help="Explicitly pass the project name. If one was set it will be overridden.",
+@click.option('--project', help="Explicitly pass the project name. If one was set it will be overridden.",
               metavar='PROJECTNAME', default=None)
-@click.option('--table-name', help="Perform operation with a different profile. (Default profile is 'default')",
+@click.option('--table', help="Perform operation with a different profile. (Default profile is 'default')",
               metavar='TABLENAME', default=None)
-@click.option('--transform-name',
+@click.option('--transform',
               help="Explicitly pass the transform name. If none is given, the default transform for the used table is used.",
               metavar='TRANSFORMNAME', default=None)
-@click.option('--job-name',
+@click.option('--job',
               help="Perform operation on the passed jobname",
               metavar='JOBNAME', default=None)
-@click.option('--function-name',
+@click.option('--function',
               help="Perform operation on the passed function",
               metavar='FUNCTIONNAME', default=None)
+@click.option('--dictionary',
+              help="Perform operation on the passed dictionary",
+              metavar='DICTIONARYNAME', default=None)
 @click.option('--password', help="Login password. If provided and the access token is expired, it will be used.",
               metavar='PASSWORD', default=None)
 @click.option('--profile-config-file', hidden=True, help='Used only for testing',
@@ -183,18 +186,20 @@ def fail_if_token_expired(user_context: ProfileUserContext):
 @report_error_and_exit(exctype=HdxCliException)
 # pylint: enable=line-too-long
 def hdx_cli(ctx, profile,
-            project_name,
-            table_name,
-            transform_name,
-            job_name,
-            function_name,
+            project,
+            table,
+            transform,
+            job,
+            function,
+            dictionary,
             password,
             profile_config_file):
     "Command-line entry point for hdx cli interface"
+    try_first_time_use(_first_time_use_config, 
+                        profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
 
-    try_first_time_use(_first_time_use_config, (profile_config_file if profile_config_file else PROFILE_CONFIG_FILE))
     load_context = ProfileLoadContext('default' if not profile else profile,
-                                      profile_config_file if profile_config_file else None)
+                                      profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
     load_set_params = ft.partial(load_set_config_parameters,
                                  load_context=load_context)
     # Load profile from cache
@@ -224,31 +229,33 @@ def hdx_cli(ctx, profile,
         user_context.auth = auth_info
 
     # Command-line overrides
-    if transform_name:
-        user_context.transformname = transform_name
-    if job_name:
-        user_context.batchname = job_name
-    if project_name:
-        user_context.projectname = project_name
-    if table_name:
-        user_context.tablename = table_name
-    if function_name:
-        user_context.functionname = function_name
+    if transform:
+        user_context.transformname = transform
+    if job:
+        user_context.batchname = job
+    if project:
+        user_context.projectname = project
+    if table:
+        user_context.tablename = table
+    if function:
+        user_context.functionname = function
+    if dictionary:
+        user_context.dictionaryname = dictionary
 
     # Unconditional default override
     ctx.obj = {'usercontext': user_context}
 
 
-hdx_cli.add_command(project.project)
-hdx_cli.add_command(table.table)
-hdx_cli.add_command(transform.transform)
+hdx_cli.add_command(project_.project)
+hdx_cli.add_command(table_.table)
+hdx_cli.add_command(transform_.transform)
 hdx_cli.add_command(set_commands.set)
 hdx_cli.add_command(set_commands.unset)
-hdx_cli.add_command(job.job)
-hdx_cli.add_command(function.function)
-hdx_cli.add_command(job.purgejobs)
-hdx_cli.add_command(dictionary.dictionary)
-hdx_cli.add_command(profile.profile)
+hdx_cli.add_command(job_.job)
+hdx_cli.add_command(function_.function)
+hdx_cli.add_command(job_.purgejobs)
+hdx_cli.add_command(dictionary_.dictionary)
+hdx_cli.add_command(profile_.profile)
 
 
 def main():

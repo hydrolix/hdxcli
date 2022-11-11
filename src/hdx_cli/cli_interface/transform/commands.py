@@ -32,20 +32,22 @@ def transform(ctx: click.Context):
     projects_list = rest_ops.list(list_projects_url,
                                   headers=headers)
 
-    project_id = [p['uuid'] for p in projects_list if p['name'] == project_name][0]
+    try:
+        project_id = [p['uuid'] for p in projects_list if p['name'] == project_name][0]
 
-    list_tables_url = f'https://{hostname}/config/v1/orgs/{org_id}/projects/{project_id}/tables'
-    tables_list = rest_ops.list(list_tables_url,
-                                  headers=headers)
-    table_id = [t['uuid'] for t in tables_list if t['name'] == table_name][0]
-
-
-    transforms_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/'
-    transforms_url = f'https://{hostname}{transforms_path}'
-
-    transforms_list = rest_ops.list(transforms_url,
+        list_tables_url = f'https://{hostname}/config/v1/orgs/{org_id}/projects/{project_id}/tables'
+        tables_list = rest_ops.list(list_tables_url,
                                     headers=headers)
-    transform_id = None
+        table_id = [t['uuid'] for t in tables_list if t['name'] == table_name][0]
+
+
+        transforms_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/'
+        transforms_url = f'https://{hostname}{transforms_path}'
+
+        transforms_list = rest_ops.list(transforms_url,
+                                        headers=headers)
+    except IndexError as idx_err:
+        raise LogicException('Cannot find resource.') from idx_err
 
     if not profile_info.transformname:
         try:

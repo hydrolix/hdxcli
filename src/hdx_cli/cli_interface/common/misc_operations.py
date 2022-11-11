@@ -141,6 +141,8 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     """
     split_path = resource_path.split("/")
     plural = split_path[-2]
+    if plural == "dictionaries":
+        return "dictionaries", "dictionary"
     singular = plural if not plural.endswith('s') else plural[0:-1]
     return plural, singular
 
@@ -185,10 +187,17 @@ def settings(ctx: click.Context,
 
     if not getattr(profile, resource_kind + "name"):
         raise LogicException(f'No default {resource_kind} found in profile')
-    resources = globals()["find_" + resource_kind_plural](profile)
-    resource = [ r for r in resources if r["name"] == getattr(profile, resource_kind + "name")][0]
+    resources = None
+    try:
+        resources = globals()["find_" + resource_kind_plural](profile)
+        resource = [ r for r in resources if r["name"] == getattr(profile, resource_kind + "name")][0]
+    except IndexError as idx_err:
+        raise LogicException(f'Cannot find resource.') from idx_err
 
     if not key:
+        project_str = f'Project: {profile.projectname}'
+        print(project_str)
+        print(f'{"-" * (90 + 30 + 40)}')
         print(_format_settings_header([("name", 90), ("type", 30), ("value", 40)]))
         _for_each_setting(options, resource=resource)
     elif key and not value:

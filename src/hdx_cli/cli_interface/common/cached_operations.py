@@ -18,6 +18,7 @@ def find_projects(user_ctx: ProfileUserContext):
         raise HdxCliException(f"Error getting projects.")
     return json.loads(result.content)
 
+
 def find_batch(user_ctx: ProfileUserContext):
     token = user_ctx.auth
     hostname = user_ctx.hostname
@@ -37,8 +38,8 @@ def find_project_id(user_ctx, project_name):
     return [t["uuid"] for t in projects if t["name"] == project_name]
 
 
-def _find_functions_or_tables(user_ctx: ProfileUserContext, resource):
-    """resource parameter is one of 'functions' or 'tables'"""
+def _find_project_resource(user_ctx: ProfileUserContext, resource):
+    """resource parameter is 'functions' or 'tables', 'dictionaries' or anything project-level"""
     project_id = [ p for p in find_projects(user_ctx)
                     if p["name"] == user_ctx.projectname][0]["uuid"]
     token = user_ctx.auth
@@ -53,10 +54,13 @@ def _find_functions_or_tables(user_ctx: ProfileUserContext, resource):
 
 
 def find_tables(user_ctx: ProfileUserContext):
-    return _find_functions_or_tables(user_ctx, 'tables')
+    return _find_project_resource(user_ctx, 'tables')
+
+def find_dictionaries(user_ctx: ProfileUserContext):
+    return _find_project_resource(user_ctx, 'dictionaries')
 
 def find_functions(user_ctx: ProfileUserContext):
-    return _find_functions_or_tables(user_ctx, 'functions')
+    return _find_project_resource(user_ctx, 'functions')
 
 
 @find_in_disk_cache(cache_file=HDX_CLI_HOME_DIR / "cache/cache.bin",

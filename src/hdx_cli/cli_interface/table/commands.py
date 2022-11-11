@@ -33,11 +33,14 @@ def table(ctx: click.Context):
     auth_token: AuthInfo = profileinfo.auth
     headers = {'Authorization': f'{auth_token.token_type} {auth_token.token}',
                'Accept': 'application/json'}
-    projects_list = rest_ops.list(list_projects_url,
-                                  headers=headers)
-    project_id = [p['uuid'] for p in projects_list if p['name'] == project_name]
-    ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/projects/{project_id[0]}/tables/',
-               'usercontext': profileinfo}
+    try:
+        projects_list = rest_ops.list(list_projects_url,
+                                      headers=headers)
+        project_id = [p['uuid'] for p in projects_list if p['name'] == project_name]
+        ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/projects/{project_id[0]}/tables/',
+                   'usercontext': profileinfo}
+    except IndexError as idx_err:
+        raise LogicException(f'Cannot find project: {project_name}') from idx_err
 
 
 table.add_command(command_create)

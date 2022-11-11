@@ -5,9 +5,7 @@ import json
 import click
 
 from ...library_api.common.exceptions import (HdxCliException,
-                                              ResourceNotFoundException,
-                                              LogicException)
-from ...library_api.common import auth as api_auth
+                                              ResourceNotFoundException)
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
@@ -18,6 +16,13 @@ from .cached_operations import *
               help='Create will use as body for request the file contents.'
               "'name' key from the body will be replaced by the given 'resource_name'.",
               default=None)
+@click.option('--body-from-file', '-f',
+              help='Create will use as body the file contents.',
+              default=None)
+@click.option('--body-from-file-type', '-t',
+              type=click.Choice(('json', 'verbatim')),
+              help='How to interpret the body from option. ',
+              default='json')
 @click.argument('resource_name')
 @click.option('--sql', '-s',
               help="Create will use as 'sql' field the contents of the sql string",
@@ -27,27 +32,37 @@ from .cached_operations import *
 def create(ctx: click.Context,
            resource_name: str,
            body_from_file,
+           body_from_file_type,
            sql):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
-    username = profile.username
     hostname = profile.hostname
     url = f'https://{hostname}{resource_path}'
+    token = profile.auth
+    headers = {'Authorization': f'{token.token_type} {token.token}',
+               'Accept': 'application/json'}
     body = {}
+    body_stream = None
     if body_from_file:
-        with open(body_from_file, 'r') as input_body:
-            body = json.load(input_body)
-            body['name'] = f'{resource_name}'
+        if body_from_file_type == 'json':
+            with open(body_from_file, 'r', encoding='utf-8') as input_body:  
+                body = json.load(input_body)
+                body['name'] = f'{resource_name}'
+        else:
+            body_stream = open(body_from_file, 'rb') # pylint:disable=consider-using-with
     elif sql:
         body['name'] = f'{resource_name}'
         body['sql'] = sql
     else:
         body = {'name': f'{resource_name}',
                 'description': 'Created with hdx-cli tool'}
-    token = profile.auth
-    headers = {'Authorization': f'{token.token_type} {token.token}',
-               'Accept': 'application/json'}
-    rest_ops.create(url, body=body, headers=headers)
+    
+    if body_from_file_type == 'json':
+        rest_ops.create(url, body=body, headers=headers)
+    else:
+        rest_ops.create_file(url, headers=headers, file_stream=body_stream,
+                             remote_filename=resource_name)
+        body_stream.close()
     print(f'Created {resource_name}.')
 
 
@@ -91,19 +106,18 @@ def delete(ctx: click.Context, resource_name: str,
 def list(ctx: click.Context):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
-    username = profile.username
     hostname = profile.hostname
     list_url = f'https://{hostname}{resource_path}'
+    print(list_url)
     auth_info : AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
     resources = rest_ops.list(list_url, headers=headers)
     for resource in resources:
         print(resource['name'], end='')
-        if (settings := resource.get('settings')) and (is_default := settings.get('is_default')):
+        if (settings := resource.get('settings')) and settings.get('is_default'):
             print(' (default)', end='')
         print()
-
 
 
 def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
@@ -117,6 +131,8 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     """
     split_path = resource_path.split("/")
     plural = split_path[-2]
+    if plural == 'dictionaries':
+        return 'dictionaries', 'dictionary'
     singular = plural if not plural.endswith('s') else plural[0:-1]
     return plural, singular
 
@@ -129,13 +145,12 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
 def show(ctx: click.Context,
-         # TODO: all commands should support an optional resource name that overrides the prefix-style ---someresourcetype-name
+        # TODO: all commands should support an optional resource name that overrides the prefix-style ---someresourcetype-name
          # It seems there are good use cases for it...
          # resource_name,
          show_all=False):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
-    username = profile.username
     hostname = profile.hostname
     list_url = f'https://{hostname}{resource_path}'
     auth_info : AuthInfo = profile.auth
@@ -147,7 +162,7 @@ def show(ctx: click.Context,
         for resource in resources:
             print(json.dumps(resource))
     else:
-        resource_kind_plural, resource_kind = _heuristically_get_resource_kind(resource_path)
+        _, resource_kind = _heuristically_get_resource_kind(resource_path)
         resource_name = getattr(profile, f'{resource_kind}name')
         for resource in resources:
             if resource['name'] == resource_name:

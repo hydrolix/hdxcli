@@ -165,23 +165,27 @@ def _parse_expected_output(tst):
 def is_last_test(test_info):
     return len(test_info) == 6
 
+
 def pytest_generate_tests(metafunc):
     """Generate all tests from tests_data"""
     def interpolate_with_profile_vars(a_str):
         profile_dict = HDXCLI_PROFILE_DATA['default']
+        profile_dict['HDXCLI_TESTS_DIR'] = THIS_DIR
         interpolated = a_str.format(**profile_dict)
         return interpolated
 
     global_setup = THE_TESTS.get('global_setup')
     if global_setup:
-        global_setup_cmds = _add_parameters_to_hdx_cli_commands(global_setup)
+        global_setup_interpolated = [interpolate_with_profile_vars(tic)
+                                 for tic in global_setup]
+        global_setup_cmds = _add_parameters_to_hdx_cli_commands(global_setup_interpolated)
         _execute_commands(global_setup_cmds, check=True)
     tests_array = THE_TESTS['test']
     all_tests = []
     for tst in tests_array:
         test_input_commands = [interpolate_with_profile_vars(tic)
                             for tic in
-                            tst['input_commands']]
+                            tst['commands_under_test']]
         all_tests.append((test_input_commands, _parse_expected_output(tst), tst['name'], 
                           tst.get('setup', None),
                           tst.get('teardown', None)))
