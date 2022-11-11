@@ -33,6 +33,7 @@ from hdx_cli.library_api.common.auth import (
 from hdx_cli.cli_interface.set import commands as set_commands
 from hdx_cli.library_api.common.login import login
 
+VERSION = '1.0rc2'
 
 def _is_valid_username(username):
     return not username[0].isdigit()
@@ -182,6 +183,8 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               metavar='PASSWORD', default=None)
 @click.option('--profile-config-file', hidden=True, help='Used only for testing',
               default=None)
+@click.option('--version', help="Print version",
+              is_flag=True, default=False)
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
 # pylint: enable=line-too-long
@@ -193,7 +196,10 @@ def hdx_cli(ctx, profile,
             function,
             dictionary,
             password,
-            profile_config_file):
+            profile_config_file,
+            version):
+    if version:
+        print(VERSION)
     "Command-line entry point for hdx cli interface"
     try_first_time_use(_first_time_use_config, 
                         profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)

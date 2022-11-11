@@ -1,4 +1,5 @@
-# Hdx-cli purpose
+[![](images/hdxcli.png)](https://github.com/hydrolix/hdx-cli)
+
 
 `hdxcli` is a command-line tool to work with hydrolix projects and tables
 interactively.
@@ -85,7 +86,6 @@ to a bucket *for which the cluster has at lease read access to*.
 
 
 ## Listing and showing your profiles 
-
 
 Listing profiles:
 
@@ -191,8 +191,7 @@ hdxcli table <mytablename> settings key value
 
 Check which commands are available for each resource by typing:
 
+
 ```
 hdxcli [<resource>...] [<verb>] --help
 ```
-
-
