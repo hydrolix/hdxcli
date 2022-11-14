@@ -9,10 +9,10 @@ and others  can be performed.
 
 # Hdx-cli installation
 
-You can install `hdx-cli` from pip:
+You can install `hdxcli` from pip:
 
 ```shell
-pip install hdx-cli
+pip install hdxcli
 ```
 
 # Using hdxcli command-line program

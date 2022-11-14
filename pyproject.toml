@@ -3,17 +3,19 @@ maintainers = [{name = "German Diago Gomez", email = "german@hydrolix.io"}]
 
 
 [tool.poetry]
-name = "hdx-cli"
-version = "1.0-rc1"
+name = "hdxcli"
+version = "1.0-rc8"
 description = "Hydrolix command line utility to do CRUD operations on projects, tables, transforms and other resources in Hydrolix clusters"
 authors = ["German Diago Gomez <german@hydrolix.io>"]
-license = "Hydrolix Inc. License"
+license = "MIT license"
 keywords = ["database", "bigdata", "hydrolix"]
 classifiers = ["Development Status :: 3 - Alpha",
                "Topic :: Database",
                "Topic :: Database :: Front-Ends"]
 readme = "README.md"
-
+packages = [
+    { include = "hdx_cli", from = "src" }
+]
 
 [tool.poetry.scripts]
 hdxcli = "hdx_cli.main:main"
