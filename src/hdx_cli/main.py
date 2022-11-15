@@ -16,6 +16,7 @@ from hdx_cli.cli_interface.job import commands as job_
 from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
 from hdx_cli.cli_interface.profile import commands as profile_
+from hdx_cli.cli_interface.sources import commands as sources_
 
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
@@ -33,7 +34,7 @@ from hdx_cli.library_api.common.auth import (
 from hdx_cli.cli_interface.set import commands as set_commands
 from hdx_cli.library_api.common.login import login
 
-VERSION = '1.0rc8'
+VERSION = '1.0rc9'
 
 def _is_valid_username(username):
     return not username[0].isdigit()
@@ -70,9 +71,10 @@ def _first_time_use_config(profile_config_file):
             username = input('Please, type the user name of your cluster: ')
             good_username = _is_valid_username(username)
         config_data = {'default': {'username': username, 'hostname': hostname}}
-        with open(profile_config_file, 'w', encoding='utf-8') as config_file:
+        os.makedirs(Path(profile_config_file).parent, exist_ok=True)
+        with open(profile_config_file, 'w+', encoding='utf-8') as config_file:
             toml.dump(config_data, config_file)
-        print('Your configuration with profile [default] has been created at {profile_config_file}')
+        print(f'\nYour configuration with profile [default] has been created at {profile_config_file}')
         print('This will be the profile used to perform commands against by default')
         print('You can start working with hdx-cli now')
         sys.exit(0)
@@ -171,17 +173,17 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               help="Explicitly pass the transform name. If none is given, the default transform for the used table is used.",
               metavar='TRANSFORMNAME', default=None)
 @click.option('--job',
-              help="Perform operation on the passed jobname",
+              help="Perform operation on the passed jobname.",
               metavar='JOBNAME', default=None)
 @click.option('--function',
-              help="Perform operation on the passed function",
+              help="Perform operation on the passed function.",
               metavar='FUNCTIONNAME', default=None)
 @click.option('--dictionary',
-              help="Perform operation on the passed dictionary",
+              help="Perform operation on the passed dictionary.",
               metavar='DICTIONARYNAME', default=None)
 @click.option('--password', help="Login password. If provided and the access token is expired, it will be used.",
               metavar='PASSWORD', default=None)
-@click.option('--profile-config-file', hidden=True, help='Used only for testing',
+@click.option('--profile-config-file', hidden=True, help='Used only for testing.',
               default=None)
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
@@ -264,6 +266,7 @@ hdx_cli.add_command(function_.function)
 hdx_cli.add_command(job_.purgejobs)
 hdx_cli.add_command(dictionary_.dictionary)
 hdx_cli.add_command(profile_.profile)
+hdx_cli.add_command(sources_.sources)
 hdx_cli.add_command(version)
 
 
