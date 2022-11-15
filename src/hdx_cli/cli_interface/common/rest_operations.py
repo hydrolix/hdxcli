@@ -108,7 +108,6 @@ def list(ctx: click.Context):
     profile = ctx.parent.obj['usercontext']
     hostname = profile.hostname
     list_url = f'https://{hostname}{resource_path}'
-    print(list_url)
     auth_info : AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
