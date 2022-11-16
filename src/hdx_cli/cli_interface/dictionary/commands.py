@@ -10,7 +10,7 @@ from ...library_api.common import rest_operations as rest_ops
 
 from ..common.rest_operations import (create as command_create,
                                       delete as command_delete,
-                                      list as command_list,
+                                      list_ as command_list,
                                       show as command_show)
 
 from ..common.misc_operations import settings as command_settings
@@ -38,9 +38,11 @@ def files(ctx: click.Context):
     ctx.obj = {'resource_path': resource_path,
                'usercontext': profileinfo}
 
+
 dictionary.add_command(command_create)
 dictionary.add_command(files)
 files.add_command(command_create)
+files.add_command(command_list)
 
 dictionary.add_command(command_list)
 # dictionary.add_command(command_delete)

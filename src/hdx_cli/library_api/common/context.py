@@ -30,6 +30,8 @@ class ProfileUserContext:
     batchname: Optional[str] = None
     functionname: Optional[str] = None
     dictionaryname : Optional[str] = None
+    kafkaname : Optional[str] = None
+    kinesisname : Optional[str] = None
 
     def as_dict_for_config(self):
         dict_to_save = {}

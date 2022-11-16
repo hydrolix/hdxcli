@@ -91,7 +91,10 @@ def delete(ctx: click.Context, resource_name: str,
     url = None
     for a_resource in resources:
         if a_resource['name'] == resource_name:
-            url = a_resource['url']
+            if 'url' in a_resource:
+                url = a_resource['url']
+            else:
+                url = f"https://{hostname}{resource_path}{a_resource['uuid']}"
             break
     if not url:
         print(f'Could not delete {ctx.parent.command.name} {resource_name}. Not found.')
@@ -100,10 +103,10 @@ def delete(ctx: click.Context, resource_name: str,
         print(f'Deleted {resource_name}')
 
 
-@click.command(help='List resources.')
+@click.command(help='List resources.', name='list')
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
-def list(ctx: click.Context):
+def list_(ctx: click.Context):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
     hostname = profile.hostname
@@ -113,10 +116,13 @@ def list(ctx: click.Context):
                'Accept': 'application/json'}
     resources = rest_ops.list(list_url, headers=headers)
     for resource in resources:
-        print(resource['name'], end='')
-        if (settings := resource.get('settings')) and settings.get('is_default'):
-            print(' (default)', end='')
-        print()
+        if isinstance(resources, str):
+            print(resource)
+        else:
+            print(resource['name'], end='')
+            if (settings := resource.get('settings')) and settings.get('is_default'):
+                print(' (default)', end='')
+            print()
 
 
 def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
@@ -132,6 +138,8 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     plural = split_path[-2]
     if plural == 'dictionaries':
         return 'dictionaries', 'dictionary'
+    elif plural == 'kinesis':
+        return 'kinesis', 'kinesis'
     singular = plural if not plural.endswith('s') else plural[0:-1]
     return plural, singular
 

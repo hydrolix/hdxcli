@@ -126,7 +126,7 @@ def _do_for_each_setting(settings_dict, prefix="",
 
 
 def _for_each_setting(settings_dict, prefix="",
-                         resource=None):
+                      resource=None):
     _do_for_each_setting(settings_dict, prefix, resource)
 
 
@@ -143,6 +143,8 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     plural = split_path[-2]
     if plural == "dictionaries":
         return "dictionaries", "dictionary"
+    elif plural == 'kinesis':
+        return 'kinesis', 'kinesis'
     singular = plural if not plural.endswith('s') else plural[0:-1]
     return plural, singular
 
@@ -162,9 +164,6 @@ def _cleanup_some_fields_when_updateworkaround(body_dict):
                "Otherwise, when invoked with no arguments, all the settings will be listed.")
 @click.argument("key", required=False, default=None)
 @click.argument("value", required=False, default=None)
-@click.option("--body-from-file", "-f",
-              help="Create uses as body for request the file contents. "
-              "name key from the body will be replaced by the given 'resource_name'.")
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
 def settings(ctx: click.Context,

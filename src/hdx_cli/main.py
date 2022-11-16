@@ -34,7 +34,7 @@ from hdx_cli.library_api.common.auth import (
 from hdx_cli.cli_interface.set import commands as set_commands
 from hdx_cli.library_api.common.login import login
 
-VERSION = '1.0rc9'
+VERSION = '1.0rc12'
 
 def _is_valid_username(username):
     return not username[0].isdigit()
@@ -185,6 +185,8 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               metavar='PASSWORD', default=None)
 @click.option('--profile-config-file', hidden=True, help='Used only for testing.',
               default=None)
+@click.option('--source', help='Source for kinesis/kafka streams',
+              default=None)
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
 # pylint: enable=line-too-long
@@ -196,7 +198,8 @@ def hdx_cli(ctx, profile,
             function,
             dictionary,
             password,
-            profile_config_file):
+            profile_config_file,
+            source):
     if ctx.invoked_subcommand == 'version':
         return
     "Command-line entry point for hdx cli interface"
@@ -246,6 +249,9 @@ def hdx_cli(ctx, profile,
         user_context.functionname = function
     if dictionary:
         user_context.dictionaryname = dictionary
+    if source:
+        user_context.kafkaname = source
+        user_context.kinesisname = source
 
     # Unconditional default override
     ctx.obj = {'usercontext': user_context}

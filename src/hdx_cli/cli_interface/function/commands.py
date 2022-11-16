@@ -12,7 +12,7 @@ from ...library_api.common.exceptions import HdxCliException, LogicException
 
 from ..common.rest_operations import (create as command_create,
                                       delete as command_delete,
-                                      list as command_list,
+                                      list_ as command_list,
                                       show as command_show)
 
 from ..common.misc_operations import settings as command_settings

@@ -10,7 +10,7 @@ from ...library_api.common.auth import PROFILE_CONFIG_FILE
 from ...library_api.common import rest_operations as rest_ops
 from ..common.rest_operations import (create as command_create,
                                       delete as command_delete,
-                                      list as command_list,
+                                      list_ as command_list,
                                       show as command_show)
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                confirmation_prompt)

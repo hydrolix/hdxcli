@@ -5,6 +5,20 @@ from ...library_api.common.exceptions import HdxCliException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.utility.decorators import find_in_disk_cache
 from ...library_api.common.config_constants import HDX_CLI_HOME_DIR
+from ...library_api.common.generic_resource import access_resource
+
+
+def find_kafka(user_ctx: ProfileUserContext):
+    return access_resource(user_ctx,
+                    [('projects', user_ctx.projectname),
+                     ('tables', user_ctx.tablename),
+                     ('sources/kafka', None)])
+
+def find_kinesis(user_ctx: ProfileUserContext):
+    return access_resource(user_ctx,
+                    [('projects', user_ctx.projectname),
+                     ('tables', user_ctx.tablename),
+                     ('sources/kinesis', None)])
 
 
 def find_projects(user_ctx: ProfileUserContext):
@@ -13,7 +27,7 @@ def find_projects(user_ctx: ProfileUserContext):
     url = f"https://{hostname}/config/v1/orgs/{user_ctx.org_id}/projects/"
     headers = {"Authorization": f"{token.token_type} {token.token}",
                "Accept": "application/json"}
-    result = requests.get(url, headers=headers)
+    result = requests.get(url, headers=headers, timeout=30)
     if result.status_code != 200:
         raise HdxCliException(f"Error getting projects.")
     return json.loads(result.content)
@@ -25,9 +39,9 @@ def find_batch(user_ctx: ProfileUserContext):
     url = f"https://{hostname}/config/v1/orgs/{user_ctx.org_id}/jobs/batch/"
     headers = {"Authorization": f"{token.token_type} {token.token}",
                "Accept": "application/json"}
-    result = requests.get(url, headers=headers)
+    result = requests.get(url, headers=headers, timeout=30)
     if result.status_code != 200:
-        raise HdxCliException(f"Error getting projects.")
+        raise HdxCliException("Error getting projects.")
     return json.loads(result.content)
 
 

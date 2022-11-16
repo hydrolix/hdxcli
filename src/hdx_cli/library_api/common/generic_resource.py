@@ -6,6 +6,7 @@ from .context import ProfileUserContext
 ResourceKind = str
 ResourceName = str
 
+
 def access_resource(ctx: ProfileUserContext,
                     resource_kind_and_name:
                     List[Tuple[ResourceKind,
