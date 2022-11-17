@@ -168,8 +168,7 @@ def _cleanup_some_fields_when_updateworkaround(body_dict):
 @report_error_and_exit(exctype=HdxCliException)
 def settings(ctx: click.Context,
              key,
-             value,
-             body_from_file):
+             value):
     """Given a resource type, it returns the settings that can be used for it"""
     resource_path = ctx.parent.obj["resource_path"]
     # Resource kind is extracted from the url pattern
@@ -204,25 +203,6 @@ def settings(ctx: click.Context,
             print(f"{key}: {_get_dotted_key_from_dict(key, resource)}")
         except KeyError as ke:
             print(f'Key not found in {resource["name"]}: {key}')
-    elif key and body_from_file:
-        with open(body_from_file, "r") as input_body:
-            try:
-                patch_data = _create_dict_from_dotted_key_and_value(key, value)
-                this_resource_url = f'{settings_url}{resource["uuid"]}'
-                rest_ops.update_with_patch(
-                    this_resource_url,
-                    headers=headers,
-                    body=patch_data)
-            except:
-                put_data = _create_dict_from_dotted_key_and_value(key, value)
-                this_resource_url = f'{settings_url}{resource["uuid"]}'
-                updated_resource = resource
-                updated_resource.update(put_data)
-                rest_ops.update_with_put(
-                this_resource_url,
-                headers=headers,
-                body=updated_resource)
-            print(f'Updated {resource["name"]} {key}')
     else:
         try:
             patch_data = _create_dict_from_dotted_key_and_value(key, value)
