@@ -1,0 +1,25 @@
+name: test-hdxcli
+run-name: ${{ github.actor }} acceptance tests
+on: [push]
+jobs:
+  run-tests:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4.3.0
+        with:
+          python-version: '3.10'
+      - name: "Install poetry"
+        run: python3 -m pip install poetry
+      - name: "Install hdxcli dependencies"
+        run: python3 -m poetry install
+      - name: "Set environment for tests"
+        run: |
+          echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+      - name: "Run tests"
+        run: poetry run python3 -m pytest -v
+        env:
+          HDXCLI_TESTS_CLUSTER_PASSWORD: ${{secrets.HDXCLI_TESTS_CLUSTER_PASSWORD}}
+          HDXCLI_TESTS_CLUSTER_USERNAME: ${{secrets.HDXCLI_TESTS_CLUSTER_USERNAME}}
+          PYTHONPATH: ${{env.PYTHONPATH}}
+          HDXCLI_TESTS_CLUSTER_HOSTNAME: ${{secrets.HDXCLI_TESTS_CLUSTER_HOSTNAME}}

@@ -15,14 +15,31 @@ from hdx_cli.library_api.common.exceptions import (
     BadFileNameConventionException,
     HdxCliException)
 
+HDXCLI_TESTS_CLUSTER_USERNAME = os.getenv('HDXCLI_TESTS_CLUSTER_USERNAME')
+HDXCLI_TESTS_CLUSTER_HOSTNAME = os.getenv('HDXCLI_TESTS_CLUSTER_HOSTNAME')
+HDXCLI_TESTS_CLUSTER_PASSWORD = os.getenv('HDXCLI_TESTS_CLUSTER_PASSWORD')
 
 THIS_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 HDXCLI_PROFILE_DATA_FILE = THIS_DIR / 'config_for_testing.toml'
+
+
+def _create_cluster_config_file_for_tests():
+    if not HDXCLI_TESTS_CLUSTER_USERNAME or not HDXCLI_TESTS_CLUSTER_HOSTNAME:
+        raise RuntimeError('HDXCLI_TESTS_CLUSTER_USERNAME and HDXCLI_TESTS_CLUSTER_HOSTNAME'
+                           ' environment vars must be set')
+    config = {'default': {'username': HDXCLI_TESTS_CLUSTER_USERNAME,
+                          'hostname': HDXCLI_TESTS_CLUSTER_HOSTNAME}}
+    with open(HDXCLI_PROFILE_DATA_FILE, 'w+', encoding='utf-8') as cfile:
+        toml.dump(config, cfile)
+
+
+_create_cluster_config_file_for_tests()
+
+
 HDXCLI_TEST_CASES_DIR = THIS_DIR / 'test_cases'
 HDXCLI_PROFILE_DATA = toml.load(open(HDXCLI_PROFILE_DATA_FILE, 'r',
                                      encoding='utf-8'))
 
-HDXCLI_TESTS_CLUSTER_PASSWORD = os.getenv('HDXCLI_TESTS_CLUSTER_PASSWORD')
 
 def _load_toml_file_with_extension(toml_file_path, expected_extension=''):
     if not (fname := Path(toml_file_path).name).endswith(expected_extension):
@@ -144,6 +161,7 @@ def test_approval_run_all(test_data: Tuple[List[str], str, str]):
                                        teardown_steps=test_data[4])
     tc_runner.run()
 
+
 _load_test_suite_file = (
     partial(_load_toml_file_with_extension, expected_extension='.ts'))
 
@@ -160,10 +178,6 @@ def _parse_expected_output(tst):
     elif val := tst.get('expected_output_expr'):
         return (ExpectedOutput.EXPRESSION, val)
     raise KeyError('No expected_output of any form found for test validation')
-
-
-def is_last_test(test_info):
-    return len(test_info) == 6
 
 
 def pytest_generate_tests(metafunc):
