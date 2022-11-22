@@ -16,6 +16,7 @@ from ..common.rest_operations import (create as command_create,
 from ..common.misc_operations import settings as command_settings
 from .kafkakinesis import (kafka as command_kafka,
                            kinesis as command_kinesis)
+from .summary import summary as command_summary
 
 
 @click.group(help="Sources-related operations")
@@ -49,5 +50,7 @@ def sources(ctx: click.Context):
         ctx.obj = {'resource_path': sources_path,
                    'usercontext': profile_info}
 
+
 sources.add_command(command_kafka)
 sources.add_command(command_kinesis)
+sources.add_command(command_summary)
