@@ -18,9 +18,11 @@ from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
 from hdx_cli.cli_interface.profile import commands as profile_
 from hdx_cli.cli_interface.sources import commands as sources_
+from hdx_cli.cli_interface.migrate import commands as migrate_
 
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
+from hdx_cli.library_api.common.validation import is_valid_username, is_valid_hostname
 from hdx_cli.library_api.common.cache import CacheDict
 from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext
 from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException
@@ -30,28 +32,13 @@ from hdx_cli.library_api.common.first_use import try_first_time_use
 
 from hdx_cli.library_api.common.auth import (
     load_profile,
+    save_profile_cache,
     try_load_profile_from_cache_data)
 
 from hdx_cli.cli_interface.set import commands as set_commands
 from hdx_cli.library_api.common.login import login
 
 VERSION = '1.0rc12'
-
-def _is_valid_username(username):
-    return not username[0].isdigit()
-
-
-def _is_valid_hostname(hostname):
-    # Credits to https://stackoverflow.com/questions/2532053/validate-a-hostname-string
-    # Just import here, since this function is not called often at all
-    import re # pylint:disable=import-outside-toplevel
-
-    if len(hostname) > 255:
-        return False
-    if hostname[-1] == ".":
-        hostname = hostname[:-1] # strip exactly one dot from the right, if present
-    allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
-    return all(allowed.match(x) for x in hostname.split("."))
 
 
 def _first_time_use_config(profile_config_file):
@@ -63,14 +50,14 @@ def _first_time_use_config(profile_config_file):
     try:
         while not good_hostname:
             hostname = input('Please, type the host name of your cluster: ')
-            good_hostname = _is_valid_hostname(hostname)
+            good_hostname = is_valid_hostname(hostname)
             if not good_hostname:
                 print('Invalid host name.')
         good_username = False
         username = None
         while not good_username:
             username = input('Please, type the user name of your cluster: ')
-            good_username = _is_valid_username(username)
+            good_username = is_valid_username(username)
         config_data = {'default': {'username': username, 'hostname': hostname}}
         os.makedirs(Path(profile_config_file).parent, exist_ok=True)
         with open(profile_config_file, 'w+', encoding='utf-8') as config_file:
@@ -83,27 +70,27 @@ def _first_time_use_config(profile_config_file):
         sys.exit(-1)
 
 
-def _save_profile_cache(a_profile: ProfileUserContext,
-                        *,
-                        token,
-                        expiration_time: datetime,
-                        org_id,
-                        token_type,
-                        cache_dir_path=None):
-    """
-    Save a cache file for this profile.
-    The profile cache file is saved in cache_dir_path
-    """
-    os.makedirs(cache_dir_path, mode=0o700, exist_ok=True)
-    username = a_profile.username
-    hostname = a_profile.hostname
-    with open(cache_dir_path / f'{a_profile.profilename}', 'w', encoding='utf-8') as f:
-        CacheDict.build_from_dict({'org_id': f'{org_id}',
-                                   'token':{'auth_token': token,
-                                            'token_type': token_type,
-                                            'expires_at': expiration_time},
-                                   'username': f'{username}',
-                                   'hostname': f'{hostname}'}).save_to_stream(f)
+# def _save_profile_cache(a_profile: ProfileUserContext,
+#                         *,
+#                         token,
+#                         expiration_time: datetime,
+#                         org_id,
+#                         token_type,
+#                         cache_dir_path=None):
+#     """
+#     Save a cache file for this profile.
+#     The profile cache file is saved in cache_dir_path
+#     """
+#     os.makedirs(cache_dir_path, mode=0o700, exist_ok=True)
+#     username = a_profile.username
+#     hostname = a_profile.hostname
+#     with open(cache_dir_path / f'{a_profile.profilename}', 'w', encoding='utf-8') as f:
+#         CacheDict.build_from_dict({'org_id': f'{org_id}',
+#                                    'token':{'auth_token': token,
+#                                             'token_type': token_type,
+#                                             'expires_at': expiration_time},
+#                                    'username': f'{username}',
+#                                    'hostname': f'{hostname}'}).save_to_stream(f)
 
 
 def _chain_calls_ignore_exc(*funcs, **kwargs):
@@ -229,14 +216,13 @@ def hdx_cli(ctx, profile,
 
         cache_dir_path = (Path(profile_config_file).parent
                           if profile_config_file else HDX_CLI_HOME_DIR)
-        _save_profile_cache(user_context,
-                            token=auth_info.token,
-                            expiration_time=auth_info.expires_at,
-                            token_type=auth_info.token_type,
-                            org_id=auth_info.org_id,
-                            cache_dir_path=cache_dir_path)
+        save_profile_cache(user_context,
+                           token=auth_info.token,
+                           expiration_time=auth_info.expires_at,
+                           token_type=auth_info.token_type,
+                           org_id=auth_info.org_id,
+                           cache_dir_path=cache_dir_path)
         user_context.auth = auth_info
-
     # Command-line overrides
     if transform:
         user_context.transformname = transform
@@ -253,7 +239,6 @@ def hdx_cli(ctx, profile,
     if source:
         user_context.kafkaname = source
         user_context.kinesisname = source
-
     # Unconditional default override
     ctx.obj = {'usercontext': user_context}
 
@@ -274,6 +259,7 @@ hdx_cli.add_command(job_.purgejobs)
 hdx_cli.add_command(dictionary_.dictionary)
 hdx_cli.add_command(profile_.profile)
 hdx_cli.add_command(sources_.sources)
+hdx_cli.add_command(migrate_.migrate)
 hdx_cli.add_command(version)
 
 

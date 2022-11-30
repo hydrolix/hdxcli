@@ -1,4 +1,7 @@
+from datetime import datetime
 from pathlib import Path
+
+import os
 from typing import overload, Union
 
 import toml
@@ -10,8 +13,7 @@ from .cache import CacheDict
 from ..userdata.token import AuthInfo
 
 
-__all__ = ['load_profile', 'try_load_profile_from_cache_data']
-
+__all__ = ['load_profile', 'try_load_profile_from_cache_data', 'save_profile_cache']
 
 
 @overload
@@ -48,6 +50,28 @@ def load_profile(load_profile_context:
         raise ProfileNotFoundException(
             f'Profile name not found: {profile_name}') from key_err
 
+
+def save_profile_cache(a_profile: ProfileUserContext,
+                       *,
+                       token,
+                       expiration_time: datetime,
+                       org_id,
+                       token_type,
+                       cache_dir_path=None):
+    """
+    Save a cache file for this profile.
+    The profile cache file is saved in cache_dir_path
+    """
+    os.makedirs(cache_dir_path, mode=0o700, exist_ok=True)
+    username = a_profile.username
+    hostname = a_profile.hostname
+    with open(cache_dir_path / f'{a_profile.profilename}', 'w', encoding='utf-8') as f:
+        CacheDict.build_from_dict({'org_id': f'{org_id}',
+                                   'token':{'auth_token': token,
+                                            'token_type': token_type,
+                                            'expires_at': expiration_time},
+                                   'username': f'{username}',
+                                   'hostname': f'{hostname}'}).save_to_stream(f)
 
 
 def _compose_profile_cache_filename(load_ctx: ProfileLoadContext) -> Path:

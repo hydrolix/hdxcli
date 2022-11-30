@@ -10,6 +10,7 @@ class ProfileLoadContext:
     profilename : str
     profile_config_file : Optional[Path] = None
 
+
 _PROFILE_USER_CONTEXT_SAVE_FIELDS = ['username', 'hostname',
                                      'projectname', 'tablename']
 

@@ -10,6 +10,8 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from .cached_operations import *
+from .undecorated_click_commands import basic_create, basic_show
+
 
 @click.command(help='Create resource.')
 @click.option('--body-from-file', '-f',
@@ -24,45 +26,19 @@ from .cached_operations import *
               help='How to interpret the body from option. ',
               default='json')
 @click.argument('resource_name')
-@click.option('--sql', '-s',
-              help="Create will use as 'sql' field the contents of the sql string",
-                default=None)
+# @click.option('--sql', '-s',
+#               help="Create will use as 'sql' field the contents of the sql string",
+#               default=None)
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
 def create(ctx: click.Context,
            resource_name: str,
            body_from_file,
-           body_from_file_type,
-           sql):
+           body_from_file_type):
+    user_profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']
-    profile = ctx.parent.obj['usercontext']
-    hostname = profile.hostname
-    url = f'https://{hostname}{resource_path}'
-    token = profile.auth
-    headers = {'Authorization': f'{token.token_type} {token.token}',
-               'Accept': 'application/json'}
-    body = {}
-    body_stream = None
-    if body_from_file:
-        if body_from_file_type == 'json':
-            with open(body_from_file, 'r', encoding='utf-8') as input_body:  
-                body = json.load(input_body)
-                body['name'] = f'{resource_name}'
-        else:
-            body_stream = open(body_from_file, 'rb') # pylint:disable=consider-using-with
-    elif sql:
-        body['name'] = f'{resource_name}'
-        body['sql'] = sql
-    else:
-        body = {'name': f'{resource_name}',
-                'description': 'Created with hdx-cli tool'}
-    
-    if body_from_file_type == 'json':
-        rest_ops.create(url, body=body, headers=headers)
-    else:
-        rest_ops.create_file(url, headers=headers, file_stream=body_stream,
-                             remote_filename=resource_name)
-        body_stream.close()
+    basic_create(user_profile, resource_path,
+                 resource_name, body_from_file, body_from_file_type)
     print(f'Created {resource_name}.')
 
 
@@ -101,6 +77,7 @@ def delete(ctx: click.Context, resource_name: str,
     else:
         rest_ops.delete(url, headers=headers)
         print(f'Deleted {resource_name}')
+
 
 
 @click.command(help='List resources.', name='list')
@@ -145,35 +122,10 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 
 
 @click.command(help='Show resource. If not resource_name is provided, it will show the default if there is one.')
-@click.option('--show-all', '-s',
-              is_flag=True,
-              required=False,
-              default=False)
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
-def show(ctx: click.Context,
-        # TODO: all commands should support an optional resource name that overrides the prefix-style ---someresourcetype-name
-         # It seems there are good use cases for it...
-         # resource_name,
-         show_all=False):
-    resource_path = ctx.parent.obj['resource_path']
+def show(ctx: click.Context):
     profile = ctx.parent.obj['usercontext']
-    hostname = profile.hostname
-    list_url = f'https://{hostname}{resource_path}'
-    auth_info : AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
-
-    resources = rest_ops.list(list_url, headers=headers)
-    if show_all:
-        for resource in resources:
-            print(json.dumps(resource))
-    else:
-        _, resource_kind = _heuristically_get_resource_kind(resource_path)
-        resource_name = getattr(profile, f'{resource_kind}name')
-        for resource in resources:
-            if resource['name'] == resource_name:
-                print(json.dumps(resource))
-                break
-        else:
-            raise ResourceNotFoundException(f'{resource_name} not found')
+    _, resource_kind = _heuristically_get_resource_kind(ctx.parent.obj['resource_path'])
+    resource_name = getattr(profile, resource_kind + 'name')
+    basic_show(ctx, resource_name)

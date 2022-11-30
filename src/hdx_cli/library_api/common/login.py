@@ -62,7 +62,7 @@ def _retry(num_retries, failed_message, func,
 def login(username, hostname,
           password=None,
           *,
-          use_ssl=True):
+          use_ssl=True) -> AuthInfo:
     """Login a user given a profile"""
     if not password:
         auth_token = _retry(3, "Wrong password", _do_interactive_login,

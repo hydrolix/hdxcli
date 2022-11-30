@@ -3,11 +3,11 @@ from io import StringIO
 import json
 import requests
 
-from .exceptions import HdxCliException
+from .exceptions import HdxCliException, HttpException
 
 Headers = Dict[str, str]
 
-MAX_TIMEOUT=30
+MAX_TIMEOUT = 30
 
 def create(url: str, *,
            headers: Headers,
@@ -16,8 +16,7 @@ def create(url: str, *,
                            headers=headers,
                            timeout=MAX_TIMEOUT)
     if result.status_code not in (201, 200):
-        raise HdxCliException(f'Error creating: {result.status_code} ' +
-                              f'Message: {result.content}')
+        raise HttpException(result.status_code, result.content)
 
 def create_file(url: str, *,
            headers: Headers, 
@@ -27,8 +26,7 @@ def create_file(url: str, *,
                             headers=headers,
                             timeout=MAX_TIMEOUT)
     if result.status_code not in (201, 200):
-        raise HdxCliException(f'Error creating: {result.status_code} ' +
-                              f'Message: {result.content}')
+        raise HttpException(result.status_code, result.content)
 
 def update_with_patch(url, *,
            headers,
@@ -38,8 +36,7 @@ def update_with_patch(url, *,
                           headers=headers,
                           timeout=MAX_TIMEOUT)
     if result.status_code != 200:
-        raise HdxCliException(f'Error updating: {result.status_code} ' +
-                              f'Message: {result.content}')
+        raise HttpException(result.status_code, result.content)
 
 def update_with_put(url, *,
            headers,
@@ -49,8 +46,7 @@ def update_with_put(url, *,
                           headers=headers,
                           timeout=MAX_TIMEOUT)
     if result.status_code != 200:
-        raise HdxCliException(f'Error updating: {result.status_code} ' +
-                              f'Message: {result.content}')
+        raise HttpException(result.status_code, result.content)
 
 
 def list(url, *,
@@ -59,19 +55,17 @@ def list(url, *,
                           headers=headers,
                           timeout=MAX_TIMEOUT)
     if result.status_code != 200:
-        raise HdxCliException(f'Error listing: {result.status_code} ' +
-                              f'Message: {result.content}')
+        raise HttpException(result.status_code, result.content)
     return json.loads(result.content)
 
 
 def options(url, *,
-         headers):
+            headers):
     result = requests.options(url,
                           headers=headers,
                           timeout=MAX_TIMEOUT)
     if result.status_code != 200:
-        raise HdxCliException(f'Error listing: {result.status_code} ' +
-                              f'Message: {result.content}')
+        raise HttpException(result.status_code, result.content)
     return json.loads(result.content)
 
 
@@ -81,6 +75,5 @@ def delete(url, *,
                           headers=headers,
                           timeout=MAX_TIMEOUT)
     if result.status_code != 204:
-        raise HdxCliException(f'Error deleting: {result.status_code} ' +
-                              f'Message: {result.content}')
+        raise HttpException(result.status_code, result.content)
     return json.loads('{}')
