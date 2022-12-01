@@ -128,4 +128,8 @@ def show(ctx: click.Context):
     profile = ctx.parent.obj['usercontext']
     _, resource_kind = _heuristically_get_resource_kind(ctx.parent.obj['resource_path'])
     resource_name = getattr(profile, resource_kind + 'name')
-    basic_show(ctx, resource_name)
+
+    resource_path = ctx.parent.obj['resource_path']
+    profile = ctx.parent.obj['usercontext']
+    print(basic_show(profile, resource_path,
+                     resource_name))

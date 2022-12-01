@@ -1,5 +1,7 @@
 from typing import Optional
+
 from hdx_cli.library_api.common.context import ProfileUserContext
+from hdx_cli.library_api.common.exceptions import LogicException, HdxCliException
 
 import json
 import click
@@ -46,9 +48,25 @@ def basic_create(profile,
         rest_ops.create(url, body=body, headers=headers)
 
 
-def basic_show(ctx: click.Context, resource_name):
-    resource_path = ctx.parent.obj['resource_path']
-    profile = ctx.parent.obj['usercontext']
+def basic_create_with_body_from_string(profile,
+                 resource_path,
+                 resource_name: str,
+                 body_from_string: Optional[str]
+                 # body_from_file_type='json',
+                 # sql
+                 ):
+    hostname = profile.hostname
+    url = f'https://{hostname}{resource_path}'
+    token = profile.auth
+    headers = {'Authorization': f'{token.token_type} {token.token}',
+               'Accept': 'application/json'}
+    body = json.loads(body_from_string)
+    body['name'] = f'{resource_name}'
+    rest_ops.create(url, body=body, headers=headers)
+
+
+
+def basic_show(profile, resource_path, resource_name):
     hostname = profile.hostname
     list_url = f'https://{hostname}{resource_path}'
     auth_info : AuthInfo = profile.auth
@@ -58,7 +76,7 @@ def basic_show(ctx: click.Context, resource_name):
 
     for resource in resources:
         if resource['name'] == resource_name:
-            print(json.dumps(resource))
+            return json.dumps(resource)
 
 
 def basic_transform(ctx: click.Context):
@@ -83,7 +101,7 @@ def basic_transform(ctx: click.Context):
                                     headers=headers)
         table_id = [t['uuid'] for t in tables_list if t['name'] == table_name][0]
 
-        transforms_path = f'/config/v1/orgs/{id_org}/projects/{project_id}/tables/{table_id}/transforms/'
+        transforms_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/'
         transforms_url = f'https://{hostname}{transforms_path}'
 
         transforms_list = rest_ops.list(transforms_url,
