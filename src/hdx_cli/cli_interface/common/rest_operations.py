@@ -10,7 +10,7 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from .cached_operations import *
-from .undecorated_click_commands import basic_create, basic_show
+from .undecorated_click_commands import basic_create, basic_show, basic_delete
 
 
 @click.command(help='Create resource.')
@@ -47,9 +47,9 @@ _confirmation_prompt = partial(dynamic_confirmation_prompt,
                         confirmation_message='delete this resource',
                         fail_message='Incorrect prompt input: resource was not deleted')
 @click.command(help='Delete resource.')
-@click.option('--disable-confirmation-prompt', 
-is_flag=True,
-help='Suppress confirmation to delete resource.', show_default=True, default=False)
+@click.option('--disable-confirmation-prompt',
+              is_flag=True,
+              help='Suppress confirmation to delete resource.', show_default=True, default=False)
 @click.argument('resource_name')
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
@@ -58,28 +58,11 @@ def delete(ctx: click.Context, resource_name: str,
     _confirmation_prompt(prompt_active=not disable_confirmation_prompt)
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
-    hostname = profile.hostname
-    list_url = f'https://{hostname}{resource_path}'
-    auth = profile.auth
-    headers = {'Authorization': f'{auth.token_type} {auth.token}',
-               'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
-    url = None
-    for a_resource in resources:
-        if a_resource['name'] == resource_name:
-            if 'url' in a_resource:
-                url = a_resource['url']
-            else:
-                url = f"https://{hostname}{resource_path}{a_resource['uuid']}"
-            break
-    if not url:
-        print(f'Could not delete {ctx.parent.command.name} {resource_name}. Not found.')
-    else:
-        rest_ops.delete(url, headers=headers)
+    if basic_delete(profile, resource_path, resource_name):
         print(f'Deleted {resource_name}')
-
-
-
+    else:
+        print(f'Could not delete {resource_name}. Not found.')
+        
 @click.command(help='List resources.', name='list')
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)

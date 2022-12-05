@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import os
 import tempfile
 from urllib.parse import urlparse
@@ -22,13 +23,10 @@ from ..common.undecorated_click_commands import (basic_create,
                                                  basic_settings)
 
 
-from ..common.misc_operations import settings as command_settings
+from .rollback import MigrateStatus, MigrationRollbackManager, MigrationEntry, ResourceKind
 
-_RESOURCES_TO_MIGRATE = ['projects',
-                         'tables',
-                         'transforms',
-                         'functions',
-                         'dictionaries']
+
+from ..common.misc_operations import settings as command_settings
 
 
 def _setup_target_cluster_config(profile_config_file,
@@ -40,25 +38,6 @@ def _setup_target_cluster_config(profile_config_file,
     os.makedirs(Path(profile_config_file).parent, exist_ok=True)
     with open(profile_config_file, 'w+', encoding='utf-8') as config_file:
         toml.dump(config_data, config_file)
-
-
-class MigrateStatus:
-    CREATED = 0
-    SKIPPED = 1
-
-
-class MigrationRollbackManager:
-    def __init__(self):
-        self.projects_created_so_far = []
-
-    def add_created_project(self, name):
-        self.projects_created_so_far.append(name)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type_, value, traceback):
-        pass
 
 
 def migrate_projects(ctx: click.Context,
@@ -238,32 +217,44 @@ def migrate(ctx: click.Context,
     if not project_blacklist and not project_whitelist:
         project_blacklist = ['hdx']
 
-    for project, status in migrate_projects(ctx,
-                                            ctx.parent.obj['usercontext'],
-                                            target_user_profile,
-                                            project_whitelist,
-                                            project_blacklist):
-        print(f'Project {project["name"]}: ', end='')
-        if status == MigrateStatus.CREATED:
-            print('created')
-        elif status == MigrateStatus.SKIPPED:
-            print('skipped creation (was found).')
-        for table, tbl_status in create_tables_for_project(project['name'],
-                                                           ctx.parent.obj['usercontext'],
-                                                           target_user_profile):
-            print(f'\tTable {table["name"]}: ', end='')
-            if tbl_status == MigrateStatus.CREATED:
+    with MigrationRollbackManager(target_user_profile) as migration_rollback_manager:
+        for project, status in migrate_projects(ctx,
+                                                ctx.parent.obj['usercontext'],
+                                                target_user_profile,
+                                                project_whitelist,
+                                                project_blacklist):
+            print(f'Project {project["name"]}: ', end='')
+            if status == MigrateStatus.CREATED:
                 print('created')
-            elif tbl_status == MigrateStatus.SKIPPED:
+                m_entry = MigrationEntry(project['name'], 
+                                         ResourceKind.PROJECT)
+                migration_rollback_manager.push_entry(m_entry)
+            elif status == MigrateStatus.SKIPPED:
                 print('skipped creation (was found).')
-
-            for transform, transform_status in create_transforms_for_table(project['name'],
-                                                                           table['name'],
-                                                                           ctx.parent.obj['usercontext'],
-                                                                           target_user_profile):
-                print(f'\t\tTransform {transform["name"]}: ', end='')
-                if transform_status == MigrateStatus.CREATED:
+            for table, tbl_status in create_tables_for_project(project['name'],
+                                                            ctx.parent.obj['usercontext'],
+                                                            target_user_profile):
+                print(f'\tTable {table["name"]}: ', end='')
+                if tbl_status == MigrateStatus.CREATED:
                     print('created')
-                elif transform_status == MigrateStatus.SKIPPED:
+                    m_entry = MigrationEntry(table['name'], 
+                                         ResourceKind.TABLE,
+                                         [project['name']])
+                    migration_rollback_manager.push_entry(m_entry)
+                elif tbl_status == MigrateStatus.SKIPPED:
                     print('skipped creation (was found).')
-            print()
+
+                for transform, transform_status in create_transforms_for_table(project['name'],
+                                                                            table['name'],
+                                                                            ctx.parent.obj['usercontext'],
+                                                                            target_user_profile):
+                    print(f'\t\tTransform {transform["name"]}: ', end='')
+                    if transform_status == MigrateStatus.CREATED:
+                        print('created')
+                        m_entry = MigrationEntry(transform['name'], 
+                                                 ResourceKind.TRANSFORM,
+                                                 [project['name'], table['name']])
+                        migration_rollback_manager.push_entry(m_entry)
+                    elif transform_status == MigrateStatus.SKIPPED:
+                        print('skipped creation (was found).')
+                print()

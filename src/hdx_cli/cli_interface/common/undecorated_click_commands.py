@@ -331,3 +331,25 @@ def basic_settings(profile,
                 headers=headers,
                 body=updated_resource)
         print(f'Updated {resource["name"]} {key}')
+
+
+def basic_delete(profile, resource_path, resource_name: str):
+    hostname = profile.hostname
+    list_url = f'https://{hostname}{resource_path}'
+    auth = profile.auth
+    headers = {'Authorization': f'{auth.token_type} {auth.token}',
+               'Accept': 'application/json'}
+    resources = rest_ops.list(list_url, headers=headers)
+    url = None
+    for a_resource in resources:
+        if a_resource['name'] == resource_name:
+            if 'url' in a_resource:
+                url = a_resource['url']
+            else:
+                url = f"https://{hostname}{resource_path}{a_resource['uuid']}"
+            break
+    if not url:
+        return False
+    else:
+        rest_ops.delete(url, headers=headers)
+        return True
