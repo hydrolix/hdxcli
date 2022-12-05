@@ -10,13 +10,12 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import HdxCliException, LogicException
 
-from ..common.rest_operations import (create as command_create,
-                                      delete as command_delete,
+from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
                                       show as command_show)
 
 from ..common.misc_operations import settings as command_settings
-
+from ..common.undecorated_click_commands import basic_create
 
 
 @click.group(help="Table-related operations")
@@ -43,7 +42,20 @@ def table(ctx: click.Context):
         raise LogicException(f'Cannot find project: {project_name}') from idx_err
 
 
-table.add_command(command_create)
+@click.command(help='Create table.')
+@click.argument('table_name')
+@click.pass_context
+@report_error_and_exit(exctype=HdxCliException)
+def create(ctx: click.Context,
+           table_name: str):
+    user_profile = ctx.parent.obj['usercontext']
+    resource_path = ctx.parent.obj['resource_path']
+    basic_create(user_profile, resource_path,
+                 table_name, None, None)
+    print(f'Created table {table_name}.')
+
+
+table.add_command(create)
 table.add_command(command_delete)
 table.add_command(command_list)
 table.add_command(command_show)

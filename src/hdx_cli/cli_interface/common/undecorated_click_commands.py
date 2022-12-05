@@ -11,7 +11,6 @@ from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard
 from ...library_api.common import rest_operations as rest_ops
 
 
-
 def basic_create(profile,
                  resource_path,
                  resource_name: str,
@@ -30,6 +29,7 @@ def basic_create(profile,
         # This parameter is for dictionaries
         if body_from_file_type == 'json':
             with open(body_from_file, 'r', encoding='utf-8') as input_body:
+                print(input_body)
                 body = json.load(input_body)
                 body['name'] = f'{resource_name}'
         else:
@@ -52,12 +52,9 @@ def basic_create(profile,
 
 
 def basic_create_with_body_from_string(profile,
-                 resource_path,
-                 resource_name: str,
-                 body_from_string: Optional[str]
-                 # body_from_file_type='json',
-                 # sql
-                 ):
+                                       resource_path,
+                                       resource_name: str,
+                                       body_from_string: Optional[str]):
     hostname = profile.hostname
     url = f'https://{hostname}{resource_path}'
     token = profile.auth
@@ -353,3 +350,20 @@ def basic_delete(profile, resource_path, resource_name: str):
     else:
         rest_ops.delete(url, headers=headers)
         return True
+
+
+def basic_list(profile, resource_path):
+    hostname = profile.hostname
+    list_url = f'https://{hostname}{resource_path}'
+    auth_info: AuthInfo = profile.auth
+    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
+               'Accept': 'application/json'}
+    resources = rest_ops.list(list_url, headers=headers)
+    for resource in resources:
+        if isinstance(resource, str):
+            print(resource)
+        else:
+            print(resource['name'], end='')
+            if (settings := resource.get('settings')) and settings.get('is_default'):
+                print(' (default)', end='')
+            print()

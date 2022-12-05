@@ -19,7 +19,7 @@ class ResourceKind(Enum):
     PROJECT = 0
     TABLE = 1
     TRANSFORM = 2
-
+    FUNCTION = 3
 
 @dataclass(frozen=True)
 class MigrationEntry:

@@ -10,7 +10,10 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from .cached_operations import *
-from .undecorated_click_commands import basic_create, basic_show, basic_delete
+from .undecorated_click_commands import (basic_create,
+                                         basic_delete,
+                                         basic_list,
+                                         basic_show)
 
 
 @click.command(help='Create resource.')
@@ -69,21 +72,7 @@ def delete(ctx: click.Context, resource_name: str,
 def list_(ctx: click.Context):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
-    hostname = profile.hostname
-    list_url = f'https://{hostname}{resource_path}'
-    auth_info : AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
-    for resource in resources:
-        if isinstance(resources, str):
-            print(resource)
-        else:
-            print(resource['name'], end='')
-            if (settings := resource.get('settings')) and settings.get('is_default'):
-                print(' (default)', end='')
-            print()
-
+    basic_list(profile, resource_path)
 
 def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     """Returns plural and singular names for resource kind given a resource path.

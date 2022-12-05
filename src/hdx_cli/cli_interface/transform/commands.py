@@ -14,6 +14,7 @@ from ..common.rest_operations import (create as command_create,
 
 from ...library_api.common.context import ProfileUserContext
 from ..common.misc_operations import settings as command_settings
+from ..common.undecorated_click_commands import basic_create_with_body_from_string
 
 
 @click.group(help="Transform-related operations")
@@ -23,9 +24,27 @@ def transform(ctx: click.Context):
     basic_transform(ctx)
 
 
-transform.add_command(command_create)
+@click.command(help='Create transform.')
+@click.option('--body-from-file', '-f',
+              help='Use file contents as the transform settings.'
+              "'name' key from the body will be replaced by the given 'resource_name'.",
+              default=None)
+@click.argument('transform_name')
+@click.pass_context
+@report_error_and_exit(exctype=HdxCliException)
+def create(ctx: click.Context,
+           transform_name: str,
+           body_from_file):
+    user_profile = ctx.parent.obj['usercontext']
+    resource_path = ctx.parent.obj['resource_path']
+    with open(body_from_file, "r", encoding="utf-8") as f:
+        basic_create_with_body_from_string(user_profile, resource_path,
+                                           transform_name, f.read())
+    print(f'Created transform {transform_name}.')
+
+
+transform.add_command(create)
 transform.add_command(command_delete)
 transform.add_command(command_list)
 transform.add_command(command_show)
 transform.add_command(command_settings)
-#transform.add_command(command_set_default)

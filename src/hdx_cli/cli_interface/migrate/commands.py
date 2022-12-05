@@ -18,6 +18,7 @@ from ...library_api.common.generic_resource import access_resource_detailed
 from ...library_api.common.exceptions import LogicException, HdxCliException, HttpException
 from ...library_api.utility.decorators import report_error_and_exit
 from ..common.undecorated_click_commands import (basic_create,
+                                                 basic_list,
                                                  basic_show,
                                                  basic_create_with_body_from_string,
                                                  basic_settings)
@@ -110,6 +111,64 @@ def create_tables_for_project(project_name,
                 raise
         else:
             yield (table, MigrateStatus.CREATED)
+
+
+def create_functions_for_project(project_name,
+                                 source_profile: ProfileUserContext,
+                                 target_profile: ProfileUserContext):
+    source_project_functions, source_functions_url = access_resource_detailed(source_profile,
+                                                                        [('projects', project_name), ('functions', None)])
+    _, target_function_url = access_resource_detailed(target_profile, [('projects', project_name)])
+
+    source_functions_path = urlparse(f'{source_functions_url}').path
+    target_functions_path = urlparse(f'{target_function_url}functions/').path
+
+    for function in source_project_functions:
+        try:
+            function_show = json.loads(basic_show(source_profile, source_functions_path, function['name']))
+           
+            basic_create_with_body_from_string(target_profile,
+                                               target_functions_path,
+                                               function['name'],
+                                               json.dumps({'sql': function_show['sql']}))
+        except HttpException as exc:
+            if exc.error_code == 400:
+                yield (function, MigrateStatus.SKIPPED)
+            else:
+                raise
+        else:
+            yield (function, MigrateStatus.CREATED)
+
+
+# def create_dictionary_files_for_project(project_name,
+#                                         source_profile: ProfileUserContext,
+#                                         target_profile: ProfileUserContext):
+#     source_project_dictionaries_files, files_url = access_resource_detailed(source_profile,
+#                                                                     [('projects', project_name),
+#                                                                      ('dictionaries/files', None)])
+#     files_path = urlparse(files_url).path
+#     for dict_file in source_project_dictionaries_files:
+#         dict_file_url = f'{files_path}{dict_file}'
+#         print(dict_file_url)
+        # basic_list(target_profile, )
+        # print(dict_file_url)
+        # access_resource_detailed(source_profile,
+        #                          [('projects', project_name),
+        #                           ('dictionaries/files', None)])
+    #     try:
+    #         function_show = json.loads(basic_show(source_profile, source_functions_path, function['name']))
+
+    #         basic_create_with_body_from_string(target_profile,
+    #                                             target_functions_path,
+    #                                             function['name'],
+    #                                             json.dumps({'sql': function_show['sql']}))
+    #     except HttpException as exc:
+    #         if exc.error_code == 400:
+    #             yield (function, MigrateStatus.SKIPPED)
+    #         else:
+    #             raise
+    #     else:
+    #         yield (function, MigrateStatus.CREATED)
 
 
 def create_transforms_for_table(project_name,
@@ -210,7 +269,7 @@ def migrate(ctx: click.Context,
         project_whitelist = list(project_whitelist)
         try:
             project_whitelist.remove('hdx')
-        except:
+        except ValueError:
             pass
 
     # Blacklist hdx, which is special
@@ -231,6 +290,23 @@ def migrate(ctx: click.Context,
                 migration_rollback_manager.push_entry(m_entry)
             elif status == MigrateStatus.SKIPPED:
                 print('skipped creation (was found).')
+            
+            for func, func_status in create_functions_for_project(project['name'], 
+                                                                  ctx.parent.obj['usercontext'],
+                                                                  target_user_profile):
+                print(f'\tFunction {func["name"]}: ', end='')
+                if func_status == MigrateStatus.CREATED:
+                    print('created')
+                    m_entry = MigrationEntry(func['name'], 
+                                             ResourceKind.FUNCTION,
+                                            [project['name']])
+                    migration_rollback_manager.push_entry(m_entry)
+                elif func_status == MigrateStatus.SKIPPED:
+                    print('skipped creation (was found).')
+            # for d, status in create_dictionary_files_for_project(project['name'],
+            #                                                      ctx.parent.obj['usercontext'],
+            #                                                      target_user_profile):
+            #     pass
             for table, tbl_status in create_tables_for_project(project['name'],
                                                             ctx.parent.obj['usercontext'],
                                                             target_user_profile):
@@ -243,7 +319,6 @@ def migrate(ctx: click.Context,
                     migration_rollback_manager.push_entry(m_entry)
                 elif tbl_status == MigrateStatus.SKIPPED:
                     print('skipped creation (was found).')
-
                 for transform, transform_status in create_transforms_for_table(project['name'],
                                                                             table['name'],
                                                                             ctx.parent.obj['usercontext'],
