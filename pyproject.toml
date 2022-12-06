@@ -4,7 +4,7 @@ maintainers = [{name = "German Diago Gomez", email = "german@hydrolix.io"}]
 
 [tool.poetry]
 name = "hdxcli"
-version = "1.0-rc12"
+version = "1.0-rc14"
 description = "Hydrolix command line utility to do CRUD operations on projects, tables, transforms and other resources in Hydrolix clusters"
 authors = ["German Diago Gomez <german@hydrolix.io>"]
 license = "MIT license"
