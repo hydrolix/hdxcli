@@ -24,7 +24,7 @@ from ..common.undecorated_click_commands import (basic_create,
                                                  basic_settings)
 
 
-from .rollback import MigrateStatus, MigrationRollbackManager, MigrationEntry, ResourceKind
+from .rollback import MigrateStatus, MigrationRollbackManager, DoNothingMigrationRollbackManager, MigrationEntry, ResourceKind
 
 
 from ..common.misc_operations import settings as command_settings
@@ -207,15 +207,19 @@ def create_transforms_for_table(project_name,
 @click.command(help="Migrate projects to a target cluster. The migrate command takes of migrating"
                " projects, tables, transforms, dictionaries and functions. Projects can be whitelisted"
                " and blacklisted. Any project that already exists in the target cluster is considered to"
-               " be the same and will be skipped. "
-               " If the migration fails, an option to rollback the progress is offered by default."
-               " The rollback command will remove all the projects migrated so far but it does not currently"
-               " deal with functions and dictionaries.")
+               " be the same as in the source cluster and its creation will be skipped. However, "
+               " if the project has tables or other resources that exist in the source but not in the target, "
+               " those resources will be created.\n"
+               " If the migration fails, a rollback will happen by default. The rollback will rollback exactly "
+               " the resources that were created during the migration so far. Resources that already existed in "
+               " the target cluster before starting the migration will not be deleted, even if the source cluster "
+               " contains those resources (resource matching between source and cluster is done by name).")
 @click.argument('target_cluster_username', metavar='TARGET_CLUSTERUSERNAME', required=True, default=None)
 @click.argument('target_cluster_hostname', metavar='TARGET_CLUSTERHOSTNAME', required=True, default=None)
 @click.option('-p', '--target-cluster-password', required=False, default=None)
 @click.option('-B', '--project-blacklist', multiple=True, default=None, required=False)
 @click.option('-b', '--project-whitelist', multiple=True, default=None, required=False)
+@click.option('-R', '--no-rollback', default=False)
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
 def migrate(ctx: click.Context,
@@ -223,7 +227,8 @@ def migrate(ctx: click.Context,
             target_cluster_hostname,
             target_cluster_password,
             project_blacklist,
-            project_whitelist):
+            project_whitelist,
+            no_rollback):
     if project_blacklist and project_whitelist:
         raise LogicException('You can only use project whitelist or project black list but not both.')
 
@@ -276,7 +281,10 @@ def migrate(ctx: click.Context,
     if not project_blacklist and not project_whitelist:
         project_blacklist = ['hdx']
 
-    with MigrationRollbackManager(target_user_profile) as migration_rollback_manager:
+    mrm = MigrationRollbackManager
+    if no_rollback:
+        mrm = DoNothingMigrationRollbackManager
+    with mrm(target_user_profile, ) as migration_rollback_manager:
         for project, status in migrate_projects(ctx,
                                                 ctx.parent.obj['usercontext'],
                                                 target_user_profile,
@@ -291,7 +299,7 @@ def migrate(ctx: click.Context,
             elif status == MigrateStatus.SKIPPED:
                 print('skipped creation (was found).')
             
-            for func, func_status in create_functions_for_project(project['name'], 
+            for func, func_status in create_functions_for_project(project['name'],
                                                                   ctx.parent.obj['usercontext'],
                                                                   target_user_profile):
                 print(f'\tFunction {func["name"]}: ', end='')

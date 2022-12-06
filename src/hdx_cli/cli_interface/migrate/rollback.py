@@ -51,29 +51,27 @@ class MigrationRollbackManager:
                 print(f'Rolled back project {entry.name}')
         elif entry.resource_kind == ResourceKind.TABLE:
             _, table_url = access_resource_detailed(self._profile, 
-                                     [('projects', entry.parents[0]),
-                                     ('tables', entry.name)])
+                                                    [('projects', entry.parents[0]),
+                                                     ('tables', entry.name)])
             split_path = urlparse(table_url).path.split('/')
             resource_path = '/'.join(split_path[:-2])
             if basic_delete(self._profile, resource_path, entry.name):
                 print(f'Rolled back table {entry.name}')
         elif entry.resource_kind == ResourceKind.TRANSFORM:
             _, transform_url = access_resource_detailed(self._profile, 
-                                     [('projects', entry.parents[0]),
-                                     ('tables', entry.parents[1]),
-                                     ('transforms', entry.name)])
+                                                        [('projects', entry.parents[0]),
+                                                         ('tables', entry.parents[1]),
+                                                         ('transforms', entry.name)])
             split_path = urlparse(transform_url).path.split('/')
             resource_path = '/'.join(split_path[:-2])
             if basic_delete(self._profile, resource_path, entry.name):
                 print(f'Rolled back transform {entry.name}')
-
 
     def _rollback(self):
         current_entry = self.pop_entry()
         while current_entry:
             self._rollback_entry(current_entry)
             current_entry = self.pop_entry()
-
 
     def __enter__(self):
         return self
@@ -90,3 +88,28 @@ class MigrationRollbackManager:
                 result = input('A rollback was in progress, are you sure you want to abort without rolling back? (y/n): ')
                 if result.lower() == 'y':
                     done = True
+                else:
+                    done = False
+
+
+class DoNothingMigrationRollbackManager:
+    def __init__(self, profile):
+        pass
+
+    def push_entry(self, entry: MigrationEntry):
+        pass
+
+    def pop_entry(self):
+        pass
+
+    def _rollback_entry(self, entry: MigrationEntry):
+        pass
+
+    def _rollback(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type_, value, traceback):
+        pass
