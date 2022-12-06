@@ -213,7 +213,9 @@ def create_transforms_for_table(project_name,
                " If the migration fails, a rollback will happen by default. The rollback will rollback exactly "
                " the resources that were created during the migration so far. Resources that already existed in "
                " the target cluster before starting the migration will not be deleted, even if the source cluster "
-               " contains those resources (resource matching between source and cluster is done by name).")
+               " contains those resources (resource matching between source and cluster is done by name)."
+               " You can use black lists and white lists by giving repeated arguments with project names."
+               " Only one of blacklisting or whitelisting is allowed in the same migration command.")
 @click.argument('target_cluster_username', metavar='TARGET_CLUSTERUSERNAME', required=True, default=None)
 @click.argument('target_cluster_hostname', metavar='TARGET_CLUSTERHOSTNAME', required=True, default=None)
 @click.option('-p', '--target-cluster-password', required=False, default=None)
