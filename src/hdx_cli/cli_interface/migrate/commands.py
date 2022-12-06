@@ -204,7 +204,7 @@ def create_transforms_for_table(project_name,
             yield (transform, MigrateStatus.CREATED)
 
 
-@click.command(help="Migrate projects to a target cluster. The migrate command takes of migrating"
+@click.command(help="Migrate projects to a target cluster. The migrate command takes care of migrating"
                " projects, tables, transforms, dictionaries and functions. Projects can be whitelisted"
                " and blacklisted. Any project that already exists in the target cluster is considered to"
                " be the same as in the source cluster and its creation will be skipped. However, "
