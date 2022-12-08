@@ -33,6 +33,7 @@ class ProfileUserContext:
     dictionaryname : Optional[str] = None
     kafkaname : Optional[str] = None
     kinesisname : Optional[str] = None
+    scheme: str = 'https'
 
     def as_dict_for_config(self):
         dict_to_save = {}

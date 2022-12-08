@@ -89,7 +89,8 @@ def dict_file_delete(ctx: click.Context, dictionary_filename):
     profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']
     hostname = profile.hostname
-    resource_url = f'https://{hostname}{resource_path}/{dictionary_filename}'
+    scheme = profile.scheme
+    resource_url = f'{scheme}://{hostname}{resource_path}/{dictionary_filename}'
     auth = profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}

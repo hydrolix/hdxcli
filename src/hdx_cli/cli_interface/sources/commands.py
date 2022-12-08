@@ -29,7 +29,8 @@ def sources(ctx: click.Context):
         raise HdxCliException("Error. No project name provided and no 'projectname' set in profile")
     hostname = profile_info.hostname
     org_id = profile_info.org_id
-    list_projects_url = f'https://{hostname}/config/v1/orgs/{org_id}/projects/'
+    scheme = profile_info.scheme
+    list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
     token = profile_info.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
@@ -39,7 +40,7 @@ def sources(ctx: click.Context):
     try:
         project_id = [p['uuid'] for p in projects_list if p['name'] == project_name][0]
 
-        list_tables_url = f'https://{hostname}/config/v1/orgs/{org_id}/projects/{project_id}/tables'
+        list_tables_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/{project_id}/tables'
         tables_list = rest_ops.list(list_tables_url,
                                     headers=headers)
         table_id = [t['uuid'] for t in tables_list if t['name'] == table_name][0]

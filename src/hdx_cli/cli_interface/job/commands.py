@@ -39,7 +39,8 @@ def purgejobs(ctx):
     purgejobs_path = f'/config/v1/orgs/{org_id}/purgejobs/'
     profile = ctx.parent.obj['usercontext']
     hostname = profile.hostname
-    purgejobs_url = f'https://{hostname}{purgejobs_path}'
+    scheme = profile.scheme
+    purgejobs_url = f'{scheme}://{hostname}{purgejobs_path}'
 
     auth = profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
@@ -95,7 +96,8 @@ def ingest(ctx: click.Context,
     profile = ctx.parent.obj['usercontext']
 
     hostname = profile.hostname
-    url = f'https://{hostname}{resource_path}'
+    scheme = profile.scheme
+    url = f'{scheme}://{hostname}{resource_path}'
     token = profile.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
@@ -111,7 +113,7 @@ def ingest(ctx: click.Context,
             table_id = [t for t in find_tables(profile) if t['name'] == profile.tablename][0]['uuid']
 
             transforms_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/'
-            transforms_url = f'https://{hostname}{transforms_path}'
+            transforms_url = f'{scheme}://{hostname}{transforms_path}'
             transforms_list = rest_ops.list(transforms_url,
                                             headers=headers)
             try:
@@ -132,7 +134,8 @@ def cancel(ctx,
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
     hostname = profile.hostname
-    list_url = f'https://{hostname}{resource_path}'
+    scheme = profile.scheme
+    list_url = f'{scheme}://{hostname}{resource_path}'
     auth = profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
@@ -159,7 +162,8 @@ def retry(ctx,
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
     hostname = profile.hostname
-    list_url = f'https://{hostname}{resource_path}'
+    scheme = profile.scheme
+    list_url = f'{scheme}://{hostname}{resource_path}'
     auth = profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}

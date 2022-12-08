@@ -33,8 +33,9 @@ def access_resource_detailed(ctx: ProfileUserContext,
     token = profile_info.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
-    resource_url = (f'https://{hostname}/config/v1/orgs/{org_id}/' if not base_path else
-                    f'https://{hostname}{base_path}')
+    scheme = profile_info.scheme
+    resource_url = (f'{scheme}://{hostname}/config/v1/orgs/{org_id}/' if not base_path else
+                    f'{scheme}://{hostname}{base_path}')
     if not resource_kind_and_name:
         resource = rest_ops.list(resource_url,
                                  headers=headers)

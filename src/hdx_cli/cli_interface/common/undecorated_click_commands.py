@@ -19,7 +19,8 @@ def basic_create(profile,
                  # sql
                  ):
     hostname = profile.hostname
-    url = f'https://{hostname}{resource_path}'
+    scheme = profile.scheme
+    url = f'{scheme}://{hostname}{resource_path}'
     token = profile.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
@@ -57,7 +58,8 @@ def basic_create_with_body_from_string(profile,
                                        body_from_string: Optional[str],
                                        body_from_string_type='json'):
     hostname = profile.hostname
-    url = f'https://{hostname}{resource_path}'
+    scheme = profile.scheme
+    url = f'{scheme}://{hostname}{resource_path}'
     token = profile.auth
 
     body = None
@@ -79,7 +81,8 @@ def basic_create_with_body_from_string(profile,
 
 def basic_show(profile, resource_path, resource_name):
     hostname = profile.hostname
-    list_url = f'https://{hostname}{resource_path}'
+    scheme = profile.scheme
+    list_url = f'{scheme}://{hostname}{resource_path}'
     auth_info : AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
@@ -96,7 +99,8 @@ def basic_transform(ctx: click.Context):
         raise HdxCliException("Error. No project name provided and no 'projectname' set in profile")
     hostname = profile_info.hostname
     org_id = profile_info.org_id
-    list_projects_url = f'https://{hostname}/config/v1/orgs/{org_id}/projects/'
+    scheme = profile_info.scheme
+    list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
     token = profile_info.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
@@ -106,13 +110,13 @@ def basic_transform(ctx: click.Context):
     try:
         project_id = [p['uuid'] for p in projects_list if p['name'] == project_name][0]
 
-        list_tables_url = f'https://{hostname}/config/v1/orgs/{org_id}/projects/{project_id}/tables'
+        list_tables_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/{project_id}/tables'
         tables_list = rest_ops.list(list_tables_url,
                                     headers=headers)
         table_id = [t['uuid'] for t in tables_list if t['name'] == table_name][0]
 
         transforms_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/'
-        transforms_url = f'https://{hostname}{transforms_path}'
+        transforms_url = f'{scheme}://{hostname}{transforms_path}'
 
         transforms_list = rest_ops.list(transforms_url,
                                         headers=headers)
@@ -290,7 +294,8 @@ def basic_settings(profile,
                    value):
     """Given a resource type, it returns the settings that can be used for it"""
     hostname = profile.hostname
-    settings_url = f"https://{hostname}{resource_path}"
+    scheme = profile.scheme
+    settings_url = f"{scheme}://{hostname}{resource_path}"
     auth = profile.auth
     headers = {"Authorization": f"{auth.token_type} {auth.token}",
                "Accept": "application/json"}
@@ -342,7 +347,8 @@ def basic_settings(profile,
 
 def basic_delete(profile, resource_path, resource_name: str):
     hostname = profile.hostname
-    list_url = f'https://{hostname}{resource_path}'
+    scheme = profile.scheme
+    list_url = f'{scheme}://{hostname}{resource_path}'
     auth = profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
@@ -364,7 +370,8 @@ def basic_delete(profile, resource_path, resource_name: str):
 
 def basic_list(profile, resource_path):
     hostname = profile.hostname
-    list_url = f'https://{hostname}{resource_path}'
+    scheme = profile.scheme
+    list_url = f'{scheme}://{hostname}{resource_path}'
     auth_info: AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}

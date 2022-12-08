@@ -65,7 +65,8 @@ def delete(ctx: click.Context, resource_name: str,
         print(f'Deleted {resource_name}')
     else:
         print(f'Could not delete {resource_name}. Not found.')
-        
+
+
 @click.command(help='List resources.', name='list')
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
@@ -73,6 +74,7 @@ def list_(ctx: click.Context):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
     basic_list(profile, resource_path)
+
 
 def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     """Returns plural and singular names for resource kind given a resource path.

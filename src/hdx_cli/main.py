@@ -29,7 +29,7 @@ from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredE
 from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import try_first_time_use
 
-VERSION = "1.0-rc19"
+VERSION = "1.0-rc20"
 
 from hdx_cli.library_api.common.auth import (
     load_profile,
@@ -175,6 +175,10 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               default=None)
 @click.option('--source', help='Source for kinesis/kafka streams',
               default=None)
+@click.option('--uri-scheme',
+              help='Scheme used',
+              type=click.Choice(['http', 'https']),
+              default='https')
 @click.pass_context
 @report_error_and_exit(exctype=HdxCliException)
 # pylint: enable=line-too-long
@@ -187,7 +191,8 @@ def hdx_cli(ctx, profile,
             dictionary,
             password,
             profile_config_file,
-            source):
+            source,
+            uri_scheme):
     if ctx.invoked_subcommand == 'version':
         return
     "Command-line entry point for hdx cli interface"
@@ -213,7 +218,6 @@ def hdx_cli(ctx, profile,
                           password=password)
         user_context.auth = auth_info
         user_context.org_id = auth_info.org_id
-
         cache_dir_path = (Path(profile_config_file).parent
                           if profile_config_file else HDX_CLI_HOME_DIR)
         save_profile_cache(user_context,
@@ -223,6 +227,8 @@ def hdx_cli(ctx, profile,
                            org_id=auth_info.org_id,
                            cache_dir_path=cache_dir_path)
         user_context.auth = auth_info
+
+    user_context.scheme = uri_scheme
     # Command-line overrides
     if transform:
         user_context.transformname = transform

@@ -27,7 +27,8 @@ def function(ctx: click.Context):
     if not project_name:
         raise LogicException(f"No project parameter was provided and no project is set in profile '{profileinfo.profilename}'")
     org_id = profileinfo.org_id
-    list_projects_url = f'https://{hostname}/config/v1/orgs/{org_id}/projects/'
+    scheme = profileinfo.scheme
+    list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
     auth_token: AuthInfo = profileinfo.auth
     headers = {'Authorization': f'{auth_token.token_type} {auth_token.token}',
                'Accept': 'application/json'}
@@ -66,7 +67,8 @@ def create(ctx: click.Context,
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
     hostname = profile.hostname
-    url = f'https://{hostname}{resource_path}'
+    scheme = profile.scheme
+    url = f'{scheme}://{hostname}{resource_path}'
     token = profile.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}

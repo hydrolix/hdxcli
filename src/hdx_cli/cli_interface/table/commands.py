@@ -28,7 +28,8 @@ def table(ctx: click.Context):
     if not project_name:
         raise LogicException(f"No project parameter was provided and no project is set in profile '{profileinfo.profilename}'")
     org_id = profileinfo.org_id
-    list_projects_url = f'https://{hostname}/config/v1/orgs/{org_id}/projects/'
+    scheme = profileinfo.scheme
+    list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
     auth_token: AuthInfo = profileinfo.auth
     headers = {'Authorization': f'{auth_token.token_type} {auth_token.token}',
                'Accept': 'application/json'}
