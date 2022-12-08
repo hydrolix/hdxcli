@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import io
 import os
 import tempfile
 from urllib.parse import urlparse
@@ -9,6 +10,7 @@ import json
 import toml
 
 from ..common import rest_operations as ro
+from ...library_api.common import rest_operations as lro
 from ...library_api.common.context import ProfileLoadContext, ProfileUserContext
 from ...library_api.common.first_use import try_first_time_use
 from ...library_api.common.validation import is_valid_hostname, is_valid_username
@@ -69,7 +71,6 @@ def migrate_projects(ctx: click.Context,
             # basic_create_with_body_from_string(target_profile,
             #                                    target_resource_path,
             #                                    project['name'])
-
         except HttpException as exc:
             if exc.error_code == 400:
                 yield (project, MigrateStatus.SKIPPED)
@@ -140,35 +141,66 @@ def create_functions_for_project(project_name,
             yield (function, MigrateStatus.CREATED)
 
 
-# def create_dictionary_files_for_project(project_name,
-#                                         source_profile: ProfileUserContext,
-#                                         target_profile: ProfileUserContext):
-#     source_project_dictionaries_files, files_url = access_resource_detailed(source_profile,
-#                                                                     [('projects', project_name),
-#                                                                      ('dictionaries/files', None)])
-#     files_path = urlparse(files_url).path
-#     for dict_file in source_project_dictionaries_files:
-#         dict_file_url = f'{files_path}{dict_file}'
-#         print(dict_file_url)
-        # basic_list(target_profile, )
-        # print(dict_file_url)
-        # access_resource_detailed(source_profile,
-        #                          [('projects', project_name),
-        #                           ('dictionaries/files', None)])
-    #     try:
-    #         function_show = json.loads(basic_show(source_profile, source_functions_path, function['name']))
+def create_dictionaries_for_project(project_name,
+                                    source_profile: ProfileUserContext,
+                                    target_profile: ProfileUserContext):
+    source_project_dictionaries, _ = access_resource_detailed(source_profile,
+                                                              [('projects', project_name),
+                                                               ('dictionaries', None)])
+    _, target_project_url = access_resource_detailed(target_profile,
+                                                     [('projects', project_name)])
+    target_project_path = urlparse(target_project_url).path
+    target_dict_path = f'{target_project_path}dictionaries/'
+    dictionary_files_so_far = set()
+    for dic in source_project_dictionaries:
+        d_settings = dic['settings']
+        d_name = dic['name']
+        d_file = d_settings['filename']
+        d_format = d_settings['format']
+        table_name = f'{project_name}_{d_name}'
+        query_endpoint = f'https://{source_profile.hostname}/query/?query=SELECT * FROM {table_name} FORMAT {d_format}'
+        headers = {'Authorization': f'{source_profile.auth.token_type} {source_profile.auth.token}',
+                   'Accept': '*/*'}
+        contents = lro.get(query_endpoint, headers=headers, fmt='verbatim')
+        try:
+            if d_file not in dictionary_files_so_far:
+                _create_dictionary_file_for_project(project_name, d_file, contents,
+                                                    target_profile)
+                dictionary_files_so_far.add(d_file)
+        except HttpException as exc:
+            # Dictionary file existed, no need to create it
+            if exc.error_code == 400:
+                yield (dic, MigrateStatus.SKIPPED)
+            # Genuine error, abort
+            else:
+                raise
+        finally:
+            try:
+                basic_create_with_body_from_string(target_profile,
+                                                   target_dict_path,
+                                                   d_name,
+                                                   json.dumps({'settings': d_settings}))
+            except HttpException as exc:
+                if exc.error_code == 400:
+                    yield (dic, MigrateStatus.SKIPPED)
+                raise
+            else:
+                yield (dic, MigrateStatus.CREATED)
 
-    #         basic_create_with_body_from_string(target_profile,
-    #                                             target_functions_path,
-    #                                             function['name'],
-    #                                             json.dumps({'sql': function_show['sql']}))
-    #     except HttpException as exc:
-    #         if exc.error_code == 400:
-    #             yield (function, MigrateStatus.SKIPPED)
-    #         else:
-    #             raise
-    #     else:
-    #         yield (function, MigrateStatus.CREATED)
+
+def _create_dictionary_file_for_project(project_name,
+                                        dict_file,
+                                        contents,
+                                        profile: ProfileUserContext):
+    _, project_url = access_resource_detailed(profile,
+                                              [('projects', project_name)])
+
+    headers = {'Authorization': f'{profile.auth.token_type} {profile.auth.token}',
+               'Accept': '*/*'}
+    file_url = f'{project_url}dictionaries/files/'
+    lro.create_file(file_url, headers=headers,
+                    file_stream=io.BytesIO(contents),
+                    remote_filename=dict_file)
 
 
 def create_transforms_for_table(project_name,
@@ -313,10 +345,19 @@ def migrate(ctx: click.Context,
                     migration_rollback_manager.push_entry(m_entry)
                 elif func_status == MigrateStatus.SKIPPED:
                     print('skipped creation (was found).')
-            # for d, status in create_dictionary_files_for_project(project['name'],
-            #                                                      ctx.parent.obj['usercontext'],
-            #                                                      target_user_profile):
-            #     pass
+            for dictionary, dict_status in create_dictionaries_for_project(project['name'],
+                                                             ctx.parent.obj['usercontext'],
+                                                             target_user_profile):
+                print(f'\tDictionary {dictionary["name"]}: ', end='')
+                if dict_status == MigrateStatus.CREATED:
+                    print('created')
+                    m_entry = MigrationEntry(dictionary['name'],
+                                             ResourceKind.DICTIONARY,
+                                             [project['name']])
+                    migration_rollback_manager.push_entry(m_entry)
+                elif dict_status == MigrateStatus.SKIPPED:
+                    print('skipped creation (was found).')
+
             for table, tbl_status in create_tables_for_project(project['name'],
                                                             ctx.parent.obj['usercontext'],
                                                             target_user_profile):

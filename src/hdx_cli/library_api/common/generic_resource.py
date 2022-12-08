@@ -35,6 +35,11 @@ def access_resource_detailed(ctx: ProfileUserContext,
                'Accept': 'application/json'}
     resource_url = (f'https://{hostname}/config/v1/orgs/{org_id}/' if not base_path else
                     f'https://{hostname}{base_path}')
+    if not resource_kind_and_name:
+        resource = rest_ops.list(resource_url,
+                                 headers=headers)
+        return (resource, resource_url)
+
     for resource, resource_name in resource_kind_and_name:
         resource_url = f'{resource_url}{resource}/'
         resource_list = rest_ops.list(resource_url,
@@ -44,13 +49,11 @@ def access_resource_detailed(ctx: ProfileUserContext,
         try:
             a_resource = [r for r in resource_list if r['name'] == resource_name][0]
         except:
-            print(resource, resource_name)
-            print(resource_url)
-            print(resource_name)
-            print(resource_list)
-            print(headers)
             raise
         resource_url = f'{resource_url}{a_resource["uuid"]}/'
+    if not resource_kind_and_name:
+        pass
+
     return (a_resource, resource_url)
 
 

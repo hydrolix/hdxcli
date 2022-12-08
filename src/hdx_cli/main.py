@@ -38,7 +38,7 @@ from hdx_cli.library_api.common.auth import (
 from hdx_cli.cli_interface.set import commands as set_commands
 from hdx_cli.library_api.common.login import login
 
-VERSION = '1.0rc16'
+VERSION = '1.0rc17'
 
 def _first_time_use_config(profile_config_file):
     print('No configuration was found to access your hydrolix cluster.')

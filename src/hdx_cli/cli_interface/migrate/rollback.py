@@ -9,7 +9,6 @@ from ...library_api.common.generic_resource import access_resource_detailed
 from ...library_api.common.context import ProfileUserContext
 
 
-
 class MigrateStatus(Enum):
     CREATED = 0
     SKIPPED = 1
@@ -20,12 +19,14 @@ class ResourceKind(Enum):
     TABLE = 1
     TRANSFORM = 2
     FUNCTION = 3
+    DICTIONARY = 4
 
 @dataclass(frozen=True)
 class MigrationEntry:
     name: str
     resource_kind: str = ResourceKind.PROJECT
     parents: List[str] = None
+
 
 class MigrationRollbackManager:
     def __init__(self, profile):
@@ -49,8 +50,25 @@ class MigrationRollbackManager:
             resource_path = '/'.join(split_path[:-2])
             if basic_delete(self._profile, resource_path, entry.name):
                 print(f'Rolled back project {entry.name}')
+        elif entry.resource_kind == ResourceKind.FUNCTION:
+            _, function_url = access_resource_detailed(self._profile,
+                                                    [('projects', entry.parents[0]),
+                                                     ('functions', entry.name)])
+            split_path = urlparse(function_url).path.split('/')
+            resource_path = '/'.join(split_path[:-2])
+            if basic_delete(self._profile, resource_path, entry.name):
+                print(f'Rolled back function {entry.name}')
+
+        elif entry.resource_kind == ResourceKind.DICTIONARY:
+            _, dict_url = access_resource_detailed(self._profile,
+                                                    [('projects', entry.parents[0]),
+                                                     ('dictionaries', entry.name)])
+            split_path = urlparse(dict_url).path.split('/')
+            resource_path = '/'.join(split_path[:-2])
+            if basic_delete(self._profile, resource_path, entry.name):
+                print(f'Rolled back dictionary {entry.name}')
         elif entry.resource_kind == ResourceKind.TABLE:
-            _, table_url = access_resource_detailed(self._profile, 
+            _, table_url = access_resource_detailed(self._profile,
                                                     [('projects', entry.parents[0]),
                                                      ('tables', entry.name)])
             split_path = urlparse(table_url).path.split('/')
@@ -58,7 +76,7 @@ class MigrationRollbackManager:
             if basic_delete(self._profile, resource_path, entry.name):
                 print(f'Rolled back table {entry.name}')
         elif entry.resource_kind == ResourceKind.TRANSFORM:
-            _, transform_url = access_resource_detailed(self._profile, 
+            _, transform_url = access_resource_detailed(self._profile,
                                                         [('projects', entry.parents[0]),
                                                          ('tables', entry.parents[1]),
                                                          ('transforms', entry.name)])
@@ -77,8 +95,10 @@ class MigrationRollbackManager:
         return self
 
     def __exit__(self, type_, value, traceback):
+
         if not traceback:
             return
+        print('Rolling back migration changes...')
         done = False
         while not done:
             try:
@@ -86,10 +106,7 @@ class MigrationRollbackManager:
                 done = True
             except KeyboardInterrupt:
                 result = input('A rollback was in progress, are you sure you want to abort without rolling back? (y/n): ')
-                if result.lower() == 'y':
-                    done = True
-                else:
-                    done = False
+                done = result.lower() == 'y'
 
 
 class DoNothingMigrationRollbackManager:

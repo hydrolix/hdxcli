@@ -1,7 +1,7 @@
 """Commands relative to project handling  operations"""
 import click
 
-from ...library_api.common.generic_resource import access_resource
+from ...library_api.common.generic_resource import access_resource, access_resource_detailed
 
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import HdxCliException
@@ -13,8 +13,9 @@ from ..common.rest_operations import (delete as command_delete,
 
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import (basic_create,
-                                                 basic_create_with_body_from_string)
-
+                                                 basic_create_with_body_from_string,
+                                                 basic_list,
+                                                 basic_show)
 
 
 @click.group(help="Dictionary-related operations")
@@ -79,12 +80,28 @@ def upload_file_dict(ctx: click.Context,
     print(f'Uploaded dictionary file from {dictionary_file_to_upload} with name {dictionary_filename}.')
 
 
+@click.command(help='Delete dictionary file.')
+@click.argument('dictionary_filename')
+@click.pass_context
+@report_error_and_exit(exctype=HdxCliException)
+def dict_file_delete(ctx: click.Context, dictionary_filename):
+    profile = ctx.parent.obj['usercontext']
+    resource_path = ctx.parent.obj['resource_path']
+    hostname = profile.hostname
+    resource_url = f'https://{hostname}{resource_path}/{dictionary_filename}'
+    auth = profile.auth
+    headers = {'Authorization': f'{auth.token_type} {auth.token}',
+               'Accept': 'application/json'}
+    rest_ops.delete(resource_url, headers=headers)
+
+
 dictionary.add_command(create_dict, name='create')
 dictionary.add_command(files)
 files.add_command(upload_file_dict, name='upload')
 files.add_command(command_list)
+files.add_command(dict_file_delete, name='delete')
 
 dictionary.add_command(command_list)
-# dictionary.add_command(command_delete)
+dictionary.add_command(command_delete)
 dictionary.add_command(command_show)
 dictionary.add_command(command_settings)

@@ -54,15 +54,26 @@ def basic_create(profile,
 def basic_create_with_body_from_string(profile,
                                        resource_path,
                                        resource_name: str,
-                                       body_from_string: Optional[str]):
+                                       body_from_string: Optional[str],
+                                       body_from_string_type='json'):
     hostname = profile.hostname
     url = f'https://{hostname}{resource_path}'
     token = profile.auth
-    headers = {'Authorization': f'{token.token_type} {token.token}',
-               'Accept': 'application/json'}
-    body = json.loads(body_from_string)
-    body['name'] = f'{resource_name}'
-    rest_ops.create(url, body=body, headers=headers)
+
+    body = None
+    headers = {}
+    if body_from_string_type != 'json':
+        headers = {'Authorization': f'{token.token_type} {token.token}',
+                   # This is basically hardcoding. Could be better
+                   'Content-Type': f'application/CSV',
+                   'Accept': '*/*'}
+        body = body_from_string
+    else:
+        headers = {'Authorization': f'{token.token_type} {token.token}',
+                   'Accept': 'application/json'}
+        body = json.loads(body_from_string)
+        body['name'] = f'{resource_name}'
+    rest_ops.create(url, body=body, headers=headers, body_type=body_from_string_type)
 
 
 
@@ -73,7 +84,6 @@ def basic_show(profile, resource_path, resource_name):
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
     resources = rest_ops.list(list_url, headers=headers)
-
     for resource in resources:
         if resource['name'] == resource_name:
             return json.dumps(resource)
