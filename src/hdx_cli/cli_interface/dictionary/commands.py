@@ -62,6 +62,7 @@ def create_dict(ctx: click.Context,
 @click.option('--body-from-file-type', '-t',
               type=click.Choice(('json', 'verbatim')),
               help='How to interpret the body from option. ',
+              metavar='BODYFROMFILETYPE',
               default='json')
 @click.argument('dictionary_file_to_upload')
 @click.argument('dictionary_filename')

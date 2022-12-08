@@ -29,6 +29,7 @@ from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredE
 from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import try_first_time_use
 
+VERSION = "1.0-rc19"
 
 from hdx_cli.library_api.common.auth import (
     load_profile,
@@ -38,7 +39,7 @@ from hdx_cli.library_api.common.auth import (
 from hdx_cli.cli_interface.set import commands as set_commands
 from hdx_cli.library_api.common.login import login
 
-VERSION = '1.0rc17'
+
 
 def _first_time_use_config(profile_config_file):
     print('No configuration was found to access your hydrolix cluster.')
@@ -152,9 +153,9 @@ def fail_if_token_expired(user_context: ProfileUserContext):
              ' to perform operations on different profiles and sets of projects and tables.')
 @click.option('--profile', help="Perform operation with a different profile. (Default profile is 'default')",
               metavar='PROFILENAME', default=None)
-@click.option('--project', help="Explicitly pass the project name. If one was set it will be overridden.",
+@click.option('--project', help="Use or override project set in the profile.",
               metavar='PROJECTNAME', default=None)
-@click.option('--table', help="Use or override table from that set in the profile.",
+@click.option('--table', help="Use or override table set in the profile.",
               metavar='TABLENAME', default=None)
 @click.option('--transform',
               help="Explicitly pass the transform name. If none is given, the default transform for the used table is used.",

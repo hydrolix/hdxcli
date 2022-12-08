@@ -28,6 +28,7 @@ def transform(ctx: click.Context):
 @click.option('--body-from-file', '-f',
               help='Use file contents as the transform settings.'
               "'name' key from the body will be replaced by the given 'resource_name'.",
+              metavar='BODYFROMFILE',
               default=None)
 @click.argument('transform_name')
 @click.pass_context
