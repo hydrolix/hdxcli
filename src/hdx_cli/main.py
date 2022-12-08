@@ -154,7 +154,7 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               metavar='PROFILENAME', default=None)
 @click.option('--project', help="Explicitly pass the project name. If one was set it will be overridden.",
               metavar='PROJECTNAME', default=None)
-@click.option('--table', help="Perform operation with a different profile. (Default profile is 'default')",
+@click.option('--table', help="Use or override table from that set in the profile.",
               metavar='TABLENAME', default=None)
 @click.option('--transform',
               help="Explicitly pass the transform name. If none is given, the default transform for the used table is used.",
