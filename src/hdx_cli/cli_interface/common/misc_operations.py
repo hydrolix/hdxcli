@@ -20,7 +20,7 @@ from ..common.undecorated_click_commands import basic_settings
 @click.argument("key", required=False, default=None)
 @click.argument("value", required=False, default=None)
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def settings(ctx: click.Context,
              key,
              value):

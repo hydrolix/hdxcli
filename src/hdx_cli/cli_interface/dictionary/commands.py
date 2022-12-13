@@ -20,7 +20,7 @@ from ..common.undecorated_click_commands import (basic_create,
 
 @click.group(help="Dictionary-related operations")
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def dictionary(ctx: click.Context):
     profileinfo = ctx.parent.obj['usercontext']
     org_id = profileinfo.org_id
@@ -33,7 +33,7 @@ def dictionary(ctx: click.Context):
 
 @click.group(help="Files operations")
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def files(ctx: click.Context):
     profileinfo = ctx.parent.obj['usercontext']
     resource_path = f'{ctx.obj["resource_path"]}files'
@@ -45,7 +45,7 @@ def files(ctx: click.Context):
 @click.argument('dictionary_description_file')
 @click.argument('dictionary_name')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def create_dict(ctx: click.Context,
                 dictionary_description_file,
                 dictionary_name: str):
@@ -67,7 +67,7 @@ def create_dict(ctx: click.Context,
 @click.argument('dictionary_file_to_upload')
 @click.argument('dictionary_filename')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def upload_file_dict(ctx: click.Context,
                      dictionary_file_to_upload: str,
                      dictionary_filename,
@@ -84,7 +84,7 @@ def upload_file_dict(ctx: click.Context,
 @click.command(help='Delete dictionary file.')
 @click.argument('dictionary_filename')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def dict_file_delete(ctx: click.Context, dictionary_filename):
     profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']

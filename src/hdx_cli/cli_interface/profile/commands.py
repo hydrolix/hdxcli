@@ -13,7 +13,7 @@ def profile(ctx: click.Context):
 
 @click.command(help='List profiles')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def profile_show(ctx: click.Context):
     profilename = ctx.parent.obj['usercontext'].profilename
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
@@ -26,7 +26,7 @@ def profile_show(ctx: click.Context):
 
 @click.command(help='Show profile')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def profile_list(ctx: click.Context):
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
         cfg_dict = toml.load(config_file)

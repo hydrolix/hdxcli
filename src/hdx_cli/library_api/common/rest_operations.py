@@ -49,9 +49,10 @@ def update_with_patch(url, *,
     if result.status_code != 200:
         raise HttpException(result.status_code, result.content)
 
+
 def update_with_put(url, *,
-           headers,
-           body):
+                    headers,
+                    body):
     result = requests.put(url,
                           json=body,
                           headers=headers,

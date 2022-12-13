@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict, Any
 
 import json
 import click
@@ -216,9 +216,10 @@ def _format_elem(elem, obj_detailed=True):
     elif isinstance(elem, dict):
         return _format_dict(elem, detailed=obj_detailed)
     else:
-        if isinstance(elem, str):
-            return f"'{str(elem)}'"
-        return str(elem)
+        if isinstance(elem, KeyAbsent):
+            return "(Key absent)"
+        return json.dumps(elem)
+
 
 def _format_setting(dotted_key, value, resource_value):
     return f"{dotted_key:<90}{value:<30}{_format_elem(resource_value):<40}"
@@ -288,6 +289,31 @@ def _cleanup_some_fields_when_updateworkaround(body_dict):
     return body_dict
 
 
+DottedKey = str
+
+
+def _settings_update(resource: Dict[str, Any],
+                     key: DottedKey,
+                     value: Any):
+    "Update resource and return it with updated_data"
+    key_parts = key.split('.')
+
+    the_value = None
+    try:
+        the_value = json.loads(value)
+    except json.JSONDecodeError:
+        the_value = value
+    resource_key = resource[key_parts[0]]
+    for k in key_parts[1:-1]:
+        resource_key = resource_key[k]
+
+    if len(key_parts) > 1:
+        resource_key[key_parts[-1]] = the_value
+    else:
+        resource_key = the_value
+    return resource
+
+
 def basic_settings(profile,
                    resource_path,
                    key,
@@ -300,7 +326,6 @@ def basic_settings(profile,
     headers = {"Authorization": f"{auth.token_type} {auth.token}",
                "Accept": "application/json"}
     options = rest_ops.options(settings_url, headers=headers)["actions"]["POST"]
-
     resource_kind_plural, resource_kind = (
         _heuristically_get_resource_kind(resource_path))
 
@@ -309,13 +334,12 @@ def basic_settings(profile,
     resources = None
     try:
         resources = globals()["find_" + resource_kind_plural](profile)
-        resource = [ r for r in resources if r["name"] == getattr(profile, resource_kind + "name")][0]
+        resource = [r for r in resources if r["name"] == getattr(profile, resource_kind + "name")][0]
     except IndexError as idx_err:
-        raise LogicException(f'Cannot find resource.') from idx_err
+        raise LogicException('Cannot find resource.') from idx_err
 
     if not key:
-        project_str = f'Project: {profile.projectname}'
-        print(project_str)
+        # project_str = f'Project: {profile.projectname}'
         print(f'{"-" * (90 + 30 + 40)}')
         print(_format_settings_header([("name", 90), ("type", 30), ("value", 40)]))
         _for_each_setting(options, resource=resource)
@@ -326,22 +350,19 @@ def basic_settings(profile,
             print(f'Key not found in {resource["name"]}: {key}')
     else:
         try:
+            this_resource_url = f'{settings_url}{resource["uuid"]}'
+            resource = _settings_update(resource, key, value)
+            rest_ops.update_with_put(
+                this_resource_url,
+                headers=headers,
+                body=resource)
+        except:
             patch_data = _create_dict_from_dotted_key_and_value(key, value)
             this_resource_url = f'{settings_url}{resource["uuid"]}'
             rest_ops.update_with_patch(
                 this_resource_url,
                 headers=headers,
                 body=patch_data)
-        except:
-            put_data = _create_dict_from_dotted_key_and_value(key, value)
-            this_resource_url = f'{settings_url}{resource["uuid"]}'
-            updated_resource = resource
-            updated_resource.update(put_data)
-            # updated_resource = _cleanup_auto_ingest_workaround(updated_resource)
-            rest_ops.update_with_put(
-                this_resource_url,
-                headers=headers,
-                body=updated_resource)
         print(f'Updated {resource["name"]} {key}')
 
 

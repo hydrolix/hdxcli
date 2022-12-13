@@ -23,13 +23,13 @@ def _any_source_impl(ctx: click.Context, source_name):
 
 @click.group(help="Kafka source operations")
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def kafka(ctx: click.Context):
     _any_source_impl(ctx, 'kafka')
 
 @click.group(help="Kinesis source operations")
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def kinesis(ctx: click.Context):
     _any_source_impl(ctx, 'kinesis')
 
@@ -38,7 +38,7 @@ def kinesis(ctx: click.Context):
 @click.argument('source_filename')
 @click.argument('source_name')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            source_filename: str,
            source_name: str):

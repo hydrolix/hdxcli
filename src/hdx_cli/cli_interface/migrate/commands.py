@@ -255,7 +255,7 @@ def create_transforms_for_table(project_name,
 @click.option('-b', '--project-whitelist', multiple=True, default=None, required=False)
 @click.option('-R', '--no-rollback', default=False)
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def migrate(ctx: click.Context,
             target_cluster_username,
             target_cluster_hostname,

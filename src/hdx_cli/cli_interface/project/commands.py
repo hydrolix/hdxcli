@@ -33,7 +33,7 @@ def project(ctx: click.Context):
 @click.command(help='Create project.')
 @click.argument('project_name')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            project_name: str):
     user_profile = ctx.parent.obj['usercontext']

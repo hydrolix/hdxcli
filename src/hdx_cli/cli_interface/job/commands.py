@@ -29,7 +29,7 @@ def job(ctx):
 
 @click.command(help='Purge all batch jobs in your org.')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 @confirmation_prompt(prompt="Please type 'purge all jobs' to proceed: ",
                      confirmation_message='purge all jobs',
                      fail_message='Incorrect prompt input: jobs have not been purged')
@@ -86,7 +86,7 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 @click.argument('jobname')
 @click.argument('jobname_file')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 # pylint:enable=line-too-long
 def ingest(ctx: click.Context,
            jobname: str,
@@ -128,7 +128,7 @@ def ingest(ctx: click.Context,
 @click.command(help='Cancels a job.')
 @click.argument('job_name')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def cancel(ctx,
            job_name):
     resource_path = ctx.parent.obj['resource_path']
@@ -156,7 +156,7 @@ def cancel(ctx,
 @click.command(help='Retries a job.')
 @click.argument('job_name')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def retry(ctx,
            job_name):
     resource_path = ctx.parent.obj['resource_path']

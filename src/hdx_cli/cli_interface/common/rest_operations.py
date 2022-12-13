@@ -33,7 +33,7 @@ from .undecorated_click_commands import (basic_create,
 #               help="Create will use as 'sql' field the contents of the sql string",
 #               default=None)
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            resource_name: str,
            body_from_file,
@@ -55,7 +55,7 @@ _confirmation_prompt = partial(dynamic_confirmation_prompt,
               help='Suppress confirmation to delete resource.', show_default=True, default=False)
 @click.argument('resource_name')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def delete(ctx: click.Context, resource_name: str,
            disable_confirmation_prompt):
     _confirmation_prompt(prompt_active=not disable_confirmation_prompt)
@@ -69,7 +69,7 @@ def delete(ctx: click.Context, resource_name: str,
 
 @click.command(help='List resources.', name='list')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
@@ -97,7 +97,7 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 
 @click.command(help='Show resource. If not resource_name is provided, it will show the default if there is one.')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def show(ctx: click.Context):
     profile = ctx.parent.obj['usercontext']
     _, resource_kind = _heuristically_get_resource_kind(ctx.parent.obj['resource_path'])

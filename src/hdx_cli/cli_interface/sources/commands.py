@@ -21,7 +21,7 @@ from .summary import summary as command_summary
 
 @click.group(help="Sources-related operations")
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def sources(ctx: click.Context):
     profile_info : ProfileUserContext = ctx.obj['usercontext']
     project_name, table_name = profile_info.projectname, profile_info.tablename

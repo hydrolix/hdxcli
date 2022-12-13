@@ -19,7 +19,7 @@ from ..common.misc_operations import settings as command_settings
 
 @click.group(help="Function-related operations")
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def function(ctx: click.Context):
     profileinfo = ctx.parent.obj['usercontext']
     hostname = profileinfo.hostname
@@ -54,7 +54,7 @@ def function(ctx: click.Context):
               default=None)
 @click.argument('function_name')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            function_name: str,
            sql_from_file,

@@ -23,7 +23,7 @@ def _any_source_impl(ctx: click.Context, source_name):
 
 @click.group(help="Summary source operations")
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def summary(ctx: click.Context):
     _any_source_impl(ctx, 'summary')
 

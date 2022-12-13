@@ -19,7 +19,7 @@ from ..common.undecorated_click_commands import basic_create_with_body_from_stri
 
 @click.group(help="Transform-related operations")
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def transform(ctx: click.Context):
     basic_transform(ctx)
 
@@ -32,7 +32,7 @@ def transform(ctx: click.Context):
               default=None)
 @click.argument('transform_name')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            transform_name: str,
            body_from_file):

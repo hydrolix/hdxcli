@@ -20,7 +20,7 @@ from ..common.undecorated_click_commands import basic_create
 
 @click.group(help="Table-related operations")
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def table(ctx: click.Context):
     profileinfo = ctx.parent.obj['usercontext']
     hostname = profileinfo.hostname
@@ -46,7 +46,7 @@ def table(ctx: click.Context):
 @click.command(help='Create table.')
 @click.argument('table_name')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            table_name: str):
     user_profile = ctx.parent.obj['usercontext']

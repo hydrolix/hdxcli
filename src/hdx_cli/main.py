@@ -29,7 +29,7 @@ from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredE
 from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import try_first_time_use
 
-VERSION = "1.0-rc20"
+VERSION = "1.0-rc22"
 
 from hdx_cli.library_api.common.auth import (
     load_profile,
@@ -180,7 +180,7 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               type=click.Choice(['http', 'https']),
               default='https')
 @click.pass_context
-@report_error_and_exit(exctype=HdxCliException)
+@report_error_and_exit(exctype=Exception)
 # pylint: enable=line-too-long
 def hdx_cli(ctx, profile,
             project,
