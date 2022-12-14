@@ -6,7 +6,8 @@ from getpass import getpass
 import requests as req
 
 from ..userdata.token import AuthInfo
-from .exceptions import LoginException, HdxCliException
+from .exceptions import LoginException, HdxCliException, LogicException
+
 
 def _do_login(username, hostname,
               password,
@@ -18,14 +19,17 @@ def _do_login(username, hostname,
         login_data = {'username': f'{username}',
                       'password': f'{password}'}
         result = req.post(url, json=login_data,
-                          headers={'Accept': 'application/json'})
-    except Exception as exc:
-        raise LoginException() from exc
+                          headers={'Accept': 'application/json'},
+                          timeout=15)
+    except req.ConnectionError as exc:
+        raise LogicException(f"Connection error: could not stablish connection with host {hostname} (using {scheme}).") from exc
+    except req.ConnectTimeout as exc:
+        raise HdxCliException("Timeout exception.")
     else:
         if result.status_code != 200:
             raise LoginException(
-                f'Could not login. Error code {result.status_code}. '
-                f'Message: {str(result.content, encoding="utf-8")}')
+                f'Error {result.status_code}. '
+                f'Message: {json.loads(str(result.content, encoding="utf-8"))["detail"]}.')
         content = json.loads(result.content)
         token_expiration_time = (datetime.now()
                                  + timedelta(seconds=content['auth_token']['expires_in'] -
@@ -42,18 +46,17 @@ def _do_interactive_login(username, hostname,
                           use_ssl):
     password = getpass()
     return _do_login(username, hostname,
-             use_ssl=use_ssl,
-             password=password)
+                     use_ssl=use_ssl,
+                     password=password)
 
 
-def _retry(num_retries, failed_message, func,
+def _retry(num_retries, func,
            *args, **kwargs):
-
     for tried in range(num_retries):
         try:
             return func(*args, **kwargs)
-        except HdxCliException:
-            print(failed_message)
+        except HdxCliException as exc:
+            print(f'{exc}')
             if tried == num_retries - 1:
                 raise
     assert False, "Unreachable code"
@@ -65,8 +68,8 @@ def login(username, hostname,
           use_ssl=True) -> AuthInfo:
     """Login a user given a profile"""
     if not password:
-        auth_token = _retry(3, "Wrong password", _do_interactive_login,
-                      username, hostname,
-                      use_ssl=use_ssl)
+        auth_token = _retry(3, _do_interactive_login,
+                            username, hostname,
+                            use_ssl=use_ssl)
         return auth_token
     return _do_login(username, hostname, use_ssl=use_ssl, password=password)

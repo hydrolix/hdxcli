@@ -29,7 +29,7 @@ from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredE
 from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import try_first_time_use
 
-VERSION = "1.0-rc22"
+VERSION = "1.0-rc23"
 
 from hdx_cli.library_api.common.auth import (
     load_profile,
@@ -193,11 +193,12 @@ def hdx_cli(ctx, profile,
             profile_config_file,
             source,
             uri_scheme):
+    "Command-line entry point for hdx cli interface"
     if ctx.invoked_subcommand == 'version':
         return
-    "Command-line entry point for hdx cli interface"
-    try_first_time_use(_first_time_use_config, 
-                        profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
+
+    try_first_time_use(_first_time_use_config,
+                       profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
 
     load_context = ProfileLoadContext('default' if not profile else profile,
                                       profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
