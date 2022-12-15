@@ -46,9 +46,9 @@ def create(ctx: click.Context,
 
 
 _confirmation_prompt = partial(dynamic_confirmation_prompt,
-                        prompt="Please type 'delete this resource' to delete: ",
-                        confirmation_message='delete this resource',
-                        fail_message='Incorrect prompt input: resource was not deleted')
+                               prompt="Please type 'delete this resource' to delete: ",
+                               confirmation_message='delete this resource',
+                               fail_message='Incorrect prompt input: resource was not deleted')
 @click.command(help='Delete resource.')
 @click.option('--disable-confirmation-prompt',
               is_flag=True,

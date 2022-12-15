@@ -33,6 +33,7 @@ def profile_list(ctx: click.Context):
         for cfg_name in cfg_dict:
             print(cfg_name)
 
+
 profile.add_command(profile_list, name='list')
 profile.add_command(profile_show, name='show')
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import toml
 
+from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import LogicException
 from ...library_api.common.context import ProfileUserContext, ProfileLoadContext
 from ...library_api.common.auth import PROFILE_CONFIG_FILE
@@ -11,19 +12,22 @@ from ...library_api.common.auth import PROFILE_CONFIG_FILE
 def _serialize_to_config_file(profile: ProfileUserContext,
                               config_file_path: Path):
     all_profiles = None
-    with open(config_file_path, 'r') as stream:
+    with open(config_file_path, 'r', encoding='utf-8') as stream:
         all_profiles = toml.load(stream)
         all_profiles[profile.profilename] = profile.as_dict_for_config()
-    with open(config_file_path, 'w') as stream:
+    with open(config_file_path, 'w', encoding='utf-8') as stream:
         toml.dump(all_profiles, stream)
 
 
 @click.command(help='Set project and or/table to apply subsequent commands on it')
 @click.argument('projectname', metavar='PROJECT', required=False, default=None)
 @click.argument('tablename', metavar='TABLE', required=False, default=None)
+@click.option('--scheme', metavar='SCHEME', type=click.Choice(['http', 'https']),
+              default='http')
 @click.pass_context
-def set(ctx, projectname, tablename):
-    profile = ctx.obj['usercontext']
+@report_error_and_exit(exctype=Exception)
+def set(ctx, projectname, tablename, scheme):
+    profile: ProfileUserContext = ctx.obj['usercontext']
     # Currently the condition below cannot happen due to the fact that both projectname and table
     # are positional arguments. I leave it here because I could change def __iter__(self):
     # in the future
@@ -34,6 +38,7 @@ def set(ctx, projectname, tablename):
         profile.projectname = projectname
     if tablename:
         profile.tablename = tablename
+    profile.scheme = scheme
     _serialize_to_config_file(profile, profile.profile_config_file)
 
 

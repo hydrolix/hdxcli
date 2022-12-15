@@ -7,7 +7,7 @@ from typing import overload, Union
 import toml
 
 from .config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
-from .exceptions import ProfileNotFoundException, CacheFileNotFoundException
+from .exceptions import ProfileNotFoundException, CacheFileNotFoundException, LogicException
 from .context import ProfileUserContext, ProfileLoadContext
 from .cache import CacheDict
 from ..userdata.token import AuthInfo
@@ -37,12 +37,13 @@ def load_profile(load_profile_context:
         elif isinstance(load_profile_context, str):
             profile_config_file = PROFILE_CONFIG_FILE
             profile_name = load_profile_context
-
+        else:
+            raise LogicException('Wrong profile type.')
         with open(profile_config_file, 'r', encoding='utf-8') as stream:
-            profile = toml.load(stream)[profile_name]
-            profile['profilename'] = profile_name
-            profile['profile_config_file'] = profile_config_file
-            return ProfileUserContext(**profile)
+            profile_dict = toml.load(stream)[profile_name]
+            profile_dict['profilename'] = profile_name
+            profile_dict['profile_config_file'] = profile_config_file
+            return ProfileUserContext(**profile_dict)
     except FileNotFoundError as ex:
         raise ProfileNotFoundException(
             f'File not found: {profile_config_file}') from ex

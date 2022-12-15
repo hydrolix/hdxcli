@@ -12,7 +12,8 @@ class ProfileLoadContext:
 
 
 _PROFILE_USER_CONTEXT_SAVE_FIELDS = ['username', 'hostname',
-                                     'projectname', 'tablename']
+                                     'projectname', 'tablename',
+                                     'scheme']
 
 @dataclass
 class ProfileUserContext:
@@ -25,14 +26,14 @@ class ProfileUserContext:
     profile_config_file: Path
     org_id: Optional[str] = None
     auth: Optional[AuthInfo] = None
-    projectname : Optional[str] = None
-    tablename   : Optional[str] = None
-    transformname : Optional[str] = None
+    projectname: Optional[str] = None
+    tablename: Optional[str] = None
+    transformname: Optional[str] = None
     batchname: Optional[str] = None
     functionname: Optional[str] = None
     dictionaryname : Optional[str] = None
-    kafkaname : Optional[str] = None
-    kinesisname : Optional[str] = None
+    kafkaname: Optional[str] = None
+    kinesisname: Optional[str] = None
     scheme: str = 'https'
 
     def as_dict_for_config(self):

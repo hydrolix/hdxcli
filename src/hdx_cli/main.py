@@ -28,8 +28,10 @@ from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadCo
 from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException
 from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import try_first_time_use
+from hdx_cli.library_api.common.profile import save_profile
 
-VERSION = "1.0-rc24"
+
+VERSION = "1.0-rc25"
 
 from hdx_cli.library_api.common.auth import (
     load_profile,
@@ -38,7 +40,6 @@ from hdx_cli.library_api.common.auth import (
 
 from hdx_cli.cli_interface.set import commands as set_commands
 from hdx_cli.library_api.common.login import login
-
 
 
 def _first_time_use_config(profile_config_file):
@@ -58,10 +59,10 @@ def _first_time_use_config(profile_config_file):
         while not good_username:
             username = input('Please, type the user name of your cluster: ')
             good_username = is_valid_username(username)
-        config_data = {'default': {'username': username, 'hostname': hostname}}
-        os.makedirs(Path(profile_config_file).parent, exist_ok=True)
-        with open(profile_config_file, 'w+', encoding='utf-8') as config_file:
-            toml.dump(config_data, config_file)
+        save_profile(username,
+                     hostname,
+                     profile_config_file,
+                     'default')
         print(f'\nYour configuration with profile [default] has been created at {profile_config_file}')
         print('This will be the profile used to perform commands against by default')
         print('You can start working with hdx-cli now')
@@ -132,7 +133,8 @@ def load_set_config_parameters(user_context: ProfileUserContext,
     config_params = {'projectname':
                      (prof := load_profile(load_context)).projectname,
                      'tablename':
-                     prof.tablename}
+                     prof.tablename,
+                     'scheme': prof.scheme}
     user_ctx_dict = dc.asdict(user_context) | config_params
     # Keep old auth since asdict will transform AuthInfo into a dictionary.
     old_auth = user_context.auth
@@ -177,8 +179,8 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               default=None)
 @click.option('--uri-scheme',
               help='Scheme used',
-              type=click.Choice(['http', 'https']),
-              default='https')
+              type=click.Choice(['default', 'http', 'https']),
+              default='default')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 # pylint: enable=line-too-long
@@ -202,6 +204,7 @@ def hdx_cli(ctx, profile,
 
     load_context = ProfileLoadContext('default' if not profile else profile,
                                       profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
+    user_context = load_profile(load_context)
     load_set_params = ft.partial(load_set_config_parameters,
                                  load_context=load_context)
     # Load profile from cache
@@ -212,12 +215,13 @@ def hdx_cli(ctx, profile,
                                            load_ctx=load_context,
                                            # _chain_calls_ignore_exc Function configuration
                                            exctype=HdxCliException)
+
     if not user_context:
         user_context: ProfileUserContext = load_profile(load_context)
         auth_info = login(user_context.username,
                           user_context.hostname,
                           password=password,
-                          use_ssl=True if uri_scheme == 'https' else False)
+                          use_ssl=True if user_context.scheme == 'https' else False)
         user_context.auth = auth_info
         user_context.org_id = auth_info.org_id
         cache_dir_path = (Path(profile_config_file).parent
@@ -230,7 +234,8 @@ def hdx_cli(ctx, profile,
                            cache_dir_path=cache_dir_path)
         user_context.auth = auth_info
 
-    user_context.scheme = uri_scheme
+    if uri_scheme != 'default':
+        user_context.scheme = uri_scheme
     # Command-line overrides
     if transform:
         user_context.transformname = transform
