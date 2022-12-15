@@ -29,7 +29,7 @@ from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredE
 from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import try_first_time_use
 
-VERSION = "1.0-rc23"
+VERSION = "1.0-rc24"
 
 from hdx_cli.library_api.common.auth import (
     load_profile,
@@ -216,7 +216,8 @@ def hdx_cli(ctx, profile,
         user_context: ProfileUserContext = load_profile(load_context)
         auth_info = login(user_context.username,
                           user_context.hostname,
-                          password=password)
+                          password=password,
+                          use_ssl=True if uri_scheme == 'https' else False)
         user_context.auth = auth_info
         user_context.org_id = auth_info.org_id
         cache_dir_path = (Path(profile_config_file).parent
