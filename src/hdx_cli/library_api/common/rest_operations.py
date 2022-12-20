@@ -10,7 +10,6 @@ Headers = Dict[str, str]
 MAX_TIMEOUT = 30
 
 
-
 def create(url: str, *,
            headers: Headers,
            body: Dict[str, Any],
@@ -29,9 +28,9 @@ def create(url: str, *,
 
 
 def create_file(url: str, *,
-           headers: Headers, 
-           file_stream,
-           remote_filename):
+                headers: Headers,
+                file_stream,
+                remote_filename):
     result = requests.post(url, files={'file': file_stream}, data={'name': remote_filename},
                             headers=headers,
                             timeout=MAX_TIMEOUT)
@@ -39,9 +38,10 @@ def create_file(url: str, *,
     if result.status_code not in (201, 200):
         raise HttpException(result.status_code, result.content)
 
+
 def update_with_patch(url, *,
-           headers,
-           body):
+                      headers,
+                      body):
     result = requests.patch(url,
                           json=body,
                           headers=headers,

@@ -72,4 +72,6 @@ def login(username, hostname,
                             username, hostname,
                             use_ssl=use_ssl)
         return auth_token
-    return _do_login(username, hostname, use_ssl=use_ssl, password=password)
+    return _do_login(username, hostname,
+                     use_ssl=use_ssl,
+                     password=password)
