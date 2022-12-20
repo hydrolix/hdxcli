@@ -297,7 +297,9 @@ def _settings_update(resource: Dict[str, Any],
                      value: Any):
     "Update resource and return it with updated_data"
     key_parts = key.split('.')
-
+    if len(key_parts) == 1:
+        resource[key_parts[0]] = json.loads(value)
+        return resource
     the_value = None
     try:
         the_value = json.loads(value)
@@ -307,10 +309,7 @@ def _settings_update(resource: Dict[str, Any],
     for k in key_parts[1:-1]:
         resource_key = resource_key[k]
 
-    if len(key_parts) > 1:
-        resource_key[key_parts[-1]] = the_value
-    else:
-        resource_key = the_value
+    resource_key[key_parts[-1]] = the_value
     return resource
 
 

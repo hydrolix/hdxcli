@@ -31,7 +31,7 @@ from hdx_cli.library_api.common.first_use import try_first_time_use
 from hdx_cli.library_api.common.profile import save_profile
 
 
-VERSION = "1.0-rc25"
+VERSION = "1.0-rc26"
 
 from hdx_cli.library_api.common.auth import (
     load_profile,
