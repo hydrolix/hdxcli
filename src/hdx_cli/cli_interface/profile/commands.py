@@ -11,6 +11,7 @@ from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFIL
 def profile(ctx: click.Context):
     ctx.obj = {'usercontext': ctx.parent.obj['usercontext']}
 
+
 @click.command(help='List profiles')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -34,6 +35,11 @@ def profile_list(ctx: click.Context):
             print(cfg_name)
 
 
+@click.command(help='Edit profile')
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def profile_edit():
+    pass
+
 profile.add_command(profile_list, name='list')
 profile.add_command(profile_show, name='show')
-
