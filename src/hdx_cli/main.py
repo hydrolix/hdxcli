@@ -28,7 +28,7 @@ from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadCo
 from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException
 from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import try_first_time_use
-from hdx_cli.library_api.common.profile import save_profile
+from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
 
 
 VERSION = "1.0-rc26"
@@ -46,52 +46,17 @@ def _first_time_use_config(profile_config_file):
     print('No configuration was found to access your hydrolix cluster.')
     print('A new configuration will be created now.')
     print()
-    good_hostname = False
-    hostname = None
-    try:
-        while not good_hostname:
-            hostname = input('Please, type the host name of your cluster: ')
-            good_hostname = is_valid_hostname(hostname)
-            if not good_hostname:
-                print('Invalid host name.')
-        good_username = False
-        username = None
-        while not good_username:
-            username = input('Please, type the user name of your cluster: ')
-            good_username = is_valid_username(username)
-        save_profile(username,
-                     hostname,
-                     profile_config_file,
-                     'default')
-        print(f'\nYour configuration with profile [default] has been created at {profile_config_file}')
-        print('This will be the profile used to perform commands against by default')
-        print('You can start working with hdx-cli now')
-        sys.exit(0)
-    except KeyboardInterrupt:
-        sys.exit(-1)
-
-
-# def _save_profile_cache(a_profile: ProfileUserContext,
-#                         *,
-#                         token,
-#                         expiration_time: datetime,
-#                         org_id,
-#                         token_type,
-#                         cache_dir_path=None):
-#     """
-#     Save a cache file for this profile.
-#     The profile cache file is saved in cache_dir_path
-#     """
-#     os.makedirs(cache_dir_path, mode=0o700, exist_ok=True)
-#     username = a_profile.username
-#     hostname = a_profile.hostname
-#     with open(cache_dir_path / f'{a_profile.profilename}', 'w', encoding='utf-8') as f:
-#         CacheDict.build_from_dict({'org_id': f'{org_id}',
-#                                    'token':{'auth_token': token,
-#                                             'token_type': token_type,
-#                                             'expires_at': expiration_time},
-#                                    'username': f'{username}',
-#                                    'hostname': f'{hostname}'}).save_to_stream(f)
+    profile_wizard_info = get_profile_data_from_standard_input()
+    if not profile_wizard_info:
+        print('Configuration creation aborted')
+        return
+    save_profile(profile_wizard_info.username,
+                 profile_wizard_info.hostname,
+                 profile_config_file,
+                 'default',
+                 scheme=profile_wizard_info.scheme)
+    print(f'\nYour configuration with profile [default] has been created at {profile_config_file}')
+    print('-' * 80)
 
 
 def _chain_calls_ignore_exc(*funcs, **kwargs):

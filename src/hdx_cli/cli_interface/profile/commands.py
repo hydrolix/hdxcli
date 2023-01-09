@@ -38,8 +38,12 @@ def profile_list(ctx: click.Context):
 @click.command(help='Edit profile')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def profile_edit():
-    pass
+def profile_edit(ctx: click.Context,
+                 profile_name: str):
+    with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
+        cfg_dict = toml.load(config_file)
+
+
 
 profile.add_command(profile_list, name='list')
 profile.add_command(profile_show, name='show')
