@@ -45,7 +45,10 @@ def profile_edit(ctx: click.Context,
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
         cfg_dict = toml.load(config_file)
     profile_to_edit = cfg_dict[profile_name]
-    username, hostname, scheme = profile_to_edit['username'], profile_to_edit['hostname'], profile_to_edit['scheme']
+    username, hostname, scheme = (profile_to_edit['username'],
+                                  profile_to_edit['hostname'],
+                                  profile_to_edit['scheme'])
+
     edit_profile_data = get_profile_data_from_standard_input(hostname=hostname,
                                                              username=username,
                                                              http_scheme=scheme)

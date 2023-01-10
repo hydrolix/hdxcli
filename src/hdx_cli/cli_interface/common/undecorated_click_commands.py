@@ -104,6 +104,7 @@ def basic_transform(ctx: click.Context):
     token = profile_info.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
+    print(list_projects_url)
     projects_list = rest_ops.list(list_projects_url,
                                   headers=headers)
 

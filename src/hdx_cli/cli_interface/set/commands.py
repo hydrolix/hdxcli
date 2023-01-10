@@ -22,15 +22,14 @@ def _serialize_to_config_file(profile: ProfileUserContext,
 @click.command(help='Set project and or/table to apply subsequent commands on it')
 @click.argument('projectname', metavar='PROJECT', required=False, default=None)
 @click.argument('tablename', metavar='TABLE', required=False, default=None)
-@click.option('--scheme', metavar='SCHEME', type=click.Choice(['http', 'https']),
-              default='http')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def set(ctx, projectname, tablename, scheme):
+def set(ctx, projectname, tablename, scheme=None):
     profile: ProfileUserContext = ctx.obj['usercontext']
     # Currently the condition below cannot happen due to the fact that both projectname and table
     # are positional arguments. I leave it here because I could change def __iter__(self):
     # in the future
+
     if tablename and (not profile.projectname and not projectname):
         raise LogicException('In order to set the table name you must also have the project name set either in your '
                              'profile or set with this command explicitly')
@@ -38,7 +37,6 @@ def set(ctx, projectname, tablename, scheme):
         profile.projectname = projectname
     if tablename:
         profile.tablename = tablename
-    profile.scheme = scheme
     _serialize_to_config_file(profile, profile.profile_config_file)
 
 

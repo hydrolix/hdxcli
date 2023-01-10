@@ -7,7 +7,7 @@ import sys
 from ..common.exceptions import HdxCliException
 
 
-def report_error_and_exit(exctype, exit_code=-1):
+def report_error_and_exit(exctype=Exception, exit_code=-1):
     def report_deco(func):
         @wraps(func)
         def report_wrapper(*args, **kwargs):
