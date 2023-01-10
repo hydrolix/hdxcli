@@ -6,7 +6,7 @@ import click
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.exceptions import LogicException, HdxCliException
 
-#
+
 from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard-import
 from ...library_api.common import rest_operations as rest_ops
 
@@ -104,7 +104,6 @@ def basic_transform(ctx: click.Context):
     token = profile_info.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
-    print(list_projects_url)
     projects_list = rest_ops.list(list_projects_url,
                                   headers=headers)
 
