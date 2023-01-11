@@ -14,7 +14,7 @@ from ...library_api.common import rest_operations as rest_ops
 def basic_create(profile,
                  resource_path,
                  resource_name: str,
-                 body_from_file: Optional[str],
+                 body_from_file: Optional[str]=None,
                  body_from_file_type='json',
                  # sql
                  ):

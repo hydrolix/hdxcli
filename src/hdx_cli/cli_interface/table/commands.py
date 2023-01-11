@@ -56,8 +56,50 @@ def create(ctx: click.Context,
     print(f'Created table {table_name}.')
 
 
+def _basic_truncate(profile, resource_path, resource_name: str):
+    hostname = profile.hostname
+    scheme = profile.scheme
+    list_url = f'{scheme}://{hostname}{resource_path}'
+    auth = profile.auth
+    headers = {'Authorization': f'{auth.token_type} {auth.token}',
+               'Accept': 'application/json'}
+    resources = rest_ops.list(list_url, headers=headers)
+    url = None
+    for a_resource in resources:
+        if a_resource['name'] == resource_name:
+            if 'url' in a_resource:
+                url = a_resource['url']
+            else:
+                url = f"https://{hostname}{resource_path}{a_resource['uuid']}"
+            break
+    if not url:
+        return False
+    url = f'{url}/truncate'
+    result = requests.post(url,
+                           headers=headers,
+                           timeout=5)
+    if not result.status_code in (200, 201):
+        return False
+    return True
+
+
+@click.command(help='Truncate table.')
+@click.argument('table_name')
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def command_truncate(ctx: click.Context,
+                     table_name):
+    user_profile = ctx.parent.obj['usercontext']
+    resource_path = ctx.parent.obj['resource_path']
+    if not _basic_truncate(user_profile, resource_path, table_name):
+        print(f'Error truncating table {table_name}')
+        return
+    print(f'Truncated table {table_name}.')
+
+
 table.add_command(create)
 table.add_command(command_delete)
 table.add_command(command_list)
 table.add_command(command_show)
 table.add_command(command_settings)
+table.add_command(command_truncate, name='truncate')
