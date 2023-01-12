@@ -24,7 +24,8 @@ def find_kinesis(user_ctx: ProfileUserContext):
 def find_projects(user_ctx: ProfileUserContext):
     token = user_ctx.auth
     hostname = user_ctx.hostname
-    url = f"https://{hostname}/config/v1/orgs/{user_ctx.org_id}/projects/"
+    scheme = user_ctx.scheme
+    url = f"{scheme}://{hostname}/config/v1/orgs/{user_ctx.org_id}/projects/"
     headers = {"Authorization": f"{token.token_type} {token.token}",
                "Accept": "application/json"}
     result = requests.get(url, headers=headers, timeout=30)
@@ -36,7 +37,8 @@ def find_projects(user_ctx: ProfileUserContext):
 def find_batch(user_ctx: ProfileUserContext):
     token = user_ctx.auth
     hostname = user_ctx.hostname
-    url = f"https://{hostname}/config/v1/orgs/{user_ctx.org_id}/jobs/batch/"
+    scheme = user_ctx.scheme
+    url = f"{scheme}://{hostname}/config/v1/orgs/{user_ctx.org_id}/jobs/batch/"
     headers = {"Authorization": f"{token.token_type} {token.token}",
                "Accept": "application/json"}
     result = requests.get(url, headers=headers, timeout=30)
@@ -58,7 +60,8 @@ def _find_project_resource(user_ctx: ProfileUserContext, resource):
                     if p["name"] == user_ctx.projectname][0]["uuid"]
     token = user_ctx.auth
     hostname = user_ctx.hostname
-    url = f"https://{hostname}/config/v1/orgs/{user_ctx.org_id}/projects/{project_id}/{resource}"
+    scheme = user_ctx.scheme
+    url = f"{scheme}://{hostname}/config/v1/orgs/{user_ctx.org_id}/projects/{project_id}/{resource}"
     headers={"Authorization": f"{token.token_type} {token.token}",
              "Accept": "application/json"}
     result = requests.get(url, headers=headers)
@@ -91,7 +94,8 @@ def find_transforms(user_ctx: ProfileUserContext):
                      if p["name"] == user_ctx.tablename][0]["uuid"]
     token = user_ctx.auth
     hostname = user_ctx.hostname
-    url = f"https://{hostname}/config/v1/orgs/{user_ctx.org_id}/projects/{project_id}/tables/{table_id}/transforms"
+    scheme = user_ctx.scheme
+    url = f"{scheme}://{hostname}/config/v1/orgs/{user_ctx.org_id}/projects/{project_id}/tables/{table_id}/transforms"
     headers={"Authorization": f"{token.token_type} {token.token}",
              "Accept": "application/json"}
     result = requests.get(url, headers=headers)

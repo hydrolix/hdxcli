@@ -327,10 +327,10 @@ def basic_settings(profile,
     options = rest_ops.options(settings_url, headers=headers)["actions"]["POST"]
     resource_kind_plural, resource_kind = (
         _heuristically_get_resource_kind(resource_path))
-
     if not getattr(profile, resource_kind + "name"):
         raise LogicException(f'No default {resource_kind} found in profile')
     resources = None
+
     try:
         resources = globals()["find_" + resource_kind_plural](profile)
         resource = [r for r in resources if r["name"] == getattr(profile, resource_kind + "name")][0]
@@ -379,7 +379,7 @@ def basic_delete(profile, resource_path, resource_name: str):
             if 'url' in a_resource:
                 url = a_resource['url']
             else:
-                url = f"https://{hostname}{resource_path}{a_resource['uuid']}"
+                url = f"{scheme}://{hostname}{resource_path}{a_resource['uuid']}"
             break
     if not url:
         return False
