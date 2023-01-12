@@ -15,6 +15,7 @@ from hdx_cli.library_api.common.exceptions import (
     BadFileNameConventionException,
     HdxCliException)
 
+HDXCLI_TESTS_CLUSTER_SSL_ACTIVE = os.getenv('HDXCLI_TESTS_CLUSTER_SSL_ACTIVE')
 HDXCLI_TESTS_CLUSTER_USERNAME = os.getenv('HDXCLI_TESTS_CLUSTER_USERNAME')
 HDXCLI_TESTS_CLUSTER_HOSTNAME = os.getenv('HDXCLI_TESTS_CLUSTER_HOSTNAME')
 HDXCLI_TESTS_CLUSTER_PASSWORD = os.getenv('HDXCLI_TESTS_CLUSTER_PASSWORD')
@@ -27,8 +28,10 @@ def _create_cluster_config_file_for_tests():
     if not HDXCLI_TESTS_CLUSTER_USERNAME or not HDXCLI_TESTS_CLUSTER_HOSTNAME:
         raise RuntimeError('HDXCLI_TESTS_CLUSTER_USERNAME and HDXCLI_TESTS_CLUSTER_HOSTNAME'
                            ' environment vars must be set')
+    tests_protocol = 'http' if HDXCLI_TESTS_CLUSTER_SSL_ACTIVE == "0" else 'https'
     config = {'default': {'username': HDXCLI_TESTS_CLUSTER_USERNAME,
-                          'hostname': HDXCLI_TESTS_CLUSTER_HOSTNAME}}
+                          'hostname': HDXCLI_TESTS_CLUSTER_HOSTNAME,
+                          'scheme': tests_protocol}}
     with open(HDXCLI_PROFILE_DATA_FILE, 'w+', encoding='utf-8') as cfile:
         toml.dump(config, cfile)
 
