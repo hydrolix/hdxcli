@@ -12,11 +12,16 @@ def profile(ctx: click.Context):
     ctx.obj = {'usercontext': ctx.parent.obj['usercontext']}
 
 
+
 @click.command(help='List profiles')
+@click.argument('profile_name', default=None, required=False)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def profile_show(ctx: click.Context):
-    profilename = ctx.parent.obj['usercontext'].profilename
+def profile_show(ctx: click.Context,
+                 profile_name):
+    profilename = ctx.parent.obj['usercontext'].profilename if not profile_name else profile_name
+    print(f'Showing [{profilename}]')
+    print(f'-' * 100)
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
         cfg_dict = toml.load(config_file)
         for cfg_name, cfg_val in cfg_dict.items():
@@ -45,6 +50,8 @@ def profile_edit(ctx: click.Context,
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
         cfg_dict = toml.load(config_file)
     profile_to_edit = cfg_dict[profile_name]
+    print(f'Editing [{profile_name}]')
+    print(f'-' * 100)
     username, hostname, scheme = (profile_to_edit['username'],
                                   profile_to_edit['hostname'],
                                   profile_to_edit['scheme'])

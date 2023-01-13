@@ -70,7 +70,7 @@ def _basic_truncate(profile, resource_path, resource_name: str):
             if 'url' in a_resource:
                 url = a_resource['url']
             else:
-                url = f"https://{hostname}{resource_path}{a_resource['uuid']}"
+                url = f"{scheme}://{hostname}{resource_path}{a_resource['uuid']}"
             break
     if not url:
         return False
