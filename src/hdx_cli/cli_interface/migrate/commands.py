@@ -34,10 +34,12 @@ from ..common.misc_operations import settings as command_settings
 
 def _setup_target_cluster_config(profile_config_file,
                                  target_cluster_username,
-                                 target_cluster_hostname):
+                                 target_cluster_hostname,
+                                 target_cluster_scheme):
     username = target_cluster_username
     hostname = target_cluster_hostname
-    config_data = {'default': {'username': username, 'hostname': hostname}}
+    scheme = target_cluster_scheme
+    config_data = {'default': {'username': username, 'hostname': hostname, 'scheme': scheme}}
     os.makedirs(Path(profile_config_file).parent, exist_ok=True)
     with open(profile_config_file, 'w+', encoding='utf-8') as config_file:
         toml.dump(config_data, config_file)
@@ -251,6 +253,7 @@ def create_transforms_for_table(project_name,
 @click.argument('target_cluster_username', metavar='TARGET_CLUSTERUSERNAME', required=True, default=None)
 @click.argument('target_cluster_hostname', metavar='TARGET_CLUSTERHOSTNAME', required=True, default=None)
 @click.option('-p', '--target-cluster-password', required=False, default=None)
+@click.option('-u', '--target-cluster-uri-scheme', required=False, default='https')
 @click.option('-B', '--project-blacklist', multiple=True, default=None, required=False)
 @click.option('-b', '--project-whitelist', multiple=True, default=None, required=False)
 @click.option('-R', '--no-rollback', default=False)
@@ -260,6 +263,7 @@ def migrate(ctx: click.Context,
             target_cluster_username,
             target_cluster_hostname,
             target_cluster_password,
+            target_cluster_uri_scheme,
             project_blacklist,
             project_whitelist,
             no_rollback):
@@ -276,11 +280,13 @@ def migrate(ctx: click.Context,
                                 target_cluster_hostname + '.toml')
     _setup_target_cluster_config(target_profiles_file,
                                  target_cluster_username,
-                                 target_cluster_hostname)
+                                 target_cluster_hostname,
+                                 target_cluster_uri_scheme)
     target_load_ctx = ProfileLoadContext('default', target_profiles_file)
     auth_info = login(target_cluster_username,
                       target_cluster_hostname,
-                      password=target_cluster_password)
+                      password=target_cluster_password,
+                      use_ssl=(target_cluster_uri_scheme == 'https'))
     target_user_profile = load_profile(target_load_ctx)
     target_user_profile.auth = auth_info
     target_user_profile.org_id = auth_info.org_id
