@@ -13,7 +13,7 @@ def profile(ctx: click.Context):
 
 
 
-@click.command(help='List profiles')
+@click.command(help='Show profile')
 @click.argument('profile_name', default=None, required=False)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -31,7 +31,7 @@ def profile_show(ctx: click.Context,
                     print(f"{cfg_key}: {cfg_val}")
 
 
-@click.command(help='Show profile')
+@click.command(help='List profiles')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def profile_list(ctx: click.Context):
