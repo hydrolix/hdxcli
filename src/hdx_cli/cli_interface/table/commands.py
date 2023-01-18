@@ -68,7 +68,7 @@ def _basic_truncate(profile, resource_path, resource_name: str):
     for a_resource in resources:
         if a_resource['name'] == resource_name:
             if 'url' in a_resource:
-                url = a_resource['url']
+                url = a_resource['url'].replace('https://', f'{scheme}://')
             else:
                 url = f"{scheme}://{hostname}{resource_path}{a_resource['uuid']}"
             break
