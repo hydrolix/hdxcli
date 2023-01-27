@@ -22,6 +22,7 @@ def _do_login(username, hostname,
                           headers={'Accept': 'application/json'},
                           timeout=15)
     except req.ConnectionError as exc:
+        print(exc)
         raise LogicException(f"Connection error: could not stablish connection with host {hostname} (using {scheme}).") from exc
     except req.ConnectTimeout as exc:
         raise HdxCliException("Timeout exception.")

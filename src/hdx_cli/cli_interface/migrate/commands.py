@@ -275,7 +275,7 @@ def migrate(ctx: click.Context,
     if not target_cluster_hostname or not is_valid_hostname(target_cluster_hostname):
         raise LogicException('Incorrect host name')
 
-    target_profiles_file = Path(tempfile.gettempdir() +
+    target_profiles_file = Path(tempfile.gettempdir() + os.sep +
                                 target_cluster_username + '_' +
                                 target_cluster_hostname + '.toml')
     _setup_target_cluster_config(target_profiles_file,
