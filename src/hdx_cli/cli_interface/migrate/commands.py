@@ -160,7 +160,7 @@ def create_dictionaries_for_project(project_name,
         d_file = d_settings['filename']
         d_format = d_settings['format']
         table_name = f'{project_name}_{d_name}'
-        query_endpoint = f'{scheme}://{source_profile.hostname}/query/?query=SELECT * FROM {table_name} FORMAT {d_format}'
+        query_endpoint = f'{source_profile.scheme}://{source_profile.hostname}/query/?query=SELECT * FROM {table_name} FORMAT {d_format}'
         headers = {'Authorization': f'{source_profile.auth.token_type} {source_profile.auth.token}',
                    'Accept': '*/*'}
         contents = lro.get(query_endpoint, headers=headers, fmt='verbatim')
