@@ -15,8 +15,7 @@ def basic_create(profile,
                  resource_path,
                  resource_name: str,
                  body_from_file: Optional[str]=None,
-                 body_from_file_type='json',
-                 # sql
+                 body_from_file_type='json'
                  ):
     hostname = profile.hostname
     scheme = profile.scheme
@@ -30,14 +29,10 @@ def basic_create(profile,
         # This parameter is for dictionaries
         if body_from_file_type == 'json':
             with open(body_from_file, 'r', encoding='utf-8') as input_body:
-                print(input_body)
                 body = json.load(input_body)
                 body['name'] = f'{resource_name}'
         else:
             body_stream = open(body_from_file, 'rb')  # pylint:disable=consider-using-with
-    # elif sql:
-    #     body['name'] = f'{resource_name}'
-    #     body['sql'] = sql
     else:
         body = {'name': f'{resource_name}',
                 'description': 'Created with hdxcli tool'}

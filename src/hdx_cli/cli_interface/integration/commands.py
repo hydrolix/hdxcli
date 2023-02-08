@@ -106,7 +106,7 @@ def show(ctx: click.Context, transform_name):
     results = _github_list(ctx)
     base_resource_url = 'https://raw.githubusercontent.com/hydrolix/transforms/dev'
     # 'Fastly/fastly_transform.json'
-    print(_basic_show(ctx, transform_name))
+    # print(_basic_show(ctx, transform_name))
 
 
 transform.add_command(show)
