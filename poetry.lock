@@ -150,6 +150,17 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
+name = "sqlglot"
+version = "10.5.10"
+description = "An easily customizable SQL parser and transpiler"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+dev = ["autoflake", "black", "duckdb", "isort", "mypy (>=0.990)", "pandas", "pdoc", "pre-commit", "pyspark", "python-dateutil"]
+
+[[package]]
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
@@ -181,7 +192,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "c2404e278398d22d9f7023d6ba80713c9e2a9403edb3ba2823af4f1ca9395094"
+content-hash = "0612603cd3d0124a7ab379755ddbda04d0e321c59fbf7f768d237c04fafb73e6"
 
 [metadata.files]
 attrs = [
@@ -235,6 +246,10 @@ pytest = [
 requests = [
     {file = "requests-2.28.1-py3-none-any.whl", hash = "sha256:8fefa2a1a1365bf5520aac41836fbee479da67864514bdb821f31ce07ce65349"},
     {file = "requests-2.28.1.tar.gz", hash = "sha256:7c5599b102feddaa661c826c56ab4fee28bfd17f5abca1ebbe3e7f19d7c97983"},
+]
+sqlglot = [
+    {file = "sqlglot-10.5.10-py3-none-any.whl", hash = "sha256:09f48b1cc9d21dbfc0c53916d4febf6731e4c8eb318097c7a2c1cb678c54bcaa"},
+    {file = "sqlglot-10.5.10.tar.gz", hash = "sha256:cbac4a89842b3ec4c303a40dc582248c1795f37f1b06425e1e709223194c53b9"},
 ]
 toml = [
     {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},

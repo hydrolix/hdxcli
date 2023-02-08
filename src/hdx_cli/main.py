@@ -10,8 +10,8 @@ import sys
 import click
 import toml
 
-from hdx_cli.cli_interface.project import commands as project_
-from hdx_cli.cli_interface.table import commands as table_
+from hdx_cli.cli_interface.project import commands as from_
+project hdx_cli.cli_interface.table import commands as table_
 from hdx_cli.cli_interface.transform import commands as transform_
 from hdx_cli.cli_interface.job import commands as job_
 from hdx_cli.cli_interface.function import commands as function_
@@ -32,7 +32,7 @@ from hdx_cli.library_api.common.first_use import try_first_time_use
 from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
 
 
-VERSION = "1.0-rc31"
+VERSION = "1.0-rc32"
 
 from hdx_cli.library_api.common.auth import (
     load_profile,
