@@ -96,27 +96,6 @@ def apply(ctx: click.Context,
                                        transform_contents)
 
 
-# @click.command(help='Create transform.')
-# @click.option('--body-from-file', '-f',
-#               help='Use file contents as the transform settings.'
-#               "'name' key from the body will be replaced by the given 'resource_name'.",
-#               metavar='BODYFROMFILE',
-#               default=None)
-# @click.argument('transform_name')
-# @click.pass_context
-# @report_error_and_exit(exctype=Exception)
-# def create(ctx: click.Context,
-#            transform_name: str,
-#            body_from_file):
-#     user_profile = ctx.parent.obj['usercontext']
-#     resource_path = ctx.parent.obj['resource_path']
-#     with open(body_from_file, "r", encoding="utf-8") as f:
-#         basic_create_with_body_from_string(user_profile, resource_path,
-#                                            transform_name, f.read())
-#     print(f'Created transform {transform_name}.')
-
-
-
 transform.add_command(apply, 'apply')
 
 
