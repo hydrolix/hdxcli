@@ -13,7 +13,8 @@ MAX_TIMEOUT = 30
 def create(url: str, *,
            headers: Headers,
            body: Dict[str, Any],
-           body_type='json'):
+           body_type='json',
+           timeout=MAX_TIMEOUT):
     if body_type == 'json':
         result = requests.post(url, json=body,
                                headers=headers,
@@ -21,7 +22,7 @@ def create(url: str, *,
     else:
         result = requests.post(url, data=body,
                                headers=headers,
-                               timeout=MAX_TIMEOUT)
+                               timeout=timeout)
 
     if result.status_code not in (201, 200):
         raise HttpException(result.status_code, result.content)
@@ -30,10 +31,11 @@ def create(url: str, *,
 def create_file(url: str, *,
                 headers: Headers,
                 file_stream,
-                remote_filename):
+                remote_filename,
+                timeout=MAX_TIMEOUT):
     result = requests.post(url, files={'file': file_stream}, data={'name': remote_filename},
-                            headers=headers,
-                            timeout=MAX_TIMEOUT)
+                           headers=headers,
+                           timeout=timeout)
 
     if result.status_code not in (201, 200):
         raise HttpException(result.status_code, result.content)

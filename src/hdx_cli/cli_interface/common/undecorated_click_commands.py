@@ -10,13 +10,14 @@ from hdx_cli.library_api.common.exceptions import LogicException, HdxCliExceptio
 from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard-import
 from ...library_api.common import rest_operations as rest_ops
 
+_MAX_TIMEOUT = 30
 
 def basic_create(profile,
                  resource_path,
                  resource_name: str,
                  body_from_file: Optional[str]=None,
-                 body_from_file_type='json'
-                 ):
+                 body_from_file_type='json',
+                 timeout=_MAX_TIMEOUT):
     hostname = profile.hostname
     scheme = profile.scheme
     url = f'{scheme}://{hostname}{resource_path}'
@@ -40,7 +41,7 @@ def basic_create(profile,
         rest_ops.create(url, body=body, headers=headers)
     elif body_from_file and body_stream:
         rest_ops.create_file(url, headers=headers, file_stream=body_stream,
-                             remote_filename=resource_name)
+                             remote_filename=resource_name, timeout=timeout)
         if body_stream:
             body_stream.close()
     else:

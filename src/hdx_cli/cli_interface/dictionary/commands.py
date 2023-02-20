@@ -51,6 +51,8 @@ def create_dict(ctx: click.Context,
                 dictionary_name: str):
     user_profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']
+    # FIXME: basic_create does not work because it does local opening
+    # of a file. A dictionary file is remote.
     basic_create(user_profile,
                  resource_path,
                  dictionary_name,
@@ -77,7 +79,8 @@ def upload_file_dict(ctx: click.Context,
     basic_create(user_profile, resource_path,
                  dictionary_filename,
                  dictionary_file_to_upload,
-                 body_from_file_type)
+                 body_from_file_type,
+                 timeout=120)
     print(f'Uploaded dictionary file from {dictionary_file_to_upload} with name {dictionary_filename}.')
 
 
