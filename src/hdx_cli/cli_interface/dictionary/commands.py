@@ -80,7 +80,7 @@ def upload_file_dict(ctx: click.Context,
                  dictionary_filename,
                  dictionary_file_to_upload,
                  body_from_file_type,
-                 timeout=120)
+                 timeout=3000)
     print(f'Uploaded dictionary file from {dictionary_file_to_upload} with name {dictionary_filename}.')
 
 

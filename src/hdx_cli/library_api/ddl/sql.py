@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Set, Union, Dict
+from typing import List, Optional, Set, Union, Dict, Any, Tuple
 
 import json
 
@@ -11,12 +11,9 @@ __all__ = ['ddl_to_create_table_info', 'DdlCreateTableInfo', 'ColumnDefinition',
            'ddl_to_hdx_datatype', 'generate_transform_dict']
 
 
-def encode_variable_name(variable_with_hyphens):
-    return variable_with_hyphens.replace('-', '__hyphens__')
+def normalize_variable_name(variable_with_hyphens):
+    return variable_with_hyphens.replace('-', '_')
 
-
-def decode_variable_name(variable_without_hyphens):
-    return variable_without_hyphens.replace('__hyphens__', '-')
 
 
 def find_next_backtick_pair(text, initial_offset=0):
@@ -37,10 +34,10 @@ def replace_query_backtick_vars(query_create_table):
         original_var = query_create_table_modified[open_backtick:close_backtick]
         original_vars.append(original_var)
         query_create_table_modified = query_create_table_modified.replace(query_create_table_modified
-                                                                          [open_backtick:close_backtick],
-                                                                          encode_variable_name(
-                                                                              query_create_table_modified
-                                                                              [open_backtick + 1: close_backtick - 1]))
+                [open_backtick:close_backtick],
+                normalize_variable_name(
+                    query_create_table_modified
+                    [open_backtick + 1: close_backtick - 1]))
         open_backtick, close_backtick = find_next_backtick_pair(query_create_table_modified, close_backtick)
     return (query_create_table_modified, original_vars)
 
@@ -106,14 +103,25 @@ def ddl_to_hdx_datatype(data_mapping_file) -> Union[str, List[str]]:
                 raise RuntimeError(f'No optimal data type mapping found for {sql_datatype}')
         if dt is not None:
             return dt
+
+        if sql_datatype.startswith('STRUCT'):
+            return [compound_datatypes['STRUCT'], 'string', 'string']
         # Compound data types
         try:
-            data_type_no_spaces = sql_datatype.replace(' ', '')
-            marker_start_inner = data_type_no_spaces.index('<')
-            outer_type = data_type_no_spaces[:marker_start_inner]
-            inner_type = data_type_no_spaces[marker_start_inner + 1:sql_datatype.index('>')]
+            inner_type = None
+            outer_type = None
+            if sql_datatype.startswith('ARRAY'):
+                outer_type = 'ARRAY'
+                data_type_no_spaces = sql_datatype.replace(' ', '')
+                marker_start_inner = data_type_no_spaces.index('<')
+                outer_type = data_type_no_spaces[:marker_start_inner]
+                inner_type = data_type_no_spaces[marker_start_inner + 1:sql_datatype.index('>')]
+            else:
+                inner_type = 'TEXT'
+                outer_type = 'ARRAY'
 
             the_inner_type = sql_to_hdx_datatype[inner_type]
+
             if isinstance(the_inner_type, list):
                 the_inner_type = [t for t in the_inner_type
                                   if t.endswith("_optimal")][0].removesuffix("_optimal")
@@ -124,130 +132,42 @@ def ddl_to_hdx_datatype(data_mapping_file) -> Union[str, List[str]]:
 
 
 
-def ddl_to_create_table_info_new(query_create_table: str,
-                             mapper) -> DdlCreateTableInfo:
-    modified_query, original_vs = replace_query_backtick_vars(query_create_table)
-    sqlglot_create_expression = sqlglot.parse_one(modified_query)
-    create_table_info = DdlCreateTableInfo()
-    parse_context = ParseContext.UNKNOWN
-    column_definition = ColumnDefinition()
-    last_seen_column_identifier: Optional[str] = None
-    last_seen_column_datatype : Optional[str] = None
-    last_seen_datatype_is_nested = False
-    for node in sqlglot_create_expression.bfs():
-        print(node)
-        # if isinstance(node[0], sqlglot.expressions.Table):
-    #         parse_context = ParseContext.TABLE
-    #     elif isinstance(node[0], sqlglot.expressions.ColumnDef):
-    #         parse_context = ParseContext.COLUMN
-    #     elif isinstance(node[0], sqlglot.expressions.ColumnConstraint):
-    #         parse_context = ParseContext.COLUMNCONSTRAINT
-
-    #     if parse_context == ParseContext.TABLE:
-    #         if isinstance(node[0], sqlglot.expressions.Identifier):
-    #             if not create_table_info.tablename:
-    #                 var_name = decode_variable_name(node[0].name)
-    #                 create_table_info.tablename = var_name
-    #             elif not create_table_info.project:
-    #                 var_name = decode_variable_name(node[0].name)
-    #                 create_table_info.project = var_name
-    #             else:
-    #                 raise RuntimeError('Syntax not supported when parsing create table.' +
-    #                                    ' Only one dot separator allowed')
-    #     elif parse_context == ParseContext.COLUMN:
-    #         if isinstance(node[0], sqlglot.expressions.Identifier):
-    #             var_name = decode_variable_name(node[0].name)
-    #             column_definition.identifier = var_name
-    #             last_seen_column_identifier = var_name
-    #         elif isinstance(node[0], sqlglot.expressions.DataType):
-    #             if last_seen_datatype_is_nested:
-    #                 last_seen_datatype_is_nested = False
-    #                 continue
-    #             column_definition.hdx_datatype = mapper(node[0].sql())
-    #             column_definition.datatype = node[0].sql()
-    #             last_seen_column_datatype = node[0].sql()
-    #             create_table_info.columns.append(column_definition)
-    #             if last_seen_column_datatype == 'TIMESTAMP':
-    #                 create_table_info.candidate_primary_keys.add(last_seen_column_identifier)
-    #             column_definition = ColumnDefinition()
-    #             last_seen_datatype_is_nested = node[0].this.name == 'ARRAY'
-
-    #     elif parse_context == ParseContext.COLUMNCONSTRAINT:
-    #         if isinstance(node[0], sqlglot.expressions.NotNullColumnConstraint):
-    #             create_table_info.columns[-1].nullable = False
-    #         if isinstance(node[0], sqlglot.expressions.PrimaryKeyColumnConstraint):
-    #             if last_seen_column_datatype == 'TIMESTAMP':
-    #                 create_table_info.default_primary_key = last_seen_column_identifier
-    #                 create_table_info.candidate_primary_keys.add(last_seen_column_identifier)
-    #             else:
-    #                 create_table_info.invalid_default_primary_key = last_seen_column_identifier
-
-    # create_table_info.final_primary_key = _choose_primary_key(create_table_info)
-    # create_table_info.compression = _select_compression()
-    # (create_table_info.ingest_type,
-    #  create_table_info.csv_delimiter,
-    #  create_table_info.csv_input_indexes) = _select_transform_type(create_table_info)
-
-    return create_table_info
-
-
 def ddl_to_create_table_info(query_create_table: str,
                              mapper) -> DdlCreateTableInfo:
     modified_query, original_vs = replace_query_backtick_vars(query_create_table)
     sqlglot_create_expression = sqlglot.parse_one(modified_query)
     create_table_info = DdlCreateTableInfo()
-    parse_context = ParseContext.UNKNOWN
-    column_definition = ColumnDefinition()
-    last_seen_column_identifier: Optional[str] = None
-    last_seen_column_datatype : Optional[str] = None
-    last_seen_datatype_is_nested = False
-    for node in sqlglot_create_expression.dfs():
+    for node in sqlglot_create_expression.bfs():
         if isinstance(node[0], sqlglot.expressions.Table):
-            parse_context = ParseContext.TABLE
-        elif isinstance(node[0], sqlglot.expressions.ColumnDef):
-            parse_context = ParseContext.COLUMN
-        elif isinstance(node[0], sqlglot.expressions.ColumnConstraint):
-            parse_context = ParseContext.COLUMNCONSTRAINT
+            create_table_info.project, create_table_info.tablename = [str(n) for n in list(node[0].flatten())]
+        if isinstance(node[0], sqlglot.expressions.ColumnDef):
+            identifier_datatype_maybeconstraint = list(node[0].flatten())
+            identifier, datatype = identifier_datatype_maybeconstraint[0], identifier_datatype_maybeconstraint[1]
+            constraint = None
+            try:
+                constraint = identifier_datatype_maybeconstraint[2]
+            except IndexError:
+                pass
+            is_nullable = True
+            if constraint and isinstance(constraint, sqlglot.expressions.ColumnConstraint):
+                constraint_type = next(constraint.flatten())
+                if isinstance(constraint_type, sqlglot.expressions.NotNullColumnConstraint):
+                    is_nullable = False
+                elif isinstance(constraint_type, sqlglot.expressions.PrimaryKeyColumnConstraint):
+                    is_nullable = False
+                    if datatype.sql() == 'TIMESTAMP':
+                        create_table_info.default_primary_key = identifier.name
+                        create_table_info.candidate_primary_keys.add(identifier.name)
+                    else:
+                        create_table_info.invalid_default_primary_key = identifier.name
+            elif datatype.sql() == 'TIMESTAMP':
+                create_table_info.candidate_primary_keys.add(identifier.name)
 
-        if parse_context == ParseContext.TABLE:
-            if isinstance(node[0], sqlglot.expressions.Identifier):
-                if not create_table_info.tablename:
-                    var_name = decode_variable_name(node[0].name)
-                    create_table_info.tablename = var_name
-                elif not create_table_info.project:
-                    var_name = decode_variable_name(node[0].name)
-                    create_table_info.project = var_name
-                else:
-                    raise RuntimeError('Syntax not supported when parsing create table.' +
-                                       ' Only one dot separator allowed')
-        elif parse_context == ParseContext.COLUMN:
-            if isinstance(node[0], sqlglot.expressions.Identifier):
-                var_name = decode_variable_name(node[0].name)
-                column_definition.identifier = var_name
-                last_seen_column_identifier = var_name
-            elif isinstance(node[0], sqlglot.expressions.DataType):
-                if last_seen_datatype_is_nested:
-                    last_seen_datatype_is_nested = False
-                    continue
-                column_definition.hdx_datatype = mapper(node[0].sql())
-                column_definition.datatype = node[0].sql()
-                last_seen_column_datatype = node[0].sql()
-                create_table_info.columns.append(column_definition)
-                if last_seen_column_datatype == 'TIMESTAMP':
-                    create_table_info.candidate_primary_keys.add(last_seen_column_identifier)
-                column_definition = ColumnDefinition()
-                last_seen_datatype_is_nested = node[0].this.name == 'ARRAY'
-
-        elif parse_context == ParseContext.COLUMNCONSTRAINT:
-            if isinstance(node[0], sqlglot.expressions.NotNullColumnConstraint):
-                create_table_info.columns[-1].nullable = False
-            if isinstance(node[0], sqlglot.expressions.PrimaryKeyColumnConstraint):
-                if last_seen_column_datatype == 'TIMESTAMP':
-                    create_table_info.default_primary_key = last_seen_column_identifier
-                    create_table_info.candidate_primary_keys.add(last_seen_column_identifier)
-                else:
-                    create_table_info.invalid_default_primary_key = last_seen_column_identifier
-
+            create_table_info.columns.append(
+                ColumnDefinition(datatype=datatype.sql(),
+                                 hdx_datatype=mapper(datatype.sql()),
+                                 identifier=identifier.name,
+                                 nullable=is_nullable))
     create_table_info.final_primary_key = _choose_primary_key(create_table_info)
     create_table_info.compression = _select_compression()
     (create_table_info.ingest_type,
@@ -257,8 +177,39 @@ def ddl_to_create_table_info(query_create_table: str,
     return create_table_info
 
 
+def _create_transform_elements_for(col_def: ColumnDefinition):
+    if not _is_composed_datatype(col_def):
+        return []
+    hdx_datatype_raw = col_def.hdx_datatype
+    result = []
+    for typename in hdx_datatype_raw[1:]:
+        dict_result = {"type": typename,
+                       "index": typename != 'double',
+                       "denullify": True}
+        the_default = None
+        if (typename.startswith('int') or typename.startswith('uint') or
+                typename == 'double'):
+            the_default = 0
+        elif typename == 'string':
+            the_default = ''
+        if the_default:
+            dict_result = {"default": the_default}
+
+        if typename == 'datetime':
+            dict_result['format'] = "2006-01-02T15:04:05.999999999Z"
+            dict_result['resolution'] = 'ns'
+        if typename == 'epoch':
+            dict_result['format'] = 'us'
+            dict_result['resolution'] = 's'
+        result.append(dict_result)
+    return result
+
+
 # This can only be used for inner type of composed types
-def _create_inner_type_dict(typename):
+def _create_inner_type_dict(typename: Union[str, Tuple[str]]):
+    if isinstance(typename, tuple):
+        raise RuntimeError(f'{typename}')
+
     dict_result = {"type": typename,
                    "index": typename != 'double',
                    "denullify": True}
@@ -277,7 +228,7 @@ def _create_inner_type_dict(typename):
     if typename == 'epoch':
         dict_result['format'] = 'us'
         dict_result['resolution'] = 's'
-    return dict_result
+    return [dict_result]
 
 
 def _is_composed_datatype(col_def: ColumnDefinition):
@@ -286,9 +237,9 @@ def _is_composed_datatype(col_def: ColumnDefinition):
 
 def _needs_index(col_def: ColumnDefinition,
                  ddl: DdlCreateTableInfo):
-    col_atomic_type = (col_def.hdx_datatype
-                       if not _is_composed_datatype(col_def) else col_def.hdx_datatype[-1])
-    return col_atomic_type != 'double' and ddl.final_primary_key != col_def.identifier
+    if _is_composed_datatype(col_def):
+        return False
+    return col_def.hdx_datatype != 'double' and ddl.final_primary_key != col_def.identifier
 
 
 def _create_transform_output_column(col_def: ColumnDefinition,
@@ -298,11 +249,9 @@ def _create_transform_output_column(col_def: ColumnDefinition,
                                     is_primary_key=False):
     output_column = {}
     output_column['name'] = col_def.identifier
-    output_column['datatype'] = {}
+    output_column['datatype'] : Dict[str, Any] = {}
 
     hdx_datatype_raw = col_def.hdx_datatype
-    is_composed_datatype = _is_composed_datatype(col_def)
-
 
     datatype = output_column['datatype']
     datatype['type'] = hdx_datatype_raw if not isinstance(hdx_datatype_raw, list) else hdx_datatype_raw[0]
@@ -319,13 +268,7 @@ def _create_transform_output_column(col_def: ColumnDefinition,
     if from_input_index is not None:
         datatype['source'] = {'from_input_index': from_input_index}
 
-    if is_composed_datatype:
-        inner_type = hdx_datatype_raw[1]
-        if isinstance(inner_type, list):
-            inner_type = [t for t in inner_type if t.endswith('_optimal')][0].removesuffix('_optimal')
-        datatype['elements'] = [_create_inner_type_dict(inner_type)]
-    else:
-        datatype['elements'] = []
+    datatype['elements'] = _create_transform_elements_for(col_def)
 
     datatype['catch_all'] = False
     datatype['resolution'] = "seconds"
@@ -400,11 +343,11 @@ def _select_transform_type(ddl: DdlCreateTableInfo):
         ttype = 'csv'
 
     delimiter = ''
-    fields_indexes = None
+    fields_indexes = {}
     if ttype == 'csv':
         delimiter = input(f"Please choose the csv delimiter (default is ','): ")
         fields_indexes = _select_csv_indexes(ddl)
-    if delimiter == '':
+    if delimiter == '' and ttype == 'csv':
         delimiter = ','
 
     return (ttype, delimiter, fields_indexes)

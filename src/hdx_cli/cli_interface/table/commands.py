@@ -45,12 +45,38 @@ def table(ctx: click.Context):
 
 @click.command(help='Create table.')
 @click.argument('table_name')
+@click.option('--type', '-t',
+              type=click.Choice(('summary', 'turbine')),
+              help='Create a turbine (regular) table or a summary (aggregation) table',
+              metavar='TYPE',
+              required=False,
+              default='turbine')
+@click.option('--sql-query', '-s',
+              type=str,
+              help='SQL query to use (for summary tables only, otherwise ignored)',
+              metavar='SQL_QUERY',
+              required=False,
+              default=None)
+@click.option('--sql-query-file', '-f',
+              type=str,
+              help='File path to SQL query to use (for summary tables only, otherwise ignored)',
+              metavar='SQL_QUERY_FILE',
+              required=False,
+              default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
-           table_name: str):
+           table_name: str,
+           type: str,
+           sql_query,
+           sql_query_file):
+    if sql_query and sql_query_file:
+        raise HdxCliException('Only one of sql_query or sql_query_file is allowed')
+
     user_profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']
+    print(resource_path)
+
     basic_create(user_profile, resource_path,
                  table_name, None, None)
     print(f'Created table {table_name}.')
@@ -95,6 +121,7 @@ def command_truncate(ctx: click.Context,
         print(f'Error truncating table {table_name}')
         return
     print(f'Truncated table {table_name}.')
+
 
 
 table.add_command(create)
