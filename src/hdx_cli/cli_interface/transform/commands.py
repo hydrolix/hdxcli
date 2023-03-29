@@ -14,10 +14,15 @@ from ..common.rest_operations import (create as command_create,
                                       list_ as command_list,
                                       show as command_show)
 
-from ...library_api.ddl.sql import (ddl_to_create_table_info, ddl_to_hdx_datatype,
+from ...library_api.ddl.common_algo import (ddl_to_create_table_info,
+                                            ddl_to_hdx_datatype,
+                                            generate_transform_dict)
+
+from ...library_api.ddl.common_intermediate_representation import (
                                     DdlCreateTableInfo,
-                                    ColumnDefinition,
-                                    generate_transform_dict)
+                                    ColumnDefinition)
+
+
 from ...library_api.common.context import ProfileUserContext
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
@@ -78,7 +83,8 @@ def map_from(ctx: click.Context,
         the_sql = fsql.read()
 
     mapper = ddl_to_hdx_datatype(ddl_custom_mapping, 'sql')
-    create_table_info: DdlCreateTableInfo = ddl_to_create_table_info(the_sql, mapper)
+    create_table_info: DdlCreateTableInfo = ddl_to_create_table_info(the_sql, 'sql',
+                                                                     mapper)
     transform_dict = generate_transform_dict(create_table_info,
                                              transform_name,
                                              transform_type=create_table_info.ingest_type)
