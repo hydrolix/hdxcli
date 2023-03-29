@@ -3,17 +3,19 @@ from enum import Enum
 from typing import List, Optional, Set, Union, Dict, Any, Tuple
 
 import json
-
 import sqlglot
 
+from .common_algo import ddl_to_hdx_datatype
 
-__all__ = ['ddl_to_create_table_info', 'DdlCreateTableInfo', 'ColumnDefinition',
-           'ddl_to_hdx_datatype', 'generate_transform_dict']
+
+__all__ = ['ddl_to_create_table_info',
+           'DdlCreateTableInfo',
+           'ColumnDefinition',
+           'generate_transform_dict']
 
 
 def normalize_variable_name(variable_with_hyphens):
     return variable_with_hyphens.replace('-', '_')
-
 
 
 def find_next_backtick_pair(text, initial_offset=0):
@@ -66,7 +68,6 @@ class DdlCreateTableInfo:
     invalid_default_primary_key: Optional[str] = None
 
 
-
 class ConstraintKind(Enum):
     NULLABLE = 0
     PRIMARY_KEY = 1
@@ -86,55 +87,9 @@ class NoDdlMappingFoundError(Exception):
         self.sql_type = sql_type
 
 
-def ddl_to_hdx_datatype(data_mapping_file) -> Union[str, List[str]]:
-    the_file = open(data_mapping_file, 'r')
-    the_mapping = json.load(the_file)
-    sql_to_hdx_datatype = the_mapping['sql_to_hdx_datatype']
-    compound_datatypes = the_mapping['compound_datatypes']
-    the_file.close()
-
-    def data_converter_func(sql_datatype: str):
-        dt = sql_to_hdx_datatype.get(sql_datatype)
-        if isinstance(dt, list):
-            for d in dt:
-                if d.endswith('_optimal'):
-                    return d.removesuffix('_optimal')
-            else:
-                raise RuntimeError(f'No optimal data type mapping found for {sql_datatype}')
-        if dt is not None:
-            return dt
-
-        if sql_datatype.startswith('STRUCT'):
-            return [compound_datatypes['STRUCT'], 'string', 'string']
-        # Compound data types
-        try:
-            inner_type = None
-            outer_type = None
-            if sql_datatype.startswith('ARRAY'):
-                outer_type = 'ARRAY'
-                data_type_no_spaces = sql_datatype.replace(' ', '')
-                marker_start_inner = data_type_no_spaces.index('<')
-                outer_type = data_type_no_spaces[:marker_start_inner]
-                inner_type = data_type_no_spaces[marker_start_inner + 1:sql_datatype.index('>')]
-            else:
-                inner_type = 'TEXT'
-                outer_type = 'ARRAY'
-
-            the_inner_type = sql_to_hdx_datatype[inner_type]
-
-            if isinstance(the_inner_type, list):
-                the_inner_type = [t for t in the_inner_type
-                                  if t.endswith("_optimal")][0].removesuffix("_optimal")
-            return [compound_datatypes[outer_type], the_inner_type]
-        except KeyError as key_error:
-            raise NoDdlMappingFoundError(sql_datatype) from key_error
-    return data_converter_func
-
-
-
 def ddl_to_create_table_info(query_create_table: str,
                              mapper) -> DdlCreateTableInfo:
-    modified_query, original_vs = replace_query_backtick_vars(query_create_table)
+    modified_query, _ = replace_query_backtick_vars(query_create_table)
     sqlglot_create_expression = sqlglot.parse_one(modified_query)
     create_table_info = DdlCreateTableInfo()
     for node in sqlglot_create_expression.bfs():
@@ -415,11 +370,11 @@ def _choose_primary_key(cti: DdlCreateTableInfo):
 if __name__ == '__main__':
     import sys
 
-    query_create_table: Optional[str] = None
+    a_query_create_table: Optional[str] = None
     with open(sys.argv[1], encoding='utf-8') as f:
-        query_create_table = f.read()
-    mapper = ddl_to_hdx_datatype(sys.argv[2])
-    create_table_info: DdlCreateTableInfo = ddl_to_create_table_info(query_create_table, mapper)
+        a_query_create_table = f.read()
+    a_mapper = ddl_to_hdx_datatype(sys.argv[2])
+    create_table_info: DdlCreateTableInfo = ddl_to_create_table_info(a_query_create_table, a_mapper)
     print('Candidate primary keys:', create_table_info.candidate_primary_keys)
     print('Default primary key:', create_table_info.default_primary_key)
     print('Table name: ', create_table_info.tablename)

@@ -34,6 +34,7 @@ from hdx_cli.library_api.common.profile import save_profile, get_profile_data_fr
 
 VERSION = "1.0-rc37"
 
+
 from hdx_cli.library_api.common.auth import (
     load_profile,
     save_profile_cache,
