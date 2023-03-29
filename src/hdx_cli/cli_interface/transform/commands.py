@@ -74,10 +74,10 @@ def map_from(ctx: click.Context,
              no_apply: bool,
              transform_name: str):
     the_sql = None
-    with open(ddl_file) as fsql:
+    with open(ddl_file, encoding='utf-8') as fsql:
         the_sql = fsql.read()
 
-    mapper = ddl_to_hdx_datatype(ddl_custom_mapping)
+    mapper = ddl_to_hdx_datatype(ddl_custom_mapping, 'sql')
     create_table_info: DdlCreateTableInfo = ddl_to_create_table_info(the_sql, mapper)
     transform_dict = generate_transform_dict(create_table_info,
                                              transform_name,
@@ -94,13 +94,6 @@ def map_from(ctx: click.Context,
                                        transform_name,
                                        body_from_string=transform_str)
     print(f'Created transform {transform_name}.')
-
-    # user_profile = ctx.parent.obj['usercontext']
-    # resource_path = ctx.parent.obj['resource_path']
-    # with open(body_from_file, "r", encoding="utf-8") as f:
-    #     basic_create_with_body_from_string(user_profile, resource_path,
-    #                                        transform_name, f.read())
-    # print(f'Created transform {transform_name}.')
 
 
 transform.add_command(map_from)

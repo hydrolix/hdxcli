@@ -1,11 +1,13 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Set, Union, Dict, Any, Tuple
+from typing import List, Optional, Set, Union, Dict, Any, Tuple, Sequence
 
 import json
 import sqlglot
 
+from .common_intermediate_representation import ColumnDefinition
 from .common_algo import ddl_to_hdx_datatype
+from .user_ddl_customization_interfaces import ColumnDefinitionsProvider
 
 
 __all__ = ['ddl_to_create_table_info',
@@ -45,14 +47,6 @@ def replace_query_backtick_vars(query_create_table):
 
 
 @dataclass
-class ColumnDefinition:
-    datatype: str = ''
-    hdx_datatype: Union[List[str], str] = ''
-    identifier: str = ''
-    nullable: bool = True
-
-
-@dataclass
 class DdlCreateTableInfo:
     project: Optional[str] = None
     tablename: Optional[str] = None
@@ -82,22 +76,21 @@ class ParseContext(Enum):
 
 
 class NoDdlMappingFoundError(Exception):
-    def __init__(self, sql_type):
+    def __init__(self, ddl_type):
         super().__init__(self)
-        self.sql_type = sql_type
+        self.sql_type = ddl_type
 
 
-def ddl_to_create_table_info(query_create_table: str,
-                             mapper) -> DdlCreateTableInfo:
-    modified_query, _ = replace_query_backtick_vars(query_create_table)
-    sqlglot_create_expression = sqlglot.parse_one(modified_query)
-    create_table_info = DdlCreateTableInfo()
-    for node in sqlglot_create_expression.bfs():
-        if isinstance(node[0], sqlglot.expressions.Table):
-            create_table_info.project, create_table_info.tablename = [str(n) for n in list(node[0].flatten())]
+# pylint: disable=R0903
+class SqlColumnDefinitionsProvider(ColumnDefinitionsProvider):
+    def yield_column(self, column_input: Any) -> ColumnDefinition:
+        node = column_input[0]
+        create_tbl_info = column_input[1]
+        mapper = column_input[2]
         if isinstance(node[0], sqlglot.expressions.ColumnDef):
             identifier_datatype_maybeconstraint = list(node[0].flatten())
-            identifier, datatype = identifier_datatype_maybeconstraint[0], identifier_datatype_maybeconstraint[1]
+            identifier, datatype = (identifier_datatype_maybeconstraint[0],
+                                    identifier_datatype_maybeconstraint[1])
             constraint = None
             try:
                 constraint = identifier_datatype_maybeconstraint[2]
@@ -111,25 +104,44 @@ def ddl_to_create_table_info(query_create_table: str,
                 elif isinstance(constraint_type, sqlglot.expressions.PrimaryKeyColumnConstraint):
                     is_nullable = False
                     if datatype.sql() == 'TIMESTAMP':
-                        create_table_info.default_primary_key = identifier.name
-                        create_table_info.candidate_primary_keys.add(identifier.name)
+                        create_tbl_info.default_primary_key = identifier.name
+                        create_tbl_info.candidate_primary_keys.add(identifier.name)
                     else:
-                        create_table_info.invalid_default_primary_key = identifier.name
+                        create_tbl_info.invalid_default_primary_key = identifier.name
             elif datatype.sql() == 'TIMESTAMP':
-                create_table_info.candidate_primary_keys.add(identifier.name)
+                create_tbl_info.candidate_primary_keys.add(identifier.name)
 
-            create_table_info.columns.append(
-                ColumnDefinition(datatype=datatype.sql(),
-                                 hdx_datatype=mapper(datatype.sql()),
-                                 identifier=identifier.name,
-                                 nullable=is_nullable))
-    create_table_info.final_primary_key = _choose_primary_key(create_table_info)
-    create_table_info.compression = _select_compression()
-    (create_table_info.ingest_type,
-     create_table_info.csv_delimiter,
-     create_table_info.csv_input_indexes) = _select_transform_type(create_table_info)
+            return ColumnDefinition(datatype=datatype.sql(),
+                                    hdx_datatype=mapper(datatype.sql()),
+                                    identifier=identifier.name,
+                                    nullable=is_nullable)
 
-    return create_table_info
+
+def ddl_to_create_table_info(source_mapping: str,
+                             mapper) -> DdlCreateTableInfo:
+    """Given a source mapping (a create table in sql, for example, or an elastic json file),
+        it fills a DdlCreateTableInfo with the necessary information to create a transform.
+    """
+    modified_source_mapping, _ = replace_query_backtick_vars(source_mapping)
+    sqlglot_create_expression = sqlglot.parse_one(modified_source_mapping)
+    create_tbl_info = DdlCreateTableInfo()
+    columns_provider = SqlColumnDefinitionsProvider()
+    for node in sqlglot_create_expression.bfs():
+        if isinstance(node[0], sqlglot.expressions.Table):
+            create_tbl_info.project, create_tbl_info.tablename = [str(n) for n
+                                                                  in list(node[0].flatten())]
+        if isinstance(node[0], sqlglot.expressions.ColumnDef):
+            new_column = columns_provider.yield_column((node, create_tbl_info, mapper))
+            create_tbl_info.columns.append(new_column)
+
+
+    create_tbl_info.final_primary_key = _choose_primary_key(create_tbl_info)
+    create_tbl_info.compression = _select_compression()
+    (create_tbl_info.ingest_type,
+     create_tbl_info.csv_delimiter,
+     create_tbl_info.csv_input_indexes) = _select_transform_type(create_tbl_info)
+
+    return create_tbl_info
 
 
 def _create_transform_elements_for(col_def: ColumnDefinition):
@@ -307,6 +319,7 @@ def _select_transform_type(ddl: DdlCreateTableInfo):
 
     return (ttype, delimiter, fields_indexes)
 
+
 class IngestIndexError(Exception):
     pass
 
@@ -329,7 +342,8 @@ def _select_csv_indexes(ddl: DdlCreateTableInfo):
             field_internal_idx = field_index - 1
             the_field = fields_available[field_internal_idx]
             ingest_index = int(input(
-                f"Which index do you want to assign for field (Type Ctrl-C to to finish) '{the_field}': "))
+                "Which index do you want to assign for field (Type Ctrl-C to to finish)" +
+                f" '{the_field}': "))
             if ingest_index in indexes_used:
                 raise IngestIndexError(f'Index already used {ingest_index}. Use another index.')
 
@@ -364,7 +378,6 @@ def _choose_primary_key(cti: DdlCreateTableInfo):
         else:
             print()
     return p_key
-
 
 
 if __name__ == '__main__':
