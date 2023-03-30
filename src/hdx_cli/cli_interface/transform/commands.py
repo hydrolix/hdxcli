@@ -7,6 +7,7 @@ from ..common.undecorated_click_commands import basic_transform
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.exceptions import (HdxCliException,
+                                              CommandLineException,
                                               TransformNotFoundException)
 
 from ..common.rest_operations import (create as command_create,
@@ -68,22 +69,38 @@ def create(ctx: click.Context,
               is_flag=True,
               default=False,
               help='Just output the transform without applying it into the table')
+@click.option('--source-mapping-dsl', '-s',
+              help='The language used in the source mapping. For sql it can be autodected '
+              'from the the ddl_file extension. Use when disambiguation is needed.',
+              metavar='SOURCEMAPPING',
+              required=False,
+              default=None)
 @click.argument('ddl_file')
 @click.argument('transform_name')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
+# pylint: disable=too-many-arguments
 def map_from(ctx: click.Context,
              ddl_file: str,
              ddl_mapping: str,
              ddl_custom_mapping: str,
              no_apply: bool,
+             source_mapping_dsl: str,
              transform_name: str):
-    the_sql = None
-    with open(ddl_file, encoding='utf-8') as fsql:
-        the_sql = fsql.read()
+    if source_mapping_dsl is None:
+        if ddl_file.lower().endswith('.sql'):
+            source_mapping_dsl = 'sql'
+    if not source_mapping_dsl:
+        raise CommandLineException(f'Unkown source mapping dsl for {ddl_file}. '
+                                   'Please specify one with -s option.')
 
-    mapper = ddl_to_hdx_datatype(ddl_custom_mapping, 'sql')
-    create_table_info: DdlCreateTableInfo = ddl_to_create_table_info(the_sql, 'sql',
+    ddl_file_contents = None
+    with open(ddl_file, encoding='utf-8') as ddl_stream:
+        ddl_file_contents = ddl_stream.read()
+
+    mapper = ddl_to_hdx_datatype(ddl_custom_mapping, source_mapping_dsl)
+    create_table_info: DdlCreateTableInfo = ddl_to_create_table_info(ddl_file_contents,
+                                                                     source_mapping_dsl,
                                                                      mapper)
     transform_dict = generate_transform_dict(create_table_info,
                                              transform_name,

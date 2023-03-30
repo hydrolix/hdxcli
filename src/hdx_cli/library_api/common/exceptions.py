@@ -11,6 +11,10 @@ class HttpException(HdxCliException):
         self.message = message
 
 
+class CommandLineException(HdxCliException):
+    pass
+
+
 class BadFileNameConventionException(HdxCliException):
     pass
 

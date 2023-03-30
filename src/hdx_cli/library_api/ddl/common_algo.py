@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from typing import Any, List, Callable, Union
 import json
 
@@ -6,20 +5,30 @@ from .common_intermediate_representation import (NoDdlMappingFoundError,
                                                  ColumnDefinition,
                                                  DdlCreateTableInfo)
 
-from .interfaces import ComposedTypeParser
-from .extensions import *
+from .interfaces import ComposedTypeParser, SourceToTableInfoProcessor
+
+# pylint: disable=wildcard-import
+# pylint: disable=unused-wildcard-import
+# All types from .extensions are used within this file from globals()['SomeType'] so
+# the pylint and flake8 errors do not apply here for the strategy used to load
+# types within this module. Alternatively importlib could be used instead of
+# a top-level import but this makes clearer at the top-level the dependency.
+from .extensions import *  # noqa: F403
+
+from .exceptions import IngestIndexError
 
 
 __all__ = ['ddl_to_hdx_datatype', 'ddl_to_create_table_info', 'generate_transform_dict']
 
+DdlTypeToHdxTypeMappingFunc = Callable[[str], Union[str, List[str]]]
 
-def ddl_to_hdx_datatype(data_mapping_file, ddl_name: str) -> Callable[[str], Union[str, List[str]]]:
+
+def ddl_to_hdx_datatype(data_mapping_file, ddl_name: str) -> DdlTypeToHdxTypeMappingFunc:
     """
-    Returns a function that translates a ddl type to a hdx type.
+    Returns a function that translates a ddl composed type to a hdx composed type.
     The algorithm works by passing the ddl_name, which is used for custom
     compound type parsing and the data_mapping_file, which is also specific to each
-    different ddl. Namely, for each ddl there are two customization points used
-    inside the algorithm.
+    different ddl.
     """
     # pylint: disable=consider-using-with
     the_file = open(data_mapping_file, 'r', encoding='utf-8')
@@ -40,7 +49,7 @@ def ddl_to_hdx_datatype(data_mapping_file, ddl_name: str) -> Callable[[str], Uni
             return dt
         try:
             composed_parser_type = globals()[ddl_name.lower().capitalize() + 'ComposedTypeParser']
-            composed_parser = composed_parser_type()
+            composed_parser: ComposedTypeParser = composed_parser_type()
             return composed_parser.parse(ddl_datatype, simple_datatypes_mapping, compound_datatypes)
         except KeyError as key_error:
             raise NoDdlMappingFoundError(ddl_datatype) from key_error
@@ -161,7 +170,9 @@ def ddl_to_create_table_info(source_mapping: str,
         it fills a DdlCreateTableInfo with the necessary information to create a transform.
     """
     create_tbl_info = DdlCreateTableInfo()
-    source_to_ti_proc = globals()[f'{ddl_name.lower().capitalize()}SourceToTableInfoProcessor']()
+    source_to_ti_proc: SourceToTableInfoProcessor = (
+        globals()[f'{ddl_name.lower().capitalize()}SourceToTableInfoProcessor']())
+
     for column_or_table_and_project_name in \
         source_to_ti_proc.yield_table_info_tokens(source_mapping,
                                                   create_tbl_info, mapper):
@@ -253,6 +264,7 @@ def _create_transform_output_column(col_def: ColumnDefinition,
 
     return output_column
 
+
 def generate_transform_dict(ddl: DdlCreateTableInfo,
                             transform_name: str,
                             *,
@@ -275,6 +287,8 @@ def generate_transform_dict(ddl: DdlCreateTableInfo,
         output_columns.append(
             _create_transform_output_column(col,
                                             ddl,
-                                            from_input_index=ddl.csv_input_indexes.get(col.identifier),
-                                            is_primary_key=(ddl.final_primary_key == col.identifier)))
+                                            from_input_index=(
+                                                ddl.csv_input_indexes.get(col.identifier)),
+                                            is_primary_key=(
+                                                ddl.final_primary_key == col.identifier)))
     return the_transform
