@@ -1,0 +1,19 @@
+{"simple_datatypes": {
+ "INT": ["uint8", "uint16", "uint32", "int8", "int16", "int32_optimal"],
+ "BIGINT":["uint64", "int64_optimal"],
+ "STRING": "string",
+ "DATE": "datetime",
+ "REAL": "double",
+ "DOUBLE": "double",
+ "FLOAT": "double",
+ "BOOLEAN": "boolean",
+ "TIMESTAMP": "datetime",
+ "TEXT": "string"
+},
+ "compound_datatypes": {
+     "ARRAY": "array",
+     "STRUCT": "map",
+     "MAP": "map",
+     "VARCHAR": "string"
+ }
+}

@@ -1,0 +1,29 @@
+{"simple_datatypes": {
+    "long": "int64",
+    "integer": "int32",
+    "short": "int16",
+    "byte": "int8",
+    "double": "double",
+    "float": "double",
+    "half_float": "double",
+    "unsigned_long": "uint64",
+    "binary": "string"
+    "completion": "string",
+    "date": "datetime",
+    "keyword": "string",
+    "date_nanos": "datetime",
+    "integer_range": ["int32", "int32"],
+    "float_range": ["double", "double"],
+    "long_range": ["int64", "int64"],
+    "double_range": ["double", "double"],
+    "date_range": ["datetime", "datetime"],
+    "ip": "string",
+    "version": "string",
+},
+ "compound_datatypes": {
+     "ARRAY": "array",
+     "STRUCT": "map",
+     "MAP": "map",
+     "VARCHAR": "string"
+ }
+}
