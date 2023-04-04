@@ -1,5 +1,6 @@
 from typing import List, Tuple
 
+import json
 import click
 
 from ...library_api.common.exceptions import HdxCliException, LogicException
@@ -26,4 +27,9 @@ def settings(ctx: click.Context,
              value):
     resource_path = ctx.parent.obj["resource_path"]
     profile = ctx.parent.obj["usercontext"]
-    basic_settings(profile, resource_path, key, value)
+    the_value = value
+    if value:
+        the_value = value
+        if (stripped := value.strip()).startswith('[') and stripped.endswith(']'):
+            the_value = json.loads(stripped)
+    basic_settings(profile, resource_path, key, the_value)
