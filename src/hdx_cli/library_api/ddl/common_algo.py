@@ -1,11 +1,12 @@
-from typing import Any, List, Callable, Union
+from typing import Any, Callable, Dict, List, Union
 import json
 
 from .common_intermediate_representation import (NoDdlMappingFoundError,
                                                  ColumnDefinition,
-                                                 DdlCreateTableInfo)
+                                                 DdlCreateTableInfo,
+                                                 DdlTypeToHdxTypeMappingFunc)
 
-from .interfaces import ComposedTypeParser, SourceToTableInfoProcessor
+from .interfaces import ComposedTypeParser, SourceToTableInfoProcessor, PostProcessingHook
 
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
@@ -15,12 +16,11 @@ from .interfaces import ComposedTypeParser, SourceToTableInfoProcessor
 # a top-level import but this makes clearer at the top-level the dependency.
 from .extensions import *  # noqa: F403
 
-from .exceptions import IngestIndexError
+from .exceptions import IngestIndexError, NoPrimaryKeyFoundException
 
 
-__all__ = ['ddl_to_hdx_datatype', 'ddl_to_create_table_info', 'generate_transform_dict']
-
-DdlTypeToHdxTypeMappingFunc = Callable[[str], Union[str, List[str]]]
+__all__ = ['ddl_to_hdx_datatype', 'ddl_to_create_table_info', 'generate_transform_dict',
+           'DdlTypeToHdxTypeMappingFunc']
 
 
 def ddl_to_hdx_datatype(data_mapping_file, ddl_name: str) -> DdlTypeToHdxTypeMappingFunc:
@@ -34,10 +34,10 @@ def ddl_to_hdx_datatype(data_mapping_file, ddl_name: str) -> DdlTypeToHdxTypeMap
     the_file = open(data_mapping_file, 'r', encoding='utf-8')
     the_mapping = json.load(the_file)
     simple_datatypes_mapping = the_mapping['simple_datatypes']
-    compound_datatypes = the_mapping['compound_datatypes']
+    compound_datatypes_mapping = the_mapping['compound_datatypes']
     the_file.close()
 
-    def data_converter_func(ddl_datatype: str) -> Union[str, List[str]]:
+    def data_converter_func(ddl_datatype: Any) -> Union[str, List[str]]:
         dt = simple_datatypes_mapping.get(ddl_datatype)
         if isinstance(dt, list):
             for d in dt:
@@ -50,7 +50,9 @@ def ddl_to_hdx_datatype(data_mapping_file, ddl_name: str) -> DdlTypeToHdxTypeMap
         try:
             composed_parser_type = globals()[ddl_name.lower().capitalize() + 'ComposedTypeParser']
             composed_parser: ComposedTypeParser = composed_parser_type()
-            return composed_parser.parse(ddl_datatype, simple_datatypes_mapping, compound_datatypes)
+            return composed_parser.parse(ddl_datatype,
+                                         simple_datatypes_mapping,
+                                         compound_datatypes_mapping)
         except KeyError as key_error:
             raise NoDdlMappingFoundError(ddl_datatype) from key_error
     return data_converter_func
@@ -119,12 +121,21 @@ def _quoted(string: str):
 def _select_potential_primary_key_candidates_maybe_interactive(
         create_table_info: DdlCreateTableInfo):
     cti = create_table_info
-    candidates = ', '.join(_quoted(pc) for pc in cti.candidate_primary_keys)
+    candidates_str = ', '.join(_quoted(pc) for pc in cti.candidate_primary_keys)
+
+    if not cti.candidate_primary_keys:
+        raise NoPrimaryKeyFoundException('No primary keys to choose from.')
+
     if cti.default_primary_key and cti.candidate_primary_keys != 1:
-        result = input(f"Please choose the primary key for your transform (default: '{cti.default_primary_key}'. "
-                       f'candidates: {candidates}): ')
-        if result in cti.candidate_primary_keys:
-            return result
+        result = None
+        while not result:
+            result = input(f"Please choose the primary key for your transform (default: '{cti.default_primary_key}'. "
+                           f'candidates: {candidates_str}): ')
+            if result in cti.candidate_primary_keys:
+                return result
+            else:
+                print(f'Primary key {result} is not a valid candidate.')
+                result = None
         return cti.default_primary_key
     elif cti.default_primary_key and cti.candidate_primary_keys == 1:
         if cti.default_primary_key != next(iter(cti.candidate_primary_keys)):
@@ -133,7 +144,7 @@ def _select_potential_primary_key_candidates_maybe_interactive(
         return next(iter(cti.candidate_primary_keys))
     elif not cti.default_primary_key and cti.candidate_primary_keys != 1:
         result = input(f'Please choose the primary key for your transform. '
-                       f'(candidates: {candidates}): ')
+                       f'(candidates: {candidates_str}): ')
         if result not in cti.candidate_primary_keys:
             return None
         return result
@@ -163,9 +174,19 @@ def _select_transform_type(ddl: DdlCreateTableInfo):
     return (ttype, delimiter, fields_indexes)
 
 
+class GenericPostProcessingHook(PostProcessingHook):
+    def post_process(self, ddl_create_table_info: DdlCreateTableInfo):
+        ddl_create_table_info.final_primary_key = _choose_primary_key(ddl_create_table_info)
+        ddl_create_table_info.compression = _select_compression()
+        (ddl_create_table_info.ingest_type,
+         ddl_create_table_info.csv_delimiter,
+         ddl_create_table_info.csv_input_indexes) = _select_transform_type(ddl_create_table_info)
+
+
 def ddl_to_create_table_info(source_mapping: str,
                              ddl_name: str,
-                             mapper) -> DdlCreateTableInfo:
+                             ddl_to_hdx_mapping_func:
+                             DdlTypeToHdxTypeMappingFunc) -> DdlCreateTableInfo:
     """Given a source mapping (a create table in sql, for example, or an elastic json file),
         it fills a DdlCreateTableInfo with the necessary information to create a transform.
     """
@@ -173,21 +194,29 @@ def ddl_to_create_table_info(source_mapping: str,
     source_to_ti_proc: SourceToTableInfoProcessor = (
         globals()[f'{ddl_name.lower().capitalize()}SourceToTableInfoProcessor']())
 
-    for column_or_table_and_project_name in \
-        source_to_ti_proc.yield_table_info_tokens(source_mapping,
-                                                  create_tbl_info, mapper):
+    for column_or_table_and_project_name in source_to_ti_proc.yield_table_info_tokens(
+            source_mapping, ddl_to_hdx_mapping_func):
         if isinstance(column_or_table_and_project_name, ColumnDefinition):
-            create_tbl_info.columns.append(column_or_table_and_project_name)
+            if (column_or_table_and_project_name.hdx_datatype in ('datetime', 'epoch') and
+                    not column_or_table_and_project_name.column_comes_from_object_field):
+                create_tbl_info.default_primary_key = column_or_table_and_project_name.identifier
+                create_tbl_info.candidate_primary_keys.add(
+                    column_or_table_and_project_name.identifier)
+
+            if not column_or_table_and_project_name.ignored_field:
+                create_tbl_info.columns.append(column_or_table_and_project_name)
+            else:
+                create_tbl_info.ignored_fields.append(column_or_table_and_project_name)
         elif isinstance(column_or_table_and_project_name, tuple):
             create_tbl_info.project, create_tbl_info.tablename = column_or_table_and_project_name
         else:
             assert False
 
-    create_tbl_info.final_primary_key = _choose_primary_key(create_tbl_info)
-    create_tbl_info.compression = _select_compression()
-    (create_tbl_info.ingest_type,
-     create_tbl_info.csv_delimiter,
-     create_tbl_info.csv_input_indexes) = _select_transform_type(create_tbl_info)
+    GenericPostProcessingHook().post_process(create_tbl_info)
+    try:
+        globals()[ddl_name.lower().capitalize() + 'PostProcessingHook']().post_process(create_tbl_info)
+    except KeyError:
+        pass
 
     return create_tbl_info
 
@@ -238,7 +267,7 @@ def _create_transform_output_column(col_def: ColumnDefinition,
                                     is_primary_key=False):
     output_column = {}
     output_column['name'] = col_def.identifier
-    output_column['datatype'] : Dict[str, Any] = {}
+    output_column['datatype']: Dict[str, Any] = {}
 
     hdx_datatype_raw = col_def.hdx_datatype
 
@@ -272,7 +301,7 @@ def generate_transform_dict(ddl: DdlCreateTableInfo,
                             transform_type: str = 'csv'):
     the_transform = {}
     the_transform['name'] = transform_name
-    the_transform['settings'] = {}
+    the_transform['settings']: Dict = {}
     the_transform['description'] = description
     the_transform['type'] = transform_type
 #   the_transform['format_details']["delimiter"] = ddl.csv_delimiter

@@ -23,6 +23,10 @@ class NotImplementedException(HdxCliException):
     pass
 
 
+class NotSupportedException(HdxCliException):
+    pass
+
+
 class TokenExpiredException(HdxCliException):
     pass
 

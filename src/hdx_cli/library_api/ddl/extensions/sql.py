@@ -3,7 +3,9 @@ from typing import Iterator, List, Union, Tuple
 
 import sqlglot
 
-from ..common_intermediate_representation import ColumnDefinition, DdlCreateTableInfo
+from ..common_intermediate_representation import (ColumnDefinition,
+                                                  DdlCreateTableInfo,
+                                                  DdlTypeToHdxTypeMappingFunc)
 from ..interfaces import SourceToTableInfoProcessor, ComposedTypeParser
 
 
@@ -12,7 +14,7 @@ __all__ = ['SqlSourceToTableInfoProcessor', 'SqlComposedTypeParser']
 
 # pylint: disable=R0903
 class SqlComposedTypeParser(ComposedTypeParser):
-    def parse(self, ddl_datatype,
+    def parse(self, ddl_datatype: str,
               simple_datatypes_mapping,
               compound_datatypes_mapping) -> List[str]:
         if ddl_datatype.startswith('STRUCT'):
@@ -90,15 +92,14 @@ class NoDdlMappingFoundError(Exception):
 # pylint: disable=R0903
 class SqlSourceToTableInfoProcessor(SourceToTableInfoProcessor):
     def yield_table_info_tokens(self, source_mapping: str,
-                                create_tbl_info: DdlCreateTableInfo,
-                                mapper) -> Iterator[Union[ColumnDefinition, Tuple[str, str]]]:
+                                mapper: DdlTypeToHdxTypeMappingFunc) -> Iterator[Union[ColumnDefinition, Tuple[str, str]]]:
         modified_source_mapping, _ = replace_query_backtick_vars(source_mapping)
         sqlglot_create_expression = sqlglot.parse_one(modified_source_mapping)
         for node in sqlglot_create_expression.bfs():
             if isinstance(node[0], sqlglot.expressions.Table):
-                create_tbl_info.project, create_tbl_info.tablename = [str(n) for n
-                                                                      in list(node[0].flatten())]
-                yield (create_tbl_info.project, create_tbl_info.tablename)
+                project, tablename = [str(n) for n
+                                      in list(node[0].flatten())]
+                yield (project, tablename)
             if isinstance(node[0], sqlglot.expressions.ColumnDef):
                 identifier_datatype_maybeconstraint = list(node[0].flatten())
                 identifier, datatype = (identifier_datatype_maybeconstraint[0],
@@ -118,14 +119,6 @@ class SqlSourceToTableInfoProcessor(SourceToTableInfoProcessor):
                     elif isinstance(constraint_type,
                                     sqlglot.expressions.PrimaryKeyColumnConstraint):
                         is_nullable = False
-                        if datatype.sql() == 'TIMESTAMP':
-                            create_tbl_info.default_primary_key = identifier.name
-                            create_tbl_info.candidate_primary_keys.add(identifier.name)
-                        else:
-                            create_tbl_info.invalid_default_primary_key = identifier.name
-                elif datatype.sql() == 'TIMESTAMP':
-                    create_tbl_info.candidate_primary_keys.add(identifier.name)
-
                 yield ColumnDefinition(datatype=datatype.sql(),
                                        hdx_datatype=mapper(datatype.sql()),
                                        identifier=identifier.name,

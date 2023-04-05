@@ -1,13 +1,14 @@
 {"simple_datatypes": {
     "long": "int64",
     "integer": "int32",
-    "short": "int16",
+    "short": "int32",
+    "boolean": "boolean",
     "byte": "int8",
     "double": "double",
     "float": "double",
     "half_float": "double",
     "unsigned_long": "uint64",
-    "binary": "string"
+    "binary": "string",
     "completion": "string",
     "date": "datetime",
     "keyword": "string",
@@ -17,8 +18,9 @@
     "long_range": ["int64", "int64"],
     "double_range": ["double", "double"],
     "date_range": ["datetime", "datetime"],
+    "text": "string",
     "ip": "string",
-    "version": "string",
+    "version": "string"
 },
  "compound_datatypes": {
      "ARRAY": "array",
