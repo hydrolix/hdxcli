@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, List, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from .common_intermediate_representation import (ColumnDefinition,
                                                  DdlCreateTableInfo,
@@ -29,7 +29,8 @@ class ComposedTypeParser(ABC):
 
 
 class PostProcessingHook(ABC):
-    def post_process(self, ddl_create_table_info: DdlCreateTableInfo):
+    def post_process(self, ddl_create_table_info: DdlCreateTableInfo,
+                     user_choices_dict: Dict[str, Any]):
         """
         This method receives all gathered create_table_info information during parsing
         and passes it through so that additional post-steps can be added.

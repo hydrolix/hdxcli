@@ -1,0 +1,10 @@
+{"csv_indexes": [],
+ "ingest_type": "csv",
+ "csv_delimiter": ",",
+ "compression": "gzip",
+ "primary_key": "timestamp_ms",
+ "add_ignored_fields_as_string_columns": false,
+ "elastic": {
+     "array_fields": ["aws_region", "nonexistent_field"]
+ }
+}

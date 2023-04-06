@@ -21,6 +21,21 @@ class ColumnDefinition:
     ignored_reason: Optional[str] = None
     column_comes_from_object_field: bool = False
 
+    def __str__(self):
+        datatype_str = (' of '.join([self.hdx_datatype])
+                        if not isinstance(self.hdx_datatype, list)
+                        else ' of '.join(self.hdx_datatype))
+        return f'{self.identifier} ({datatype_str})'
+
+    def __hash__(self):
+        return hash(self.identifier)
+
+    def __eq__(self, rhs):
+        if isinstance(rhs, str):
+            return self.identifier == rhs
+        return self.identifier == rhs.identifier
+
+
 ReasonT = str
 
 
@@ -38,6 +53,7 @@ class DdlCreateTableInfo:
     csv_delimiter: str = ','
     csv_input_indexes: Dict[str, int] = field(default_factory=dict)
     invalid_default_primary_key: Optional[str] = None
+    add_ignored_fields_as_string_columns: bool = False
 
 
 class NoDdlMappingFoundError(Exception):

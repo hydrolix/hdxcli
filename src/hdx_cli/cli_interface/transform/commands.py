@@ -1,4 +1,5 @@
 """Transform resource command. It flows down url for current table"""
+from typing import Optional
 import json
 
 import click
@@ -16,13 +17,12 @@ from ..common.rest_operations import (create as command_create,
                                       show as command_show)
 
 from ...library_api.ddl.common_algo import (ddl_to_create_table_info,
-                                            ddl_to_hdx_datatype,
+                                            ddl_datatype_to_hdx_datatype,
                                             generate_transform_dict)
 
 from ...library_api.ddl.common_intermediate_representation import (
                                     DdlCreateTableInfo,
                                     ColumnDefinition)
-
 
 from ...library_api.common.context import ProfileUserContext
 from ..common.misc_operations import settings as command_settings
@@ -69,12 +69,16 @@ def create(ctx: click.Context,
               is_flag=True,
               default=False,
               help='Just output the transform without applying it into the table')
-@click.option('--source-mapping-dsl', '-s',
+@click.option('--source-mapping-ddl-name', '-s',
               help='The language used in the source mapping. For sql it can be autodected '
               'from the the ddl_file extension. Use when disambiguation is needed.',
               metavar='SOURCEMAPPING',
               required=False,
               default=None)
+@click.option('--user-choices',
+              help='Json file with user choices. These are applied to your mapping as a postprocess step',
+              metavar='USERCHOICESFILE',
+              required=False)
 @click.argument('ddl_file')
 @click.argument('transform_name')
 @click.pass_context
@@ -82,15 +86,16 @@ def create(ctx: click.Context,
 # pylint: disable=too-many-arguments
 def map_from(ctx: click.Context,
              ddl_file: str,
-             ddl_mapping: str,
-             ddl_custom_mapping: str,
+             ddl_mapping: Optional[str],
+             ddl_custom_mapping: Optional[str],
              no_apply: bool,
-             source_mapping_dsl: str,
+             source_mapping_ddl_name: Optional[str],
+             user_choices: Optional[str],
              transform_name: str):
-    if source_mapping_dsl is None:
+    if source_mapping_ddl_name is None:
         if ddl_file.lower().endswith('.sql'):
-            source_mapping_dsl = 'sql'
-    if not source_mapping_dsl:
+            source_mapping_ddl_name = 'sql'
+    if not source_mapping_ddl_name:
         raise CommandLineException(f'Unkown source mapping dsl for {ddl_file}. '
                                    'Please specify one with -s option.')
 
@@ -98,10 +103,11 @@ def map_from(ctx: click.Context,
     with open(ddl_file, encoding='utf-8') as ddl_stream:
         ddl_file_contents = ddl_stream.read()
 
-    mapper = ddl_to_hdx_datatype(ddl_custom_mapping, source_mapping_dsl)
+    mapper = ddl_datatype_to_hdx_datatype(ddl_custom_mapping, source_mapping_ddl_name)
     create_table_info: DdlCreateTableInfo = ddl_to_create_table_info(ddl_file_contents,
-                                                                     source_mapping_dsl,
-                                                                     mapper)
+                                                                     source_mapping_ddl_name,
+                                                                     mapper,
+                                                                     user_choices_file=user_choices)
     transform_dict = generate_transform_dict(create_table_info,
                                              transform_name,
                                              transform_type=create_table_info.ingest_type)

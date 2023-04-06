@@ -1,11 +1,14 @@
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 import json
+
+from ...library_api.common.interactive_helpers import (
+    choose_interactively,
+    choose_from_elements_interactively)
 
 from .common_intermediate_representation import (NoDdlMappingFoundError,
                                                  ColumnDefinition,
                                                  DdlCreateTableInfo,
                                                  DdlTypeToHdxTypeMappingFunc)
-
 from .interfaces import ComposedTypeParser, SourceToTableInfoProcessor, PostProcessingHook
 
 # pylint: disable=wildcard-import
@@ -19,11 +22,11 @@ from .extensions import *  # noqa: F403
 from .exceptions import IngestIndexError, NoPrimaryKeyFoundException
 
 
-__all__ = ['ddl_to_hdx_datatype', 'ddl_to_create_table_info', 'generate_transform_dict',
+__all__ = ['ddl_datatype_to_hdx_datatype', 'ddl_to_create_table_info', 'generate_transform_dict',
            'DdlTypeToHdxTypeMappingFunc']
 
 
-def ddl_to_hdx_datatype(data_mapping_file, ddl_name: str) -> DdlTypeToHdxTypeMappingFunc:
+def ddl_datatype_to_hdx_datatype(data_mapping_file, ddl_name: str) -> DdlTypeToHdxTypeMappingFunc:
     """
     Returns a function that translates a ddl composed type to a hdx composed type.
     The algorithm works by passing the ddl_name, which is used for custom
@@ -60,7 +63,7 @@ def ddl_to_hdx_datatype(data_mapping_file, ddl_name: str) -> DdlTypeToHdxTypeMap
 
 def _select_csv_indexes(ddl: DdlCreateTableInfo):
     field_indexes = {}
-    fields_available = sorted([c.identifier for c in ddl.columns])
+    fields_available = sorted((c for c in ddl.columns), key=lambda c: c.identifier)
     field_index = -1
     ingest_index = -1
 
@@ -71,17 +74,16 @@ def _select_csv_indexes(ddl: DdlCreateTableInfo):
             for i, a_field in enumerate(fields_available):
                 print(f'{i + 1}. {a_field}')
             print()
-            field_index = int(input(
-                'Please choose the field to assign an index for (Type Ctrl-C to finish): '))
+            valid_choices = {str(x) for x in range(1, len(fields_available))}
+            field_index = int(choose_interactively(
+                'Please choose the field to assign an index for (Type Ctrl-C to finish): ',
+                valid_choices=sorted(valid_choices)))
             field_internal_idx = field_index - 1
             the_field = fields_available[field_internal_idx]
-            ingest_index = int(input(
-                "Which index do you want to assign for field (Type Ctrl-C to to finish)" +
-                f" '{the_field}': "))
-            if ingest_index in indexes_used:
-                raise IngestIndexError(f'Index already used {ingest_index}. Use another index.')
-
-            field_indexes[the_field] = ingest_index
+            ingest_index = int(choose_interactively(
+                f"Which index (starting at 0) do you want to assign for field {the_field}: ",
+                valid_choices=list(set(range(len(valid_choices))) - indexes_used)))
+            field_indexes[the_field.identifier] = ingest_index
             fields_available.remove(the_field)
             indexes_used.add(ingest_index)
         except KeyboardInterrupt:
@@ -127,66 +129,122 @@ def _select_potential_primary_key_candidates_maybe_interactive(
         raise NoPrimaryKeyFoundException('No primary keys to choose from.')
 
     if cti.default_primary_key and cti.candidate_primary_keys != 1:
-        result = None
-        while not result:
-            result = input(f"Please choose the primary key for your transform (default: '{cti.default_primary_key}'. "
-                           f'candidates: {candidates_str}): ')
-            if result in cti.candidate_primary_keys:
-                return result
-            else:
-                print(f'Primary key {result} is not a valid candidate.')
-                result = None
-        return cti.default_primary_key
+        return choose_interactively(
+            f"Please choose the primary key for your transform (default: '{cti.default_primary_key}'."
+            f" candidates: {cti.candidate_primary_keys}): ",
+            default=cti.default_primary_key, valid_choices=sorted(cti.candidate_primary_keys))
+        return result
     elif cti.default_primary_key and cti.candidate_primary_keys == 1:
         if cti.default_primary_key != next(iter(cti.candidate_primary_keys)):
             return cti.default_primary_key
     elif not cti.default_primary_key and cti.candidate_primary_keys == 1:
         return next(iter(cti.candidate_primary_keys))
     elif not cti.default_primary_key and cti.candidate_primary_keys != 1:
-        result = input(f'Please choose the primary key for your transform. '
-                       f'(candidates: {candidates_str}): ')
-        if result not in cti.candidate_primary_keys:
-            return None
-        return result
+        return choose_interactively(f'Please choose the primary key for your transform. '
+                                    f'(candidates: {candidates_str}): ',
+                                    valid_choices=sorted(cti.candidate_primary_keys))
     return None
 
 
-def _select_compression():
-    compression = input(f"Please choose compression type (suggestions: 'none', 'gzip'. Default is 'none'): ")
-    if compression == '':
-        return 'none'
-    return compression
+def _select_compression(_: DdlCreateTableInfo):
+    return choose_interactively(
+        "Please choose compression type (suggestions: 'none', 'gzip'. Default is 'none'): ",
+        default='none')
 
 
-def _select_transform_type(ddl: DdlCreateTableInfo):
-    ttype = input(f"Please choose type of transform (suggestions: 'csv', 'json'. Default is 'csv'): ")
-    if ttype == '':
-        ttype = 'csv'
+def _select_delimiter(_: DdlCreateTableInfo):
+    return choose_interactively("Please choose the csv delimiter (default is ','): ",
+                                default=',')
 
-    delimiter = ''
-    fields_indexes = {}
-    if ttype == 'csv':
-        delimiter = input(f"Please choose the csv delimiter (default is ','): ")
-        fields_indexes = _select_csv_indexes(ddl)
-    if delimiter == '' and ttype == 'csv':
-        delimiter = ','
 
-    return (ttype, delimiter, fields_indexes)
+def _select_ingest_type(ddl: DdlCreateTableInfo):
+    return choose_interactively(
+        "Please choose type of transform (suggestions: 'csv', 'json'. Default is 'csv'): ",
+        default='csv', valid_choices=['csv', 'json'])
+
+
+def _select_ignored_fields_op(ddl: DdlCreateTableInfo):
+    choice = choose_interactively(
+        "Please choose whether ignored fields should be mapped "
+        "as string columns or just ignored (default is false): ",
+        default='false', valid_choices=['true', 'false'])
+    return bool(choice.lower().capitalize())
+
+
+ALL_USER_CHOICE_KEYS = ('primary_key',
+                        'ingest_type',
+                        'compression',
+                        'csv_indexes',
+                        'csv_delimiter',
+                        'add_ignored_fields_as_string_columns')
+
+
+USER_CHOICE_FUNCS: Dict[str, Callable[[DdlCreateTableInfo], Any]] = {
+    'primary_key': _choose_primary_key,
+    'compression': _select_compression,
+    'csv_delimiter': _select_delimiter,
+    'ingest_type': _select_ingest_type,
+    'csv_indexes': _select_csv_indexes,
+    'add_ignored_fields_as_string_columns': _select_ignored_fields_op}
+
+
+def _try_apply_user_choice_from_dict(the_dict, key):
+    if not the_dict or the_dict.get(key) is None:
+        return (None, False)
+    return (the_dict.get(key), True)
 
 
 class GenericPostProcessingHook(PostProcessingHook):
-    def post_process(self, ddl_create_table_info: DdlCreateTableInfo):
-        ddl_create_table_info.final_primary_key = _choose_primary_key(ddl_create_table_info)
-        ddl_create_table_info.compression = _select_compression()
-        (ddl_create_table_info.ingest_type,
-         ddl_create_table_info.csv_delimiter,
-         ddl_create_table_info.csv_input_indexes) = _select_transform_type(ddl_create_table_info)
+    def post_process(self, ddl_create_table_info: DdlCreateTableInfo,
+                     user_choices_dict: Dict[str, Any]):
+        already_set_choices = {choice: False for choice in ALL_USER_CHOICE_KEYS}
+        ignored_options_in_loop = {'csv_delimiter', 'csv_indexes'}
+        ddl_table_fields_to_set = {'primary_key': 'final_primary_key'}
+        if user_choices_dict:
+            for user_choice in ALL_USER_CHOICE_KEYS:
+                if user_choice in ignored_options_in_loop:
+                    continue
+                field_to_set = ddl_table_fields_to_set.get(user_choice, user_choice)
+                field_val, already_set_choices[user_choice] = (
+                    _try_apply_user_choice_from_dict(user_choices_dict, user_choice))
+                if already_set_choices[user_choice]:
+                    setattr(ddl_create_table_info, field_to_set, field_val)
+            if ddl_create_table_info.ingest_type == 'csv':
+                ddl_create_table_info.csv_delimiter = (
+                    user_choices_dict.get('csv_delimiter') if
+                    user_choices_dict.get('csv_delimiter') is not None
+                    else USER_CHOICE_FUNCS['csv_delimiter'](ddl_create_table_info))
+                already_set_choices['csv_delimiter'] = True
+
+                if (indexes := user_choices_dict.get('csv_indexes')) is not None:
+                    ddl_create_table_info.csv_input_indexes = {elem[0]: elem[1] for elem in indexes}
+                    already_set_choices['csv_indexes'] = True
+                else:
+                    ddl_create_table_info.csv_input_indexes = USER_CHOICE_FUNCS['csv_indexes'](ddl_create_table_info)
+                    already_set_choices['csv_indexes'] = True
+
+        for user_choice, is_set_choice in already_set_choices.items():
+            if not is_set_choice and user_choice not in ignored_options_in_loop:
+                field_to_set = ddl_table_fields_to_set.get(user_choice, user_choice)
+                setattr(ddl_create_table_info, field_to_set,
+                        USER_CHOICE_FUNCS[user_choice](ddl_create_table_info))
+                already_set_choices[user_choice] = True
+
+        if ddl_create_table_info.ingest_type == 'csv':
+            if not already_set_choices['csv_delimiter']:
+                ddl_create_table_info.csv_delimiter = (
+                    USER_CHOICE_FUNCS['csv_delimiter'](ddl_create_table_info))
+            if not already_set_choices['csv_indexes']:
+                ddl_create_table_info.csv_input_indexes = (
+                    USER_CHOICE_FUNCS['csv_indexes'](ddl_create_table_info))
 
 
 def ddl_to_create_table_info(source_mapping: str,
                              ddl_name: str,
                              ddl_to_hdx_mapping_func:
-                             DdlTypeToHdxTypeMappingFunc) -> DdlCreateTableInfo:
+                             DdlTypeToHdxTypeMappingFunc, *,
+                             user_choices_file: Optional[str]=None
+                             ) -> DdlCreateTableInfo:
     """Given a source mapping (a create table in sql, for example, or an elastic json file),
         it fills a DdlCreateTableInfo with the necessary information to create a transform.
     """
@@ -212,12 +270,19 @@ def ddl_to_create_table_info(source_mapping: str,
         else:
             assert False
 
-    GenericPostProcessingHook().post_process(create_tbl_info)
+    user_choices_dict = {}
+    if user_choices_file:
+        with open(user_choices_file,
+                  encoding='utf-8') as user_choices_stream:
+            user_choices_dict = json.load(user_choices_stream)
+    GenericPostProcessingHook().post_process(create_tbl_info, user_choices_dict)
     try:
-        globals()[ddl_name.lower().capitalize() + 'PostProcessingHook']().post_process(create_tbl_info)
+
+        globals()[ddl_name.lower().capitalize() +
+                  'PostProcessingHook']().post_process(create_tbl_info,
+                                                       user_choices_dict.get(ddl_name.lower()))
     except KeyError:
         pass
-
     return create_tbl_info
 
 
@@ -265,12 +330,10 @@ def _create_transform_output_column(col_def: ColumnDefinition,
                                     *,
                                     from_input_index=None,
                                     is_primary_key=False):
-    output_column = {}
+    output_column: Dict[str, Any] = {}
     output_column['name'] = col_def.identifier
-    output_column['datatype']: Dict[str, Any] = {}
-
+    output_column['datatype'] = {}
     hdx_datatype_raw = col_def.hdx_datatype
-
     datatype = output_column['datatype']
     datatype['type'] = hdx_datatype_raw if not isinstance(hdx_datatype_raw, list) else hdx_datatype_raw[0]
     datatype['index'] = _needs_index(col_def, ddl)
@@ -282,7 +345,6 @@ def _create_transform_output_column(col_def: ColumnDefinition,
     datatype['default'] = None
     datatype['primary'] = is_primary_key
     datatype['virtual'] = False
-
     if from_input_index is not None:
         datatype['source'] = {'from_input_index': from_input_index}
 
@@ -299,20 +361,20 @@ def generate_transform_dict(ddl: DdlCreateTableInfo,
                             *,
                             description: str = None,
                             transform_type: str = 'csv'):
-    the_transform = {}
+    the_transform: Dict[str, Any] = {}
     the_transform['name'] = transform_name
-    the_transform['settings']: Dict = {}
+    the_transform['settings'] = {}
     the_transform['description'] = description
     the_transform['type'] = transform_type
-#   the_transform['format_details']["delimiter"] = ddl.csv_delimiter
+    # the_transform['format_details'] = {}
+    # the_transform['format_details']["delimiter"] = ddl.csv_delimiter
 
     the_transform['settings']['is_default'] = False
-    the_transform['settings']['output_columns']: List[ColumnDefinition] = []
+    the_transform['settings']['output_columns'] = []
     the_transform['settings']['compression'] = ddl.compression
     output_columns: List[ColumnDefinition] = the_transform['settings']['output_columns']
-
-    col: ColumnDefinition
     for col in ddl.columns:
+
         output_columns.append(
             _create_transform_output_column(col,
                                             ddl,
