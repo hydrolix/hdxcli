@@ -34,6 +34,9 @@ class ProfileUserContext:
     dictionaryname : Optional[str] = None
     kafkaname: Optional[str] = None
     kinesisname: Optional[str] = None
+    siemname: Optional[str] = None
+    summaryname: Optional[str] = None
+    storagename: Optional[str] = None
     scheme: str = 'https'
 
     def as_dict_for_config(self):

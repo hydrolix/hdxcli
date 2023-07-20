@@ -4,13 +4,14 @@ import json
 import click
 
 from hdx_cli.library_api.common.context import ProfileUserContext
-from hdx_cli.library_api.common.exceptions import LogicException, HdxCliException
-
+from hdx_cli.library_api.common.exceptions import LogicException, HdxCliException, TransformNotFoundException
 
 from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard-import
 from ...library_api.common import rest_operations as rest_ops
+from ...library_api.userdata.token import AuthInfo
 
 _MAX_TIMEOUT = 30
+
 
 def basic_create(profile,
                  resource_path,
@@ -74,8 +75,10 @@ def basic_create_with_body_from_string(profile,
     rest_ops.create(url, body=body, headers=headers, body_type=body_from_string_type)
 
 
-
-def basic_show(profile, resource_path, resource_name):
+def basic_show(profile,
+               resource_path,
+               resource_name,
+               indent: Optional[int] = None):
     hostname = profile.hostname
     scheme = profile.scheme
     list_url = f'{scheme}://{hostname}{resource_path}'
@@ -85,7 +88,7 @@ def basic_show(profile, resource_path, resource_name):
     resources = rest_ops.list(list_url, headers=headers)
     for resource in resources:
         if resource['name'] == resource_name:
-            return json.dumps(resource)
+            return json.dumps(resource, indent=indent)
 
 
 def basic_transform(ctx: click.Context):
@@ -161,6 +164,7 @@ def _do_create_dict_from_dotted_key_and_value(split_key, value,
         _do_create_dict_from_dotted_key_and_value(split_key[1:],
                                                   value,
                                                   the_dict[split_key[0]])
+
 
 def _create_dict_from_dotted_key_and_value(dotted_key, value):
     the_dict = {}
@@ -312,7 +316,8 @@ def _settings_update(resource: Dict[str, Any],
 def basic_settings(profile,
                    resource_path,
                    key,
-                   value):
+                   value,
+                   force_operation: Optional[bool] = False):
     """Given a resource type, it returns the settings that can be used for it"""
     hostname = profile.hostname
     scheme = profile.scheme
@@ -346,6 +351,7 @@ def basic_settings(profile,
     else:
         try:
             this_resource_url = f'{settings_url}{resource["uuid"]}'
+            this_resource_url += '?force_operation=true' if force_operation else ''
             resource = _settings_update(resource, key, value)
             rest_ops.update_with_put(
                 this_resource_url,
@@ -354,6 +360,7 @@ def basic_settings(profile,
         except:
             patch_data = _create_dict_from_dotted_key_and_value(key, value)
             this_resource_url = f'{settings_url}{resource["uuid"]}'
+            this_resource_url += '?force_operation=true' if force_operation else ''
             rest_ops.update_with_patch(
                 this_resource_url,
                 headers=headers,
@@ -361,7 +368,10 @@ def basic_settings(profile,
         print(f'Updated {resource["name"]} {key}')
 
 
-def basic_delete(profile, resource_path, resource_name: str):
+def basic_delete(profile,
+                 resource_path,
+                 resource_name: str,
+                 force_operation: Optional[bool] = False):
     hostname = profile.hostname
     scheme = profile.scheme
     list_url = f'{scheme}://{hostname}{resource_path}'
@@ -380,6 +390,7 @@ def basic_delete(profile, resource_path, resource_name: str):
     if not url:
         return False
     else:
+        url += '?force_operation=true' if force_operation else ''
         rest_ops.delete(url, headers=headers)
         return True
 

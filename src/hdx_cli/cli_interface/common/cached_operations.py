@@ -14,11 +14,19 @@ def find_kafka(user_ctx: ProfileUserContext):
                      ('tables', user_ctx.tablename),
                      ('sources/kafka', None)])
 
+
 def find_kinesis(user_ctx: ProfileUserContext):
     return access_resource(user_ctx,
                     [('projects', user_ctx.projectname),
                      ('tables', user_ctx.tablename),
                      ('sources/kinesis', None)])
+
+
+def find_siem(user_ctx: ProfileUserContext):
+    return access_resource(user_ctx,
+                    [('projects', user_ctx.projectname),
+                     ('tables', user_ctx.tablename),
+                     ('sources/siem', None)])
 
 
 def find_projects(user_ctx: ProfileUserContext):
@@ -111,3 +119,14 @@ def find_transform_id(user_ctx, transform_name):
     return [t["uuid"] for t in transforms if t["name"] == transform_name]
 
 
+def find_storages(user_ctx: ProfileUserContext):
+    token = user_ctx.auth
+    hostname = user_ctx.hostname
+    scheme = user_ctx.scheme
+    url = f"{scheme}://{hostname}/config/v1/orgs/{user_ctx.org_id}/storages/"
+    headers = {"Authorization": f"{token.token_type} {token.token}",
+               "Accept": "application/json"}
+    result = requests.get(url, headers=headers, timeout=30)
+    if result.status_code != 200:
+        raise HdxCliException(f"Error getting storages.")
+    return json.loads(result.content)

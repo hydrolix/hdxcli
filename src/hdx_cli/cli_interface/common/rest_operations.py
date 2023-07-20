@@ -97,8 +97,10 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 
 @click.command(help='Show resource. If not resource_name is provided, it will show the default if there is one.')
 @click.pass_context
+@click.option("--indent", type=int, help='Number of spaces for indentation in the output.')
 @report_error_and_exit(exctype=Exception)
-def show(ctx: click.Context):
+def show(ctx: click.Context,
+         indent: int):
     profile = ctx.parent.obj['usercontext']
     _, resource_kind = _heuristically_get_resource_kind(ctx.parent.obj['resource_path'])
     resource_name = getattr(profile, resource_kind + 'name')
@@ -106,4 +108,4 @@ def show(ctx: click.Context):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
     print(basic_show(profile, resource_path,
-                     resource_name))
+                     resource_name, indent))

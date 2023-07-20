@@ -21,6 +21,7 @@ from hdx_cli.cli_interface.sources import commands as sources_
 from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.integration import commands as integration_
 from hdx_cli.cli_interface.public import commands as public_
+from hdx_cli.cli_interface.storage import commands as storage_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.common.validation import is_valid_username, is_valid_hostname
@@ -142,10 +143,12 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               metavar='PASSWORD', default=None)
 @click.option('--profile-config-file', hidden=True, help='Used only for testing.',
               default=None)
-@click.option('--source', help='Source for kinesis/kafka streams',
+@click.option('--source', help='Source for kinesis/kafka/summary/SIEM streams.',
+              default=None)
+@click.option('--storage', help='Perform operation on the passed storage.',
               default=None)
 @click.option('--uri-scheme',
-              help='Scheme used',
+              help='Scheme used.',
               type=click.Choice(['default', 'http', 'https']),
               default='default')
 @click.pass_context
@@ -161,6 +164,7 @@ def hdx_cli(ctx, profile,
             password,
             profile_config_file,
             source,
+            storage,
             uri_scheme):
     "Command-line entry point for hdx cli interface"
     if ctx.invoked_subcommand == 'version':
@@ -219,6 +223,10 @@ def hdx_cli(ctx, profile,
     if source:
         user_context.kafkaname = source
         user_context.kinesisname = source
+        user_context.summaryname = source
+        user_context.siemname = source
+    if storage:
+        user_context.storagename = storage
     # Unconditional default override
     ctx.obj = {'usercontext': user_context}
 
@@ -242,6 +250,7 @@ hdx_cli.add_command(sources_.sources)
 hdx_cli.add_command(migrate_.migrate)
 hdx_cli.add_command(integration_.integration)
 hdx_cli.add_command(public_.public)
+hdx_cli.add_command(storage_.storage)
 hdx_cli.add_command(version)
 
 

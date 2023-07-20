@@ -39,7 +39,9 @@ def set(ctx, projectname, tablename, scheme=None):
         profile.tablename = tablename
     _serialize_to_config_file(profile, profile.profile_config_file)
 
-
+# MINOR CHANGE
+# This can be improved. In some situation, you can just change the table name and not the project name.
+# So, this command, need to be able to receive the parameter "table", to unset just the table name.
 @click.command(help='Remove any set projects/tables')
 @click.pass_context
 def unset(ctx):
