@@ -15,7 +15,9 @@ from ...library_api.utility.decorators import report_error_and_exit
 
 from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
-                                      show as command_show)
+                                      show as command_show,
+                                      activity as command_activity,
+                                      stats as command_stats)
 
 from ..common.misc_operations import settings as command_settings
 
@@ -51,3 +53,5 @@ project.add_command(create)
 project.add_command(command_delete)
 project.add_command(command_show)
 project.add_command(command_settings)
+project.add_command(command_activity)
+project.add_command(command_stats)

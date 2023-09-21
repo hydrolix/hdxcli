@@ -9,6 +9,7 @@ from hdx_cli.library_api.common.exceptions import LogicException, HdxCliExceptio
 
 from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard-import
 from ...library_api.common import rest_operations as rest_ops
+from ...library_api.common.exceptions import ResourceNotFoundException
 
 _MAX_TIMEOUT = 30
 
@@ -400,3 +401,48 @@ def basic_list(profile, resource_path):
             if (settings := resource.get('settings')) and settings.get('is_default'):
                 print(' (default)', end='')
             print()
+
+
+def _get_resource_information(profile,
+                            resource_path,
+                            resource_name,
+                            action,
+                            indent: Optional[int] = None):
+    hostname = profile.hostname
+    scheme = profile.scheme
+    list_url = f'{scheme}://{hostname}{resource_path}'
+    auth_info: AuthInfo = profile.auth
+    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
+               'Accept': 'application/json'}
+    resources = rest_ops.list(list_url, headers=headers)
+    url = None
+    for resource in resources:
+        if resource['name'] == resource_name:
+            if 'url' in resource:
+                url = resource['url'].replace('https://', f'{scheme}://')
+            else:
+                url = f"{scheme}://{hostname}{resource_path}{resource['uuid']}"
+            break
+    if not url:
+        raise ResourceNotFoundException(f'Resource "{resource_name}" not found.')
+    else:
+        url = url.replace('agustin-cli-2.hydro59.com', '35.88.46.67')
+        url += f'/{action}'
+        response = rest_ops.get(url, headers=headers)
+        return json.dumps(response, indent=indent)
+
+
+def basic_stats(profile, resource_path, resource_name, indent):
+    return _get_resource_information(profile,
+                                     resource_path,
+                                     resource_name,
+                                     'stats',
+                                     indent)
+
+
+def basic_activity(profile, resource_path, resource_name, indent):
+    return _get_resource_information(profile,
+                                     resource_path,
+                                     resource_name,
+                                     'activity',
+                                     indent)

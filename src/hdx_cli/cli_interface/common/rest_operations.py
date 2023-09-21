@@ -13,7 +13,9 @@ from .cached_operations import *
 from .undecorated_click_commands import (basic_create,
                                          basic_delete,
                                          basic_list,
-                                         basic_show)
+                                         basic_show,
+                                         basic_activity,
+                                         basic_stats)
 
 
 @click.command(help='Create resource.')
@@ -107,3 +109,31 @@ def show(ctx: click.Context):
     profile = ctx.parent.obj['usercontext']
     print(basic_show(profile, resource_path,
                      resource_name))
+
+
+@click.command(help='Display the activity of a resource. If not resource_name is provided, it will show the default if '
+                    'there is one.')
+@click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def activity(ctx: click.Context, indent: int):
+    profile = ctx.parent.obj['usercontext']
+    _, resource_kind = _heuristically_get_resource_kind(ctx.parent.obj['resource_path'])
+    resource_name = getattr(profile, resource_kind + 'name')
+    resource_path = ctx.parent.obj['resource_path']
+    profile = ctx.parent.obj['usercontext']
+    print(basic_activity(profile, resource_path, resource_name, indent))
+
+
+@click.command(help='Display statistics for a resource. If not resource_name is provided, it will show the default if '
+                    'there is one.')
+@click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def stats(ctx: click.Context, indent: int):
+    profile = ctx.parent.obj['usercontext']
+    _, resource_kind = _heuristically_get_resource_kind(ctx.parent.obj['resource_path'])
+    resource_name = getattr(profile, resource_kind + 'name')
+    resource_path = ctx.parent.obj['resource_path']
+    profile = ctx.parent.obj['usercontext']
+    print(basic_stats(profile, resource_path, resource_name, indent))
