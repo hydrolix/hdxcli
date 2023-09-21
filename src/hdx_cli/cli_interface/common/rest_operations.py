@@ -1,15 +1,9 @@
 from functools import partial
 from typing import Tuple
-import json
-
 import click
 
-from ...library_api.common.exceptions import (HdxCliException,
-                                              ResourceNotFoundException)
-from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
-from .cached_operations import *
 from .undecorated_click_commands import (basic_create,
                                          basic_delete,
                                          basic_list,
@@ -91,13 +85,14 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     plural = split_path[-2]
     if plural == 'dictionaries':
         return 'dictionaries', 'dictionary'
-    elif plural == 'kinesis':
+    if plural == 'kinesis':
         return 'kinesis', 'kinesis'
     singular = plural if not plural.endswith('s') else plural[0:-1]
     return plural, singular
 
 
-@click.command(help='Show resource. If not resource_name is provided, it will show the default if there is one.')
+@click.command(help='Show resource. If not resource_name is provided, it will show the default '
+                    'if there is one.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def show(ctx: click.Context):
@@ -111,8 +106,8 @@ def show(ctx: click.Context):
                      resource_name))
 
 
-@click.command(help='Display the activity of a resource. If not resource_name is provided, it will show the default if '
-                    'there is one.')
+@click.command(help='Display the activity of a resource. If not resource_name is provided, '
+                    'it will show the default if there is one.')
 @click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -125,8 +120,8 @@ def activity(ctx: click.Context, indent: int):
     print(basic_activity(profile, resource_path, resource_name, indent))
 
 
-@click.command(help='Display statistics for a resource. If not resource_name is provided, it will show the default if '
-                    'there is one.')
+@click.command(help='Display statistics for a resource. If not resource_name is provided, '
+                    'it will show the default if there is one.')
 @click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)

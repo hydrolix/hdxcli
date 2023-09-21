@@ -425,11 +425,10 @@ def _get_resource_information(profile,
             break
     if not url:
         raise ResourceNotFoundException(f'Resource "{resource_name}" not found.')
-    else:
-        url = url.replace('agustin-cli-2.hydro59.com', '35.88.46.67')
-        url += f'/{action}'
-        response = rest_ops.get(url, headers=headers)
-        return json.dumps(response, indent=indent)
+
+    url += f'/{action}'
+    response = rest_ops.get(url, headers=headers)
+    return json.dumps(response, indent=indent)
 
 
 def basic_stats(profile, resource_path, resource_name, indent):
