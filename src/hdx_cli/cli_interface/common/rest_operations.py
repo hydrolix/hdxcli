@@ -1,19 +1,15 @@
 from functools import partial
 from typing import Tuple
-import json
-
 import click
 
-from ...library_api.common.exceptions import (HdxCliException,
-                                              ResourceNotFoundException)
-from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
-from .cached_operations import *
 from .undecorated_click_commands import (basic_create,
                                          basic_delete,
                                          basic_list,
-                                         basic_show)
+                                         basic_show,
+                                         basic_activity,
+                                         basic_stats)
 
 
 @click.command(help='Create resource.')
@@ -38,8 +34,8 @@ def create(ctx: click.Context,
            resource_name: str,
            body_from_file,
            body_from_file_type):
-    user_profile = ctx.parent.obj['usercontext']
-    resource_path = ctx.parent.obj['resource_path']
+    user_profile = ctx.parent.obj.get('usercontext')
+    resource_path = ctx.parent.obj.get('resource_path')
     basic_create(user_profile, resource_path,
                  resource_name, body_from_file, body_from_file_type)
     print(f'Created {resource_name}.')
@@ -49,6 +45,8 @@ _confirmation_prompt = partial(dynamic_confirmation_prompt,
                                prompt="Please type 'delete this resource' to delete: ",
                                confirmation_message='delete this resource',
                                fail_message='Incorrect prompt input: resource was not deleted')
+
+
 @click.command(help='Delete resource.')
 @click.option('--disable-confirmation-prompt',
               is_flag=True,
@@ -59,8 +57,8 @@ _confirmation_prompt = partial(dynamic_confirmation_prompt,
 def delete(ctx: click.Context, resource_name: str,
            disable_confirmation_prompt):
     _confirmation_prompt(prompt_active=not disable_confirmation_prompt)
-    resource_path = ctx.parent.obj['resource_path']
-    profile = ctx.parent.obj['usercontext']
+    resource_path = ctx.parent.obj.get('resource_path')
+    profile = ctx.parent.obj.get('usercontext')
     if basic_delete(profile, resource_path, resource_name):
         print(f'Deleted {resource_name}')
     else:
@@ -71,8 +69,8 @@ def delete(ctx: click.Context, resource_name: str,
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context):
-    resource_path = ctx.parent.obj['resource_path']
-    profile = ctx.parent.obj['usercontext']
+    resource_path = ctx.parent.obj.get('resource_path')
+    profile = ctx.parent.obj.get('usercontext')
     basic_list(profile, resource_path)
 
 
@@ -89,21 +87,46 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     plural = split_path[-2]
     if plural == 'dictionaries':
         return 'dictionaries', 'dictionary'
-    elif plural == 'kinesis':
+    if plural == 'kinesis':
         return 'kinesis', 'kinesis'
     singular = plural if not plural.endswith('s') else plural[0:-1]
     return plural, singular
 
 
-@click.command(help='Show resource. If not resource_name is provided, it will show the default if there is one.')
+@click.command(help='Show resource. If not resource_name is provided, it will show the default '
+                    'if there is one.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def show(ctx: click.Context):
-    profile = ctx.parent.obj['usercontext']
-    _, resource_kind = _heuristically_get_resource_kind(ctx.parent.obj['resource_path'])
+    profile = ctx.parent.obj.get('usercontext')
+    resource_path = ctx.parent.obj.get('resource_path')
+    _, resource_kind = _heuristically_get_resource_kind(resource_path)
     resource_name = getattr(profile, resource_kind + 'name')
-
-    resource_path = ctx.parent.obj['resource_path']
-    profile = ctx.parent.obj['usercontext']
     print(basic_show(profile, resource_path,
                      resource_name))
+
+
+@click.command(help='Display the activity of a resource. If not resource_name is provided, '
+                    'it will show the default if there is one.')
+@click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def activity(ctx: click.Context, indent: int):
+    profile = ctx.parent.obj.get('usercontext')
+    resource_path = ctx.parent.obj.get('resource_path')
+    _, resource_kind = _heuristically_get_resource_kind(resource_path)
+    resource_name = getattr(profile, resource_kind + 'name')
+    print(basic_activity(profile, resource_path, resource_name, indent))
+
+
+@click.command(help='Display statistics for a resource. If not resource_name is provided, '
+                    'it will show the default if there is one.')
+@click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def stats(ctx: click.Context, indent: int):
+    profile = ctx.parent.obj.get('usercontext')
+    resource_path = ctx.parent.obj.get('resource_path')
+    _, resource_kind = _heuristically_get_resource_kind(resource_path)
+    resource_name = getattr(profile, resource_kind + 'name')
+    print(basic_stats(profile, resource_path, resource_name, indent))
