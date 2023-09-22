@@ -1,18 +1,16 @@
 """Commands relative to project handling  operations"""
 import click
-import json
 import requests
-from datetime import datetime
-from functools import lru_cache
 
-from ...library_api.common import auth as auth_api
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import HdxCliException, LogicException
 
 from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
-                                      show as command_show)
+                                      show as command_show,
+                                      activity as command_activity,
+                                      stats as command_stats)
 
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import basic_create
@@ -22,15 +20,16 @@ from ..common.undecorated_click_commands import basic_create
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def table(ctx: click.Context):
-    profileinfo = ctx.parent.obj['usercontext']
-    hostname = profileinfo.hostname
-    project_name = profileinfo.projectname
+    user_profile = ctx.parent.obj.get('usercontext')
+    hostname = user_profile.hostname
+    project_name = user_profile.projectname
     if not project_name:
-        raise LogicException(f"No project parameter was provided and no project is set in profile '{profileinfo.profilename}'")
-    org_id = profileinfo.org_id
-    scheme = profileinfo.scheme
+        raise LogicException(f"No project parameter was provided and no project is set in profile "
+                             f"'{user_profile.profilename}'")
+    org_id = user_profile.org_id
+    scheme = user_profile.scheme
     list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
-    auth_token: AuthInfo = profileinfo.auth
+    auth_token: AuthInfo = user_profile.auth
     headers = {'Authorization': f'{auth_token.token_type} {auth_token.token}',
                'Accept': 'application/json'}
     try:
@@ -38,7 +37,7 @@ def table(ctx: click.Context):
                                       headers=headers)
         project_id = [p['uuid'] for p in projects_list if p['name'] == project_name]
         ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/projects/{project_id[0]}/tables/',
-                   'usercontext': profileinfo}
+                   'usercontext': user_profile}
     except IndexError as idx_err:
         raise LogicException(f'Cannot find project: {project_name}') from idx_err
 
@@ -73,10 +72,8 @@ def create(ctx: click.Context,
     if sql_query and sql_query_file:
         raise HdxCliException('Only one of sql_query or sql_query_file is allowed')
 
-    user_profile = ctx.parent.obj['usercontext']
-    resource_path = ctx.parent.obj['resource_path']
-    print(resource_path)
-
+    user_profile = ctx.parent.obj.get('usercontext')
+    resource_path = ctx.parent.obj.get('resource_path')
     basic_create(user_profile, resource_path,
                  table_name, None, None)
     print(f'Created table {table_name}.')
@@ -115,13 +112,12 @@ def _basic_truncate(profile, resource_path, resource_name: str):
 @report_error_and_exit(exctype=Exception)
 def command_truncate(ctx: click.Context,
                      table_name):
-    user_profile = ctx.parent.obj['usercontext']
-    resource_path = ctx.parent.obj['resource_path']
+    user_profile = ctx.parent.obj.get('usercontext')
+    resource_path = ctx.parent.obj.get('resource_path')
     if not _basic_truncate(user_profile, resource_path, table_name):
         print(f'Error truncating table {table_name}')
         return
     print(f'Truncated table {table_name}.')
-
 
 
 table.add_command(create)
@@ -130,3 +126,5 @@ table.add_command(command_list)
 table.add_command(command_show)
 table.add_command(command_settings)
 table.add_command(command_truncate, name='truncate')
+table.add_command(command_activity)
+table.add_command(command_stats)
