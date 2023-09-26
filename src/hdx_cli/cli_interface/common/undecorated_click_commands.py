@@ -13,6 +13,7 @@ from ...library_api.common.exceptions import ResourceNotFoundException
 
 _MAX_TIMEOUT = 30
 
+
 def basic_create(profile,
                  resource_path,
                  resource_name: str,
@@ -157,11 +158,10 @@ def _do_create_dict_from_dotted_key_and_value(split_key, value,
     if len(split_key) == 1:
         the_dict[split_key[0]] = value
         return
-    else:
-        the_dict[split_key[0]] = {}
-        _do_create_dict_from_dotted_key_and_value(split_key[1:],
-                                                  value,
-                                                  the_dict[split_key[0]])
+    the_dict[split_key[0]] = {}
+    _do_create_dict_from_dotted_key_and_value(split_key[1:],
+                                              value,
+                                              the_dict[split_key[0]])
 
 def _create_dict_from_dotted_key_and_value(dotted_key, value):
     the_dict = {}
@@ -195,27 +195,25 @@ def _format_list(lst, nelems=5):
 def _format_dict(dic, nelems=4, detailed=True):
     if not detailed:
         return "{...}"
-    else:
-        sorted_elems = sorted(dic.items())
-        max_index = min(nelems, len(sorted_elems))
-        result = []
-        for key, val in sorted_elems[0:max_index]:
-            result.append(_format_key_val(key, val))
-        if max_index < len(sorted_elems):
-            result.append("...")
-        return _wrap_str(
-            ", ".join(result), "{", f"}} ({len(sorted_elems)} keys)")
+    sorted_elems = sorted(dic.items())
+    max_index = min(nelems, len(sorted_elems))
+    result = []
+    for key, val in sorted_elems[0:max_index]:
+        result.append(_format_key_val(key, val))
+    if max_index < len(sorted_elems):
+        result.append("...")
+    return _wrap_str(
+        ", ".join(result), "{", f"}} ({len(sorted_elems)} keys)")
 
 
 def _format_elem(elem, obj_detailed=True):
     if isinstance(elem, list):
         return _format_list(elem)
-    elif isinstance(elem, dict):
+    if isinstance(elem, dict):
         return _format_dict(elem, detailed=obj_detailed)
-    else:
-        if isinstance(elem, KeyAbsent):
-            return "(Key absent)"
-        return json.dumps(elem)
+    if isinstance(elem, KeyAbsent):
+        return "(Key absent)"
+    return json.dumps(elem)
 
 
 def _format_setting(dotted_key, value, resource_value):
@@ -232,14 +230,14 @@ def _format_settings_header(headers_and_spacing: List[Tuple[str, int]]):
     return "".join(format_strings)
 
 
-def _do_for_each_setting(settings_dict, prefix="",
-                      resource=None):
+def _do_for_each_setting(settings_dict, prefix="", resource=None):
     for setting_name, setting_val in settings_dict.items():
-        if setting_val["read_only"]:
+        if setting_val.get("read_only"):
             continue
-        if setting_val["type"] == "nested object":
+        if setting_val.get("type") == "nested object" and setting_val.get('children'):
             the_prefix = prefix + "." if prefix else ""
-            _for_each_setting(setting_val["children"],
+            settings_dict = setting_val.get("children")
+            _for_each_setting(settings_dict,
                               the_prefix + setting_name,
                               resource)
         else:
@@ -250,7 +248,7 @@ def _do_for_each_setting(settings_dict, prefix="",
                 the_value_in_resource = _get_dotted_key_from_dict(full_key_name, resource)
             except KeyError:
                 the_value_in_resource = KeyAbsent()
-            print(_format_setting(full_key_name, setting_val["type"],
+            print(_format_setting(full_key_name, setting_val.get("type"),
                                   the_value_in_resource))
 
 
@@ -272,7 +270,7 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     plural = split_path[-2]
     if plural == "dictionaries":
         return "dictionaries", "dictionary"
-    elif plural == 'kinesis':
+    if plural == 'kinesis':
         return 'kinesis', 'kinesis'
     singular = plural if not plural.endswith('s') else plural[0:-1]
     return plural, singular
@@ -342,7 +340,7 @@ def basic_settings(profile,
     elif key and not value:
         try:
             print(f"{key}: {_get_dotted_key_from_dict(key, resource)}")
-        except KeyError as ke:
+        except KeyError:
             print(f'Key not found in {resource["name"]}: {key}')
     else:
         try:
@@ -380,9 +378,8 @@ def basic_delete(profile, resource_path, resource_name: str):
             break
     if not url:
         return False
-    else:
-        rest_ops.delete(url, headers=headers)
-        return True
+    rest_ops.delete(url, headers=headers)
+    return True
 
 
 def basic_list(profile, resource_path):
