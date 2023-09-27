@@ -142,10 +142,10 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               metavar='PASSWORD', default=None)
 @click.option('--profile-config-file', hidden=True, help='Used only for testing.',
               default=None)
-@click.option('--source', help='Source for kinesis/kafka streams',
+@click.option('--source', help='Source for kinesis/kafka/summary/SIEM streams.',
               default=None)
 @click.option('--uri-scheme',
-              help='Scheme used',
+              help='Scheme used.',
               type=click.Choice(['default', 'http', 'https']),
               default='default')
 @click.pass_context
@@ -219,6 +219,8 @@ def hdx_cli(ctx, profile,
     if source:
         user_context.kafkaname = source
         user_context.kinesisname = source
+        user_context.siemname = source
+        user_context.summaryname = source
     # Unconditional default override
     ctx.obj = {'usercontext': user_context}
 
