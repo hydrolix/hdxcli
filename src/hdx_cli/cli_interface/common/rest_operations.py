@@ -2,6 +2,7 @@ from functools import partial
 from typing import Tuple
 import click
 
+from hdx_cli.library_api.common.exceptions import LogicException
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from .undecorated_click_commands import (basic_create,
@@ -95,15 +96,18 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 
 @click.command(help='Show resource. If not resource_name is provided, it will show the default '
                     'if there is one.')
+@click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def show(ctx: click.Context):
+def show(ctx: click.Context, indent: int):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     _, resource_kind = _heuristically_get_resource_kind(resource_path)
-    resource_name = getattr(profile, resource_kind + 'name')
+    if not (resource_name := getattr(profile, resource_kind + 'name')):
+        raise LogicException(f'No default {resource_kind} found in profile')
     print(basic_show(profile, resource_path,
-                     resource_name))
+                     resource_name,
+                     indent))
 
 
 @click.command(help='Display the activity of a resource. If not resource_name is provided, '
@@ -115,7 +119,8 @@ def activity(ctx: click.Context, indent: int):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     _, resource_kind = _heuristically_get_resource_kind(resource_path)
-    resource_name = getattr(profile, resource_kind + 'name')
+    if not (resource_name := getattr(profile, resource_kind + 'name')):
+        raise LogicException(f'No default {resource_kind} found in profile')
     print(basic_activity(profile, resource_path, resource_name, indent))
 
 
@@ -128,5 +133,6 @@ def stats(ctx: click.Context, indent: int):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     _, resource_kind = _heuristically_get_resource_kind(resource_path)
-    resource_name = getattr(profile, resource_kind + 'name')
+    if not (resource_name := getattr(profile, resource_kind + 'name')):
+        raise LogicException(f'No default {resource_kind} found in profile')
     print(basic_stats(profile, resource_path, resource_name, indent))

@@ -76,18 +76,21 @@ def basic_create_with_body_from_string(profile,
     rest_ops.create(url, body=body, headers=headers, body_type=body_from_string_type)
 
 
-
-def basic_show(profile, resource_path, resource_name):
+def basic_show(profile,
+               resource_path,
+               resource_name,
+               indent: Optional[int] = None):
     hostname = profile.hostname
     scheme = profile.scheme
     list_url = f'{scheme}://{hostname}{resource_path}'
-    auth_info : AuthInfo = profile.auth
+    auth_info: AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
     resources = rest_ops.list(list_url, headers=headers)
     for resource in resources:
-        if resource['name'] == resource_name:
-            return json.dumps(resource)
+        if resource.get('name') == resource_name:
+            return json.dumps(resource, indent=indent)
+    raise ResourceNotFoundException('Cannot find resource.')
 
 
 def basic_transform(ctx: click.Context):
@@ -162,6 +165,7 @@ def _do_create_dict_from_dotted_key_and_value(split_key, value,
     _do_create_dict_from_dotted_key_and_value(split_key[1:],
                                               value,
                                               the_dict[split_key[0]])
+
 
 def _create_dict_from_dotted_key_and_value(dotted_key, value):
     the_dict = {}
@@ -330,7 +334,7 @@ def basic_settings(profile,
         resources = globals()["find_" + resource_kind_plural](profile)
         resource = [r for r in resources if r["name"] == getattr(profile, resource_kind + "name")][0]
     except IndexError as idx_err:
-        raise LogicException('Cannot find resource.') from idx_err
+        raise ResourceNotFoundException('Cannot find resource.') from idx_err
 
     if not key:
         # project_str = f'Project: {profile.projectname}'
@@ -401,10 +405,10 @@ def basic_list(profile, resource_path):
 
 
 def _get_resource_information(profile,
-                            resource_path,
-                            resource_name,
-                            action,
-                            indent: Optional[int] = None):
+                              resource_path,
+                              resource_name,
+                              action,
+                              indent: Optional[int] = None):
     hostname = profile.hostname
     scheme = profile.scheme
     list_url = f'{scheme}://{hostname}{resource_path}'
@@ -421,7 +425,7 @@ def _get_resource_information(profile,
                 url = f"{scheme}://{hostname}{resource_path}{resource['uuid']}"
             break
     if not url:
-        raise ResourceNotFoundException(f'Resource "{resource_name}" not found.')
+        raise ResourceNotFoundException(f'Cannot find resource.')
 
     url += f'/{action}'
     response = rest_ops.get(url, headers=headers)

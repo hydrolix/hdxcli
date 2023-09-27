@@ -10,15 +10,23 @@ from ...library_api.common.generic_resource import access_resource
 
 def find_kafka(user_ctx: ProfileUserContext):
     return access_resource(user_ctx,
-                    [('projects', user_ctx.projectname),
-                     ('tables', user_ctx.tablename),
-                     ('sources/kafka', None)])
+                           [('projects', user_ctx.projectname),
+                            ('tables', user_ctx.tablename),
+                            ('sources/kafka', None)])
+
 
 def find_kinesis(user_ctx: ProfileUserContext):
     return access_resource(user_ctx,
-                    [('projects', user_ctx.projectname),
-                     ('tables', user_ctx.tablename),
-                     ('sources/kinesis', None)])
+                           [('projects', user_ctx.projectname),
+                            ('tables', user_ctx.tablename),
+                            ('sources/kinesis', None)])
+
+
+def find_siem(user_ctx: ProfileUserContext):
+    return access_resource(user_ctx,
+                           [('projects', user_ctx.projectname),
+                            ('tables', user_ctx.tablename),
+                            ('sources/siem', None)])
 
 
 def find_projects(user_ctx: ProfileUserContext):
@@ -73,8 +81,10 @@ def _find_project_resource(user_ctx: ProfileUserContext, resource):
 def find_tables(user_ctx: ProfileUserContext):
     return _find_project_resource(user_ctx, 'tables')
 
+
 def find_dictionaries(user_ctx: ProfileUserContext):
     return _find_project_resource(user_ctx, 'dictionaries')
+
 
 def find_functions(user_ctx: ProfileUserContext):
     return _find_project_resource(user_ctx, 'functions')
@@ -109,5 +119,3 @@ def find_transforms(user_ctx: ProfileUserContext):
 def find_transform_id(user_ctx, transform_name):
     transforms = find_transforms(user_ctx)
     return [t["uuid"] for t in transforms if t["name"] == transform_name]
-
-

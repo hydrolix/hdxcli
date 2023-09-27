@@ -8,22 +8,17 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import HdxCliException, LogicException
 
-from ..common.rest_operations import (create as command_create,
-                                      delete as command_delete,
-                                      list_ as command_list,
-                                      show as command_show)
-
-from ..common.misc_operations import settings as command_settings
-from .kafkakinesis import (kafka as command_kafka,
-                           kinesis as command_kinesis)
+from .kafka import kafka as command_kafka
+from .kinesis import kinesis as command_kinesis
 from .summary import summary as command_summary
+from .siem import siem as command_siem
 
 
 @click.group(help="Sources-related operations")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def sources(ctx: click.Context):
-    profile_info : ProfileUserContext = ctx.obj['usercontext']
+    profile_info: ProfileUserContext = ctx.obj.get('usercontext')
     project_name, table_name = profile_info.projectname, profile_info.tablename
     if not project_name:
         raise HdxCliException("Error. No project name provided and no 'projectname' set in profile")
@@ -55,3 +50,4 @@ def sources(ctx: click.Context):
 sources.add_command(command_kafka)
 sources.add_command(command_kinesis)
 sources.add_command(command_summary)
+sources.add_command(command_siem)
