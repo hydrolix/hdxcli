@@ -33,6 +33,7 @@ class ProfileUserContext:
     batchname: Optional[str] = None
     functionname: Optional[str] = None
     dictionaryname : Optional[str] = None
+    storagename: Optional[str] = None
     kafkaname: Optional[str] = None
     kinesisname: Optional[str] = None
     siemname: Optional[str] = None
