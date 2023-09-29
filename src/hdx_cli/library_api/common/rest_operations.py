@@ -1,5 +1,4 @@
 from typing import Dict, Any
-from io import StringIO 
 import json
 import requests
 
@@ -43,21 +42,25 @@ def create_file(url: str, *,
 
 def update_with_patch(url, *,
                       headers,
-                      body):
+                      body,
+                      params):
     result = requests.patch(url,
-                          json=body,
-                          headers=headers,
-                          timeout=MAX_TIMEOUT)
+                            json=body,
+                            headers=headers,
+                            params=params,
+                            timeout=MAX_TIMEOUT)
     if result.status_code != 200:
         raise HttpException(result.status_code, result.content)
 
 
 def update_with_put(url, *,
                     headers,
-                    body):
+                    body,
+                    params):
     result = requests.put(url,
                           json=body,
                           headers=headers,
+                          params=params,
                           timeout=MAX_TIMEOUT)
     if result.status_code != 200:
         raise HttpException(result.status_code, result.content)
@@ -78,21 +81,24 @@ def list(url, *,
 
 get = list
 
+
 def options(url, *,
             headers):
     result = requests.options(url,
-                          headers=headers,
-                          timeout=MAX_TIMEOUT)
+                              headers=headers,
+                              timeout=MAX_TIMEOUT)
     if result.status_code != 200:
         raise HttpException(result.status_code, result.content)
     return json.loads(result.content)
 
 
 def delete(url, *,
-           headers):
+           headers,
+           params):
     result = requests.delete(url,
-                          headers=headers,
-                          timeout=MAX_TIMEOUT)
+                             headers=headers,
+                             params=params,
+                             timeout=MAX_TIMEOUT)
     if result.status_code != 204:
         raise HttpException(result.status_code, result.content)
     return json.loads('{}')

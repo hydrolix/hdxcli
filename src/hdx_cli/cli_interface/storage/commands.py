@@ -54,7 +54,8 @@ def delete(ctx: click.Context, resource_name: str,
     _confirmation_prompt(prompt_active=not disable_confirmation_prompt)
     resource_path = ctx.parent.obj.get('resource_path')
     profile = ctx.parent.obj.get('usercontext')
-    if basic_delete(profile, resource_path, resource_name, force_operation=True):
+    params = {"force_operation": True}
+    if basic_delete(profile, resource_path, resource_name, params=params):
         print(f'Deleted {resource_name}')
     else:
         print(f'Could not delete {resource_name}. Not found.')
@@ -74,12 +75,13 @@ def settings(ctx: click.Context,
              value):
     resource_path = ctx.parent.obj.get("resource_path")
     profile = ctx.parent.obj.get("usercontext")
+    params = {"force_operation": True}
     the_value = value
     if value:
         the_value = value
         if (stripped := value.strip()).startswith('[') and stripped.endswith(']'):
             the_value = json.loads(stripped)
-    basic_settings(profile, resource_path, key, the_value, force_operation=True)
+    basic_settings(profile, resource_path, key, the_value, params=params)
 
 
 storage.add_command(command_list)
