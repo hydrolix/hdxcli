@@ -315,7 +315,9 @@ def _settings_update(resource: Dict[str, Any],
 def basic_settings(profile,
                    resource_path,
                    key,
-                   value):
+                   value,
+                   *,
+                   params=None):
     """Given a resource type, it returns the settings that can be used for it"""
     hostname = profile.hostname
     scheme = profile.scheme
@@ -347,24 +349,27 @@ def basic_settings(profile,
         except KeyError:
             print(f'Key not found in {resource["name"]}: {key}')
     else:
+        this_resource_url = f'{settings_url}{resource["uuid"]}'
         try:
-            this_resource_url = f'{settings_url}{resource["uuid"]}'
             resource = _settings_update(resource, key, value)
-            rest_ops.update_with_put(
-                this_resource_url,
-                headers=headers,
-                body=resource)
+            rest_ops.update_with_put(this_resource_url,
+                                     headers=headers,
+                                     body=resource,
+                                     params=params)
         except:
             patch_data = _create_dict_from_dotted_key_and_value(key, value)
-            this_resource_url = f'{settings_url}{resource["uuid"]}'
-            rest_ops.update_with_patch(
-                this_resource_url,
-                headers=headers,
-                body=patch_data)
+            rest_ops.update_with_patch(this_resource_url,
+                                       headers=headers,
+                                       body=patch_data,
+                                       params=params)
         print(f'Updated {resource["name"]} {key}')
 
 
-def basic_delete(profile, resource_path, resource_name: str):
+def basic_delete(profile,
+                 resource_path,
+                 resource_name: str,
+                 *,
+                 params=None):
     hostname = profile.hostname
     scheme = profile.scheme
     list_url = f'{scheme}://{hostname}{resource_path}'
@@ -382,7 +387,7 @@ def basic_delete(profile, resource_path, resource_name: str):
             break
     if not url:
         return False
-    rest_ops.delete(url, headers=headers)
+    rest_ops.delete(url, headers=headers, params=params)
     return True
 
 

@@ -16,6 +16,7 @@ from hdx_cli.cli_interface.transform import commands as transform_
 from hdx_cli.cli_interface.job import commands as job_
 from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
+from hdx_cli.cli_interface.storage import commands as storage_
 from hdx_cli.cli_interface.profile import commands as profile_
 from hdx_cli.cli_interface.sources import commands as sources_
 from hdx_cli.cli_interface.migrate import commands as migrate_
@@ -142,6 +143,8 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               metavar='PASSWORD', default=None)
 @click.option('--profile-config-file', hidden=True, help='Used only for testing.',
               default=None)
+@click.option('--storage', help='Perform operation on the passed storage.',
+              default=None)
 @click.option('--source', help='Source for kinesis/kafka/summary/SIEM streams.',
               default=None)
 @click.option('--uri-scheme',
@@ -160,6 +163,7 @@ def hdx_cli(ctx, profile,
             dictionary,
             password,
             profile_config_file,
+            storage,
             source,
             uri_scheme):
     "Command-line entry point for hdx cli interface"
@@ -216,6 +220,8 @@ def hdx_cli(ctx, profile,
         user_context.functionname = function
     if dictionary:
         user_context.dictionaryname = dictionary
+    if storage:
+        user_context.storagename = storage
     if source:
         user_context.kafkaname = source
         user_context.kinesisname = source
@@ -239,6 +245,7 @@ hdx_cli.add_command(job_.job)
 hdx_cli.add_command(function_.function)
 hdx_cli.add_command(job_.purgejobs)
 hdx_cli.add_command(dictionary_.dictionary)
+hdx_cli.add_command(storage_.storage)
 hdx_cli.add_command(profile_.profile)
 hdx_cli.add_command(sources_.sources)
 hdx_cli.add_command(migrate_.migrate)
