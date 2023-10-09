@@ -94,7 +94,7 @@ def options(url, *,
 
 def delete(url, *,
            headers,
-           params):
+           params=None):
     result = requests.delete(url,
                              headers=headers,
                              params=params,

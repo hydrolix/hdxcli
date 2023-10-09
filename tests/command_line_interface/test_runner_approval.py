@@ -203,8 +203,14 @@ def pytest_generate_tests(metafunc):
         test_input_commands = [interpolate_with_profile_vars(tic)
                             for tic in
                             tst['commands_under_test']]
+        setup_commands = None
+        if tst.get('setup') is not None:
+            setup_commands = [interpolate_with_profile_vars(tic)
+                              for tic in
+                              tst.get('setup')]
+
         all_tests.append((test_input_commands, _parse_expected_output(tst), tst['name'], 
-                          tst.get('setup', None),
+                          setup_commands,
                           tst.get('teardown', None)))
 
     global_teardown = THE_TESTS.get('global_teardown')
