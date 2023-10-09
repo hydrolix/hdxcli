@@ -9,11 +9,11 @@
     },
     "settings": {
         "access_details": {
-            "host": "akab-6nbq2gafdqdao5mc-3nq2mcbvnrpa6vc3.luna.akamaiapis.net",
+            "host": "akab-1234567890123456-1234567890123.luna.akamaiapis.net",
             "entity_id": "87862",
-            "client_secret": "FSYgC3x9hqvzJlu1/qWdNDwa0Rw3gZ7bXvwCSoTo0YQ=",
-            "client_token": "akab-y5fs367g2careitt-t5kitkmb5x7bnln4",
-            "access_token": "akab-inikgqe7ecduvk46-ohrnyprooh6reyyp"
+            "client_secret": "1234567890/qWdNDwa0Rw3gZ7bX1234567890",
+            "client_token": "1234-y5fs367g2careitt-1234567890123456",
+            "access_token": "1234-inikgqe7ecduvk46-1234567890123456"
         }
     }
 }

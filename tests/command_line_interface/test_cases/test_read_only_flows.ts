@@ -21,7 +21,7 @@
 # - setup (optional): a setup list of commands executed before running the commands_under_test
 # - teardown (optional): list with teardown commands
 global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
-                #"python3 -m hdx_cli.main --project test_ci_project table create test_ci_table",
+                "python3 -m hdx_cli.main --project test_ci_project table create test_ci_table",
                 #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/every_datatype_transform.json test_ci_transform",
                 #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/country_dictionary.csv test_ci_dictionary_file",
                 #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table job batch ingest test_ci_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch_job_ci_settings.json",
@@ -34,7 +34,7 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 ]
 
 global_teardown = [#"python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_ci_storage",
-                   #"python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
+                   "python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
                    "python3 -m hdx_cli.main unset"]
 
 
