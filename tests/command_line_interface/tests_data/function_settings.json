@@ -1,0 +1,4 @@
+{
+	"name": "function_test",
+	"sql": "(x, k, b) -> k*x + b"
+}

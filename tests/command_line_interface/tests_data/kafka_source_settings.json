@@ -1,0 +1,20 @@
+{
+    "type": "pull",
+    "subtype": "kafka",
+    "transform": "test_ci_transform",
+    "table": "test_ci_project.test_ci_table",
+    "settings": {
+        "bootstrap_servers": [
+            "104.198.40.96:9092"
+        ],
+        "topics": [
+            "test_ci_topic"
+        ]
+    },
+    "pool_name": "my-kafka-pool",
+    "k8s_deployment": {
+        "cpu": 1,
+        "replicas": 1,
+        "service": "kafka-peer"
+    }
+}

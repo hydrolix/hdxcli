@@ -1,0 +1,14 @@
+{
+	"type": "batch_import",
+	"settings": {
+		"source": {
+		    "table": "test_ci_project.test_ci_table",
+		    "type": "batch",
+		    "subtype": "aws s3",
+		    "transform": "test_ci_transform",
+		    "settings": {
+		    	"url": "s3://qe-datasets/every_datatype/json/every_datatype-data.json"
+		    }
+		}
+	}
+}

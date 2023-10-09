@@ -1,0 +1,19 @@
+{
+    "transform": "test_ci_transform",
+    "table": "test_ci_project.test_ci_table",
+    "pool_name": "siem12-pool",
+    "k8s_deployment": {
+        "replicas": 1,
+        "cpu": 1,
+        "service": "akamai-siem-peer"
+    },
+    "settings": {
+        "access_details": {
+            "host": "akab-6nbq2gafdqdao5mc-3nq2mcbvnrpa6vc3.luna.akamaiapis.net",
+            "entity_id": "87862",
+            "client_secret": "FSYgC3x9hqvzJlu1/qWdNDwa0Rw3gZ7bXvwCSoTo0YQ=",
+            "client_token": "akab-y5fs367g2careitt-t5kitkmb5x7bnln4",
+            "access_token": "akab-inikgqe7ecduvk46-ohrnyprooh6reyyp"
+        }
+    }
+}
