@@ -398,19 +398,19 @@ expected_output = 'Created project test_project.'
 #			      "python3 -m hdx_cli.main unset"]
 #expected_output = 'Started job test_batch_job.'
 #
-##[[test]]
-##name = "Batch jobs can be cancelled"
-##setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-##commands_under_test = ["python3 -m hdx_cli.main job batch cancel test_ci_batch_job"]
-##teardown = ["python3 -m hdx_cli.main unset"]
-##expected_output = 'Cancelled test_ci_batch_job'
+#[[test]]
+#name = "Batch jobs can be cancelled"
+#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+#commands_under_test = ["python3 -m hdx_cli.main job batch cancel test_ci_batch_job"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output = 'Cancelled test_ci_batch_job'
 #
-##[[test]]
-##name = "Batch jobs can be retried"
-##setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-##commands_under_test = ["python3 -m hdx_cli.main job batch retry test_ci_batch_job"]
-##teardown = ["python3 -m hdx_cli.main unset"]
-##expected_output = 'Retrying test_ci_batch_job'
+#[[test]]
+#name = "Batch jobs can be retried"
+#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+#commands_under_test = ["python3 -m hdx_cli.main job batch retry test_ci_batch_job"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output = 'Retrying test_ci_batch_job'
 #
 #[[test]]
 #name = "Batch job settings can be shown"
@@ -523,14 +523,13 @@ expected_output = 'Created project test_project.'
 #
 #
 ###################################################### Set/Unset ######################################################
-### Failing - Currently set command hasn't output text
-##[[test]]
-##name = "Set can be used"
-##commands_under_test = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-##teardown = ["python3 -m hdx_cli.main unset"]
-##expected_output_re = '.*?set project/table*'
+#[[test]]
+#name = "Set can be used"
+#commands_under_test = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output_re = '.*? set project/table*'
 #
 #[[test]]
 #name = "Unset can be used"
 #commands_under_test = ["python3 -m hdx_cli.main unset"]
-#expected_output_re = '.*?unset project and table*'
+#expected_output_re = '.*? unset project/table*'

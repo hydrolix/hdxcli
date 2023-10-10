@@ -3,7 +3,6 @@ import click
 
 from ...library_api.common.context import ProfileUserContext
 
-from ...library_api.common import auth as auth_api
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import HdxCliException, LogicException
@@ -20,8 +19,9 @@ from .siem import siem as command_siem
 def sources(ctx: click.Context):
     profile_info: ProfileUserContext = ctx.obj.get('usercontext')
     project_name, table_name = profile_info.projectname, profile_info.tablename
-    if not project_name:
-        raise HdxCliException("Error. No project name provided and no 'projectname' set in profile")
+    if not project_name or not table_name:
+        raise HdxCliException(f"No project/table parameters provided and "
+                              f"no project/table set in profile '{profile_info.profilename}'")
     hostname = profile_info.hostname
     org_id = profile_info.org_id
     scheme = profile_info.scheme

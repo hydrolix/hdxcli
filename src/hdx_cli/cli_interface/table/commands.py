@@ -24,8 +24,8 @@ def table(ctx: click.Context):
     hostname = user_profile.hostname
     project_name = user_profile.projectname
     if not project_name:
-        raise LogicException(f"No project parameter was provided and no project is set in profile "
-                             f"'{user_profile.profilename}'")
+        raise LogicException(f"No project parameter provided and "
+                             f"no project is set in profile '{user_profile.profilename}'")
     org_id = user_profile.org_id
     scheme = user_profile.scheme
     list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'

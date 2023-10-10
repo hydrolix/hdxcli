@@ -4,12 +4,9 @@ import json
 import click
 
 
-from ...library_api.common.exceptions import LogicException, HdxCliException
-from ...library_api.common.context import ProfileUserContext
-from ...library_api.common.auth import PROFILE_CONFIG_FILE
+from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.common import rest_operations as rest_ops
-from ..common.rest_operations import (create as command_create,
-                                      delete as command_delete,
+from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
                                       show as command_show)
 from ...library_api.utility.decorators import (report_error_and_exit,
@@ -26,6 +23,7 @@ def job(ctx):
     jobs_path = f'/config/v1/orgs/{org_id}/jobs/'
     ctx.obj = {'resource_path': jobs_path,
                'usercontext': profileinfo}
+
 
 @click.command(help='Purge all batch jobs in your org.')
 @click.pass_context
@@ -47,6 +45,7 @@ def purgejobs(ctx):
                'Accept': 'application/json'}
     rest_ops.create(purgejobs_url, body=None, headers=headers)
     print('All jobs purged')
+
 
 @click.group(help="Job-related operations")
 @click.pass_context
@@ -78,11 +77,12 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     singular = plural if not plural.endswith('s') else plural[0:-1]
     return plural, singular
 
+
 # pylint:disable=line-too-long
 @click.command(help='Ingest data. The data path url can be local or point to a bucket. Your cluster '
-                ' (and not your client machine executing hdx-cli tool) *must have* permissions to access '
-                'the data bucket in case you need to ingest directly from there. If the data path is a '
-                'directory, the directory data will be used. ')
+               ' (and not your client machine executing hdx-cli tool) *must have* permissions to access '
+               'the data bucket in case you need to ingest directly from there. If the data path is a '
+               'directory, the directory data will be used. ')
 @click.argument('jobname')
 @click.argument('jobname_file')
 @click.pass_context
@@ -94,6 +94,10 @@ def ingest(ctx: click.Context,
            ):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
+    if not profile.projectname or not profile.tablename:
+        raise ResourceNotFoundException(
+            f"No project/table parameters provided and "
+            f"no project/table set in profile '{profile.profilename}'")
 
     hostname = profile.hostname
     scheme = profile.scheme
@@ -119,7 +123,8 @@ def ingest(ctx: click.Context,
             try:
                 transformname = [t['name'] for t in transforms_list if t['settings']['is_default']][0]
             except IndexError as exc:
-                raise LogicException('No default transform found to apply ingest command and no --transform-name passed') from exc
+                raise LogicException('No default transform found to apply ingest command and '
+                                     'no --transform passed') from exc
         body['settings']['source']['transform'] = transformname
         rest_ops.create(url, body=body, headers=headers)
     print(f'Started job {jobname}.')
@@ -149,16 +154,16 @@ def cancel(ctx,
         print(f'Could not cancel {ctx.parent.command.name} {job_name}. Not found.')
     else:
         cancel_job_url = f'{list_url}{job_id}/cancel'
-        print(cancel_job_url)
         rest_ops.create(cancel_job_url, headers=headers, body=None)
         print(f'Cancelled {job_name}')
+
 
 @click.command(help='Retries a job.')
 @click.argument('job_name')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def retry(ctx,
-           job_name):
+          job_name):
     resource_path = ctx.parent.obj['resource_path']
     profile = ctx.parent.obj['usercontext']
     hostname = profile.hostname
@@ -177,7 +182,6 @@ def retry(ctx,
         print(f'Could not retry {ctx.parent.command.name} {job_name}. Not found.')
     else:
         retry_job_url = f'{list_url}{job_id}/retry'
-        print(retry_job_url)
         rest_ops.create(retry_job_url, headers=headers, body=None)
         print(f'Retrying {job_name}')
 
