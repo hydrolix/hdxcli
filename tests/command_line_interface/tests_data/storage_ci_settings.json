@@ -1,0 +1,8 @@
+{
+    "settings": {
+        "bucket_path": "/cli/",
+        "bucket_name": "qe-multi-bucket-1",
+        "region": "us-central1",
+        "cloud": "gcp"
+    }
+}

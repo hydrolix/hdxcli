@@ -1,0 +1,21 @@
+{
+    "pool_name": "kinesis-pool",
+    "k8s_deployment": {
+        "cpu": 1,
+        "memory": "10Gi",
+        "service": "kinesis-peer",
+        "replicas": "1",
+        "storage": "10Gi"
+    },
+    "type": "pull",
+    "subtype": "kinesis",
+    "transform": "test_ci_transform",
+    "table": "test_ci_project.test_ci_table",
+    "settings": {
+        "stream_name": "arn:aws:kinesis:us-east-2:184958025203:stream/ci-kinesis-source-stream",
+        "region": "us-east-2",
+        "checkpointer": {
+            "name": "arn:aws:dynamodb:us-east-2:184958025203:table/ci-kinesis-source-stream"
+        }
+    }
+}

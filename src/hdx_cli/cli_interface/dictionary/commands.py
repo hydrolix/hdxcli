@@ -98,6 +98,7 @@ def dict_file_delete(ctx: click.Context, dictionary_filename):
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
     rest_ops.delete(resource_url, headers=headers)
+    print(f'Deleted {dictionary_filename}')
 
 
 dictionary.add_command(create_dict, name='create')
