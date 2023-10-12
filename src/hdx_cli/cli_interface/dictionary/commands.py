@@ -4,7 +4,7 @@ import click
 from ...library_api.common.generic_resource import access_resource, access_resource_detailed
 
 from ...library_api.utility.decorators import report_error_and_exit
-from ...library_api.common.exceptions import HdxCliException
+from ...library_api.common.exceptions import ResourceNotFoundException
 from ...library_api.common import rest_operations as rest_ops
 
 from ..common.rest_operations import (delete as command_delete,
@@ -24,6 +24,11 @@ from ..common.undecorated_click_commands import (basic_create,
 def dictionary(ctx: click.Context):
     profileinfo = ctx.parent.obj['usercontext']
     org_id = profileinfo.org_id
+    if not profileinfo.projectname:
+        raise ResourceNotFoundException(
+            f"No project parameter provided and "
+            f"no project set in profile '{profileinfo.profilename}'")
+
     project_id = access_resource(profileinfo,
                                  [('projects', profileinfo.projectname)])['uuid']
     resource_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/dictionaries/'
@@ -81,7 +86,8 @@ def upload_file_dict(ctx: click.Context,
                  dictionary_file_to_upload,
                  body_from_file_type,
                  timeout=3000)
-    print(f'Uploaded dictionary file from {dictionary_file_to_upload} with name {dictionary_filename}.')
+    print(f'Uploaded dictionary file from {dictionary_file_to_upload} '
+          f'with name {dictionary_filename}.')
 
 
 @click.command(help='Delete dictionary file.')

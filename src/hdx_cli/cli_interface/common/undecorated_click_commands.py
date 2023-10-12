@@ -97,7 +97,8 @@ def basic_transform(ctx: click.Context):
     profile_info: ProfileUserContext = ctx.obj['usercontext']
     project_name, table_name = profile_info.projectname, profile_info.tablename
     if not project_name:
-        raise HdxCliException("Error. No project name provided and no 'projectname' set in profile")
+        raise HdxCliException(f"No project parameter provided and "
+                              f"no project set in profile '{profile_info.profilename}'")
     hostname = profile_info.hostname
     org_id = profile_info.org_id
     scheme = profile_info.scheme
