@@ -1,0 +1,22 @@
+{
+    "settings": {
+        "layout": "complex_key_hashed",
+        "lifetime_seconds": 5,
+        "output_columns": [
+            {
+                "name": "id_country",
+                "datatype": {
+                    "type": "uint64"
+                }
+            },
+            {
+                "name": "country_name",
+                "datatype": {
+                    "type": "string"
+                }
+            }
+        ],
+        "primary_key": ["id_country"],
+        "format": "CSVWithNames"
+    }
+}

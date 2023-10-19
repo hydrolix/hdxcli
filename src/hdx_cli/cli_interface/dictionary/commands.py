@@ -1,4 +1,5 @@
 """Commands relative to project handling  operations"""
+import json
 import click
 
 from ...library_api.common.generic_resource import access_resource, access_resource_detailed
@@ -46,23 +47,28 @@ def files(ctx: click.Context):
                'usercontext': profileinfo}
 
 
-@click.command(help='Create dictionary.')
-@click.argument('dictionary_description_file')
+@click.command(help=f"Create dictionary. 'dictionary_file' contains the settings. "
+                    "The filename and name in settings will be replaced by 'dictionary_filename' "
+                    "and 'dictionary_name' respectively.")
+@click.argument('dictionary_file')
+@click.argument('dictionary_filename')
 @click.argument('dictionary_name')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create_dict(ctx: click.Context,
-                dictionary_description_file,
+                dictionary_file: str,
+                dictionary_filename: str,
                 dictionary_name: str):
     user_profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']
-    # FIXME: basic_create does not work because it does local opening
-    # of a file. A dictionary file is remote.
-    basic_create(user_profile,
-                 resource_path,
-                 dictionary_name,
-                 dictionary_description_file)
-    print(f'Created dictionary {dictionary_name}.')
+    with open(dictionary_file, 'r', encoding='utf-8') as input_body:
+        dictionary_body = json.load(input_body)
+        dictionary_body['settings']['filename'] = dictionary_filename
+    basic_create_with_body_from_string(user_profile,
+                                       resource_path,
+                                       dictionary_name,
+                                       json.dumps(dictionary_body))
+    print(f'Created {dictionary_name}.')
 
 
 @click.command(help='Upload a dictionary file.')
