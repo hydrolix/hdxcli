@@ -66,3 +66,11 @@ class TransformFileNotFoundException(ResourceNotFoundException):
 
 class LogicException(HdxCliException):
     pass
+
+
+class InvalidFormatFileException(HdxCliException):
+    pass
+
+
+class MissingSettingsException(InvalidFormatFileException):
+    pass

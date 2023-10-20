@@ -1,10 +1,13 @@
 """Commands relative to project handling  operations"""
+import json
 import click
 
-from ...library_api.common.generic_resource import access_resource, access_resource_detailed
+from ...library_api.common.generic_resource import access_resource
 
 from ...library_api.utility.decorators import report_error_and_exit
-from ...library_api.common.exceptions import ResourceNotFoundException
+from ...library_api.common.exceptions import (ResourceNotFoundException,
+                                              MissingSettingsException,
+                                              InvalidFormatFileException)
 from ...library_api.common import rest_operations as rest_ops
 
 from ..common.rest_operations import (delete as command_delete,
@@ -13,9 +16,7 @@ from ..common.rest_operations import (delete as command_delete,
 
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import (basic_create,
-                                                 basic_create_with_body_from_string,
-                                                 basic_list,
-                                                 basic_show)
+                                                 basic_create_with_body_from_string)
 
 
 @click.group(help="Dictionary-related operations")
@@ -46,23 +47,35 @@ def files(ctx: click.Context):
                'usercontext': profileinfo}
 
 
-@click.command(help='Create dictionary.')
-@click.argument('dictionary_description_file')
+@click.command(help=f"Create dictionary. 'dictionary_settings_file' contains the settings of "
+                    f"the dictionary. The filename and name in settings will be replaced by "
+                    f"'dictionary_filename' and 'dictionary_name' respectively.")
+@click.argument('dictionary_settings_file')
+@click.argument('dictionary_filename')
 @click.argument('dictionary_name')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create_dict(ctx: click.Context,
-                dictionary_description_file,
+                dictionary_settings_file: str,
+                dictionary_filename: str,
                 dictionary_name: str):
     user_profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']
-    # FIXME: basic_create does not work because it does local opening
-    # of a file. A dictionary file is remote.
-    basic_create(user_profile,
-                 resource_path,
-                 dictionary_name,
-                 dictionary_description_file)
-    print(f'Created dictionary {dictionary_name}.')
+    with open(dictionary_settings_file, 'r', encoding='utf-8') as input_body:
+        try:
+            dictionary_body = json.loads(input_body.read())
+        except json.decoder.JSONDecodeError:
+            raise InvalidFormatFileException(f"Unexpected data structure found in {dictionary_settings_file}")
+
+    if not dictionary_body.get('settings'):
+        raise MissingSettingsException(f"Missing 'settings' field in {dictionary_settings_file}")
+
+    dictionary_body['settings']['filename'] = dictionary_filename
+    basic_create_with_body_from_string(user_profile,
+                                       resource_path,
+                                       dictionary_name,
+                                       json.dumps(dictionary_body))
+    print(f'Created {dictionary_name}.')
 
 
 @click.command(help='Upload a dictionary file.')

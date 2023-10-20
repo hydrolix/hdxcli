@@ -24,6 +24,7 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main --project test_ci_project table create test_ci_table",
                 #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/every_datatype_transform.json test_ci_transform",
                 #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/country_dictionary.csv test_ci_dictionary_file",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionary_settings.json test_ci_dictionary_file test_ci_dictionary",
                 #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table job batch ingest test_ci_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch_job_ci_settings.json",
                 #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kafka create {HDXCLI_TESTS_DIR}/tests_data/kafka_source_settings.json test_ci_kafka_source",
                 #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/kinesis_source_settings.json test_ci_kinesis_source",
@@ -475,6 +476,41 @@ expected_output = 'Created project test_project.'
 #commands_under_test = ["python3 -m hdx_cli.main --function test_ci_function function show"]
 #teardown = ["python3 -m hdx_cli.main unset"]
 #expected_output_expr = 'not result.startswith("Error:") and "project" in result and "name" in result and "uuid" in result and "sql" in result'
+#
+#
+##################################################### Dictionary #######################################################
+#[[test]]
+#name = "Dictionaries can be created"
+#setup = ["python3 -m hdx_cli.main set test_ci_project"]
+#commands_under_test = ["python3 -m hdx_cli.main dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionary_settings.json test_ci_dictionary_file test_dictionary"]
+#teardown = ["python3 -m hdx_cli.main dictionary delete --disable-confirmation-prompt test_dictionary",
+#            "python3 -m hdx_cli.main unset"]
+#expected_output = 'Created test_dictionary.'
+#
+#[[test]]
+#name = "Dictionaries can be deleted"
+#setup = ["python3 -m hdx_cli.main --project test_ci_project dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionary_settings.json test_ci_dictionary_file test_dictionary"]
+#commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project dictionary delete --disable-confirmation-prompt test_dictionary"]
+#expected_output = 'Deleted test_dictionary'
+#
+#[[test]]
+#name = "Dictionaries can be listed"
+#commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project dictionary list"]
+#expected_output_re = '.*?test_ci_dictionary.*'
+#
+#[[test]]
+#name = "Dictionary settings can be shown"
+#setup = ["python3 -m hdx_cli.main set test_ci_project"]
+#commands_under_test = ["python3 -m hdx_cli.main --dictionary test_ci_dictionary dictionary settings"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_dictionary" in result'
+#
+#[[test]]
+#name = "Dictionaries can be shown"
+#setup = ["python3 -m hdx_cli.main set test_ci_project"]
+#commands_under_test = ["python3 -m hdx_cli.main --dictionary test_ci_dictionary dictionary show"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output_expr = 'not result.startswith("Error:") and "project" in result and "name" in result and "uuid" in result and "filename" in result and "test_ci_dictionary" in result'
 #
 #
 #################################################### Dictionary Files #####################################################
