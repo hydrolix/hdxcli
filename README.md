@@ -14,17 +14,15 @@ You can install `hdxcli` from pip:
 ```shell
 pip install hdxcli
 ```
+## System Requirements
+Python version `>= 3.10` is required.
 
-# Using hdxcli command-line program
+Make sure you have the correct Python version installed before proceeding 
+with the installation of `hdxcli`.
 
-`hdxcli` supports multiple profiles. You can use a default profile or
-use the `--profile` option to operate on a non-default profile.
+# Usage
 
-When trying to invoke a command, if a login to the server is necessary, 
-a prompt will be shown and the token will be cached.
-
-
-# Command-line tool organization
+## Command-line tool organization
 
 The tool is organized, mostly with the general invocation form of:
 
@@ -32,11 +30,31 @@ The tool is organized, mostly with the general invocation form of:
 hdxcli <resource> [<subresource...] <verb> [<resource_name>]
 ```
 
-Table and project resources have defaults that depend on the profile you are working with,
-so they can be omitted if you used the `set` command.
+Table and project resources have defaults that depend on the profile
+you are working with, so they can be omitted if you previously used 
+the `set` command.
 
-For all other resources, you can use `--transform`, `--dictionary`, etc. Please see the
-command line help for more information.
+For all other resources, you can use `--transform`, `--dictionary`, 
+`--source`, etc. Please see the command line help for more information.
+
+## Profiles
+`hdxcli` supports multiple profiles. You can use a default profile or
+use the `--profile` option to operate on a non-default profile.
+
+When trying to invoke a command, if a login to the server is necessary, 
+a prompt will be shown and the token will be cached.
+
+## Listing and showing profiles
+
+Listing profiles:
+```shell
+hdxcli profile list
+```
+
+Showing default profile:
+```shell
+hdxcli profile show
+```
 
 ## Projects, tables and transforms
 
@@ -51,60 +69,95 @@ The basic operations you can do with these resources are:
 - write a setting
 - show a single setting
 
-## Working with transforms and batch jobs
+## Working with transforms
 
-In order to use a transforms, you need to:
+You can create and override transforms with the following commands.
 
-1. create a transform
-
-
+Create a transform:
 ``` shell
-hdxcli transform create -f atransform.json atransform
+hdxcli transform create -f <transform-settings-file> <transform-name>
 ```
 
-Where atransform.json is a local file and atransform is the 
-name for the transform that will be uploaded to the cluster. 
-Remember that a transform is applied to a table in a project, 
-so whatever you `set` with the 
-command-line tool will be the target of your transform.
+Remember that a transform is applied to a table in a project, so whatever 
+you set with the command-line tool will be the target of your transform.
+
 
 If you want to override it, do:
 
 ``` shell
-hdxcli --project <the-project> --table <the-table> transform create -f atransform.json atransform
+hdxcli --project <project-name> --table <table-name> transform create -f <transform-settings-file>.json <transform-name>
 ```
 
-
-2. ingest a batch job
+## Ingest
+### Batch Job
+Create a batch job:
 
 ``` shell
-hdxcli job batch ingest <job-name> <job-url>
+hdxcli job batch ingest <job-name> <job-settings>.json
 ```
 
-The job-name is the job name you will see if you list the job batch. job url can be either a local url or a url
-to a bucket *for which the cluster has at lease read access to*.
+`job-name` is the name of the job that will be displayed when listing batch 
+jobs. `job-settings` is the path to the file containing the specifications 
+required to create that ingestion (for more information on the required 
+specifications, see Hydrolix API Reference).
 
+In this case, the project, table, and transform are being omitted and the 
+CLI will use the default transform within the project and table previously 
+configured in the profile with the `--set` command. Otherwise, you can add 
+`--project <project-name>, --table <table-name> --transform <transform-name>`.
 
-## Listing and showing your profiles 
-
-Listing profiles:
-
-
+This allows you to execute the command as follows:
 ``` shell
-hdxcli profile list
+hdxcli --project <project-name>, --table <table-name> --transform <transform-name> job batch ingest <job-name> <job-settings>.json
 ```
 
-Shogin default profile
+# Commands
 
-``` shell
-hdxcli profile show
-```
+- Profile
+  - *list*
+    - `hdxcli profile list`
+  - *add*
+    - `hdxcli profile add <profile-name>`
+  - *show*
+    - `hdxcli --profile <profile-name> profile show`
+- Set/Unset
+  - *set*
+    - `hdxcli set <project-name> <table-name>`
+  - *unset*
+    - `hdxcli unset`
+- Project
+  - *list*
+    - `hdxcli project list`
+  - *create*
+    - `hdxcli project create <project-name>`
+  - *delete*
+    - `hdxcli project delete <project-name>`
+  - *activity*
+    - `hdxcli --project <project-name> project activity`
+  - *stats*
+    - `hdxcli --project <project-name> project stats`
+  - *show*
+    - `hdxcli --project <project-name> project show`
+  - *settings*
+    - `hdxcli --project <project-name> project settings`
+    - `hdxcli --project <project-name> project settings <setting-name>`
+    - `hdxcli --project <project-name> project settings <setting-name> <new-value>`
+- Table
+- Transform
+- Job
+- Purgejobs
+- Sources
+- Dictionary
+- Dictionary Files
+- Function
+- Storage
+- Integration
+- Migrate
+- Version
 
+# FAQ: Common operations
 
-
-## FAQ: Common operations
-
-### Showing help 
+## Showing help 
 
 In order to see what you can do with the tool:
 
@@ -112,86 +165,34 @@ In order to see what you can do with the tool:
 hdxcli --help
 ```
 
-### Listing resources
-
-To list projects:
-
+Check which commands are available for each resource by typing:
 ``` shell
-hdxcli project list
+hdxcli [<resource>...] [<verb>] --help
 ```
 
-To list resources on a project:
-
-``` shell
-hdxcli --project <project-name> table list
-```
-
-
-You can avoid repeating the project and table name by using the `set` command:
-
-
-### Set/unset project and table
-
-``` shell
-hdxcli set <your-project> <your-table>
-```
-
-Subsequent operations will be applied to the project and table. If you want to `unset`
-it, just do:
-
-``` shell
-hdxcli unset
-```
-
-
-### Creating resources
-
-``` shell
-hdxcli project create <project-name>
-```
-
-
-### Peforming operations against another server
+## Performing operations against another server
 
 If you want to use `hdxcli` against another server, use `--profile` option:
-
-
-### Working with resource settings
-
-Show settings for a resource:
-
 ``` shell
-hdxcli project <myprojectname> settings
+hdxcli --profile <profile-name> project list
 ```
 
+## Obtain indented resource information
+
+When you use the verb `show` on any resource, the output looks like this:
 ``` shell
-hdxcli table <mytablename> settings
+hdxcli --project <project-name> project show
+{"name": "project-name", "org": "org-uuid", "description": "description", "uuid": "uuid", ...}
 ```
 
+If you need to have an indented json version, just add `-i`, `--indent int`:
 ``` shell
-hdxcli --transform <mytransform transform settings
-```
-
-
-Modify a setting:
-
-``` shell
-hdxcli table <mytablename> settings key value
-```
-
-Show a single setting:
-
-``` shell
-hdxcli table <mytablename> settings key value
-```
-
-
-
-### Getting help for subcommands
-
-Check which commands are available for each resource by typing:
-
-
-```
-hdxcli [<resource>...] [<verb>] --help
+hdxcli --project <project-name> project show -i 4
+{
+    "name": "project-name", 
+    "org": "org-uuid", 
+    "description": "description", 
+    "uuid": "uuid", 
+    ...,
+}
 ```

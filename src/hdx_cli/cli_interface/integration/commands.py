@@ -19,7 +19,7 @@ from ..common.misc_operations import settings as command_settings
 _REPO_USER = 'hydrolix/transforms'
 
 
-@click.group(help="Public resources management.")
+@click.group(help="Public resources management")
 @click.pass_context
 def integration(ctx: click.Context):
     profile: ProfileUserContext = ctx.parent.obj['usercontext']
