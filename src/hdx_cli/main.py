@@ -21,7 +21,6 @@ from hdx_cli.cli_interface.profile import commands as profile_
 from hdx_cli.cli_interface.sources import commands as sources_
 from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.integration import commands as integration_
-from hdx_cli.cli_interface.public import commands as public_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.common.validation import is_valid_username, is_valid_hostname
@@ -33,7 +32,7 @@ from hdx_cli.library_api.common.first_use import try_first_time_use
 from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
 
 
-VERSION = "1.0-rc41"
+VERSION = "1.0-rc42"
 
 
 from hdx_cli.library_api.common.auth import (
@@ -231,7 +230,7 @@ def hdx_cli(ctx, profile,
     ctx.obj = {'usercontext': user_context}
 
 
-@click.command(help='Print hdxcli version.')
+@click.command(help='Print hdxcli version')
 def version():
     print(VERSION)
 
@@ -250,7 +249,6 @@ hdx_cli.add_command(profile_.profile)
 hdx_cli.add_command(sources_.sources)
 hdx_cli.add_command(migrate_.migrate)
 hdx_cli.add_command(integration_.integration)
-hdx_cli.add_command(public_.public)
 hdx_cli.add_command(version)
 
 

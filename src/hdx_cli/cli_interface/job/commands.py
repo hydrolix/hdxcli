@@ -25,7 +25,7 @@ def job(ctx):
                'usercontext': profileinfo}
 
 
-@click.command(help='Purge all batch jobs in your org.')
+@click.command(help='Purge all batch jobs in your org')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @confirmation_prompt(prompt="Please type 'purge all jobs' to proceed: ",
