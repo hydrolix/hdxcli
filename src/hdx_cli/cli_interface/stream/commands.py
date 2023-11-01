@@ -6,7 +6,7 @@ from ...library_api.utility.decorators import report_error_and_exit
 from ..common.cached_operations import find_projects, find_tables, find_transforms
 
 
-@click.group(help="Stream ingest")
+@click.group(help="Stream-related operations")
 @click.pass_context
 def stream(ctx):
     profileinfo = ctx.parent.obj['usercontext']
@@ -47,8 +47,8 @@ def ingest(ctx: click.Context,
 
     headers['x-hdx-table'] = f'{profile.projectname}.{profile.tablename}'
     headers['x-hdx-transform'] = transformname
-    with open(stream_data_file, 'rb') as job_input:
-        data = job_input.read()
+    with open(stream_data_file, 'rb') as data_file:
+        data = data_file.read()
 
     rest_ops.create(url, body=data, body_type=bytes, headers=headers)
     print(f'Created stream ingest')

@@ -100,13 +100,13 @@ def find_table_id(user_ctx, table_name):
 def find_transforms(user_ctx: ProfileUserContext):
     try:
         project_id = [p for p in find_projects(user_ctx) if p["name"] == user_ctx.projectname][0]["uuid"]
-    except IndexError:
-        raise ResourceNotFoundException(f'Cannot find project name: {user_ctx.projectname}')
+    except IndexError as exc:
+        raise ResourceNotFoundException(f'Cannot find project name: {user_ctx.projectname}') from exc
 
     try:
         table_id = [p for p in find_tables(user_ctx) if p["name"] == user_ctx.tablename][0]["uuid"]
-    except IndexError:
-        raise ResourceNotFoundException(f'Cannot find table name: {user_ctx.tablename}')
+    except IndexError as exc:
+        raise ResourceNotFoundException(f'Cannot find table name: {user_ctx.tablename}') from exc
 
     token = user_ctx.auth
     hostname = user_ctx.hostname
