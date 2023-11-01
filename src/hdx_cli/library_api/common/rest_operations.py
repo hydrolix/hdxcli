@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Union
 import json
 import requests
 
@@ -11,7 +11,7 @@ MAX_TIMEOUT = 30
 
 def create(url: str, *,
            headers: Headers,
-           body: Dict[str, Any],
+           body: Union[Dict[str, Any], bytes],
            body_type='json',
            timeout=MAX_TIMEOUT):
     if body_type == 'json':

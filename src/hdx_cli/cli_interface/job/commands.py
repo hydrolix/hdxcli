@@ -12,7 +12,7 @@ from ..common.rest_operations import (delete as command_delete,
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                confirmation_prompt)
 from ..common.misc_operations import settings as command_settings
-from ..common.cached_operations import find_projects, find_tables
+from ..common.cached_operations import find_projects, find_tables, find_transforms
 
 
 @click.group(help="Job-related operations")
@@ -112,14 +112,7 @@ def ingest(ctx: click.Context,
 
         transformname = profile.transformname
         if not transformname:
-            org_id = profile.org_id
-            project_id = [p for p in find_projects(profile) if p['name'] == profile.projectname][0]['uuid']
-            table_id = [t for t in find_tables(profile) if t['name'] == profile.tablename][0]['uuid']
-
-            transforms_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/'
-            transforms_url = f'{scheme}://{hostname}{transforms_path}'
-            transforms_list = rest_ops.list(transforms_url,
-                                            headers=headers)
+            transforms_list = find_transforms(profile)
             try:
                 transformname = [t['name'] for t in transforms_list if t['settings']['is_default']][0]
             except IndexError as exc:
