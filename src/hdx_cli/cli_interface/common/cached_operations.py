@@ -1,7 +1,7 @@
 import json
 import requests
 
-from ...library_api.common.exceptions import HdxCliException
+from ...library_api.common.exceptions import HdxCliException, ResourceNotFoundException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.utility.decorators import find_in_disk_cache
 from ...library_api.common.config_constants import HDX_CLI_HOME_DIR
@@ -98,16 +98,23 @@ def find_table_id(user_ctx, table_name):
 
 
 def find_transforms(user_ctx: ProfileUserContext):
-    project_id = [ p for p in find_projects(user_ctx)
-                    if p["name"] == user_ctx.projectname][0]["uuid"]
-    table_id = [ p for p in find_tables(user_ctx)
-                     if p["name"] == user_ctx.tablename][0]["uuid"]
+    try:
+        project_id = [p for p in find_projects(user_ctx) if p["name"] == user_ctx.projectname][0]["uuid"]
+    except IndexError as exc:
+        raise ResourceNotFoundException(f'Cannot find project name: {user_ctx.projectname}') from exc
+
+    try:
+        table_id = [p for p in find_tables(user_ctx) if p["name"] == user_ctx.tablename][0]["uuid"]
+    except IndexError as exc:
+        raise ResourceNotFoundException(f'Cannot find table name: {user_ctx.tablename}') from exc
+
     token = user_ctx.auth
     hostname = user_ctx.hostname
     scheme = user_ctx.scheme
     url = f"{scheme}://{hostname}/config/v1/orgs/{user_ctx.org_id}/projects/{project_id}/tables/{table_id}/transforms"
-    headers={"Authorization": f"{token.token_type} {token.token}",
-             "Accept": "application/json"}
+    headers = {
+        "Authorization": f"{token.token_type} {token.token}",
+        "Accept": "application/json"}
     result = requests.get(url, headers=headers)
     if result.status_code != 200:
         raise HdxCliException(f"Error getting projects.")

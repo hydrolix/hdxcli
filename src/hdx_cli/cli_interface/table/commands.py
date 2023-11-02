@@ -117,7 +117,7 @@ def command_truncate(ctx: click.Context,
     if not _basic_truncate(user_profile, resource_path, table_name):
         print(f'Error truncating table {table_name}')
         return
-    print(f'Truncated table {table_name}.')
+    print(f'Truncated table {table_name}')
 
 
 table.add_command(create)

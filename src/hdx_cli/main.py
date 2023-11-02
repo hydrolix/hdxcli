@@ -14,6 +14,7 @@ from hdx_cli.cli_interface.project import commands as project_
 from hdx_cli.cli_interface.table import commands as table_
 from hdx_cli.cli_interface.transform import commands as transform_
 from hdx_cli.cli_interface.job import commands as job_
+from hdx_cli.cli_interface.stream import commands as stream_
 from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
 from hdx_cli.cli_interface.storage import commands as storage_
@@ -241,6 +242,7 @@ hdx_cli.add_command(transform_.transform)
 hdx_cli.add_command(set_commands.set)
 hdx_cli.add_command(set_commands.unset)
 hdx_cli.add_command(job_.job)
+hdx_cli.add_command(stream_.stream)
 hdx_cli.add_command(function_.function)
 hdx_cli.add_command(job_.purgejobs)
 hdx_cli.add_command(dictionary_.dictionary)

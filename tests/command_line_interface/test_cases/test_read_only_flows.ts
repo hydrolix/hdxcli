@@ -22,16 +22,21 @@
 # - teardown (optional): list with teardown commands
 global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main --project test_ci_project table create test_ci_table",
-                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/every_datatype_transform.json test_ci_transform",
-                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/country_dictionary.csv test_ci_dictionary_file",
-                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionary_settings.json test_ci_dictionary_file test_ci_dictionary",
-                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table job batch ingest test_ci_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch_job_ci_settings.json",
-                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kafka create {HDXCLI_TESTS_DIR}/tests_data/kafka_source_settings.json test_ci_kafka_source",
-                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/kinesis_source_settings.json test_ci_kinesis_source",
-                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources siem create {HDXCLI_TESTS_DIR}/tests_data/siem_source_settings.json test_ci_siem_source",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/transform_settings.json test_ci_transform",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/csv_transform.json test_csv_transform",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/json_transform.json test_json_transform",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/gzip_transform.json test_gzip_transform",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/zip_transform.json test_zip_transform",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/zlib_transform.json test_zlib_transform",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_file.csv test_ci_dictionary_file",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_settings.json test_ci_dictionary_file test_ci_dictionary",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table job batch ingest test_ci_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_ci_settings.json",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kafka create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_ci_kafka_source",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_ci_kinesis_source",
+                #"python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_ci_siem_source",
                 #"python3 -m hdx_cli.main --project test_ci_project function create -s '(x,k,b)->k*x+b' test_ci_function",
-                #"python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storage_ci_settings.json test_ci_storage",
-                "python3 -m hdx_cli.main unset"
+                #"python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storages/storage_ci_settings.json test_ci_storage",
+                #"python3 -m hdx_cli.main unset"
                 ]
 
 global_teardown = [#"python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_ci_storage",
@@ -111,6 +116,13 @@ expected_output = 'Created project test_project.'
 #expected_output_re = '.*?test_ci_table.*'
 #
 #[[test]]
+#name = "Tables can be truncated"
+#setup = ["python3 -m hdx_cli.main set test_ci_project"]
+#commands_under_test = ["python3 -m hdx_cli.main table truncate test_ci_table"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output = 'Truncated table test_ci_table'
+#
+#[[test]]
 #name = "Table settings can be shown"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 #commands_under_test = ["python3 -m hdx_cli.main table settings"]
@@ -154,14 +166,14 @@ expected_output = 'Created project test_project.'
 ######################################################## Transform #######################################################
 #[[test]]
 #name = "Transforms can be created"
-#commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/every_datatype_transform.json test_transform"]
+#commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/transform_settings.json test_transform"]
 #teardown = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table transform delete --disable-confirmation-prompt test_transform"]
 #expected_output = 'Created transform test_transform.'
 #
 #[[test]]
 #name = "Transforms can be deleted"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-#		     "python3 -m hdx_cli.main transform create -f {HDXCLI_TESTS_DIR}/tests_data/every_datatype_transform.json test_transform"]
+#		     "python3 -m hdx_cli.main transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/transform_settings.json test_transform"]
 #commands_under_test = ["python3 -m hdx_cli.main transform delete --disable-confirmation-prompt test_transform"]
 #teardown = ["python3 -m hdx_cli.main unset"]
 #expected_output = 'Deleted test_transform'
@@ -188,7 +200,7 @@ expected_output = 'Created project test_project.'
 #[[test]]
 #name = "Transform settings.is_default can be shown"
 #commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table --transform test_ci_transform transform settings settings.is_default"]
-#expected_output = 'settings.is_default: True'
+#expected_output = 'settings.is_default: False'
 #
 #[[test]]
 #name = "Transforms can be shown"
@@ -204,14 +216,14 @@ expected_output = 'Created project test_project.'
 #[[test]]
 #name = "Kafka sources can be created"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-#commands_under_test = ["python3 -m hdx_cli.main sources kafka create {HDXCLI_TESTS_DIR}/tests_data/kafka_source_settings.json test_kafka_source"]
+#commands_under_test = ["python3 -m hdx_cli.main sources kafka create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_kafka_source"]
 #teardown = ["python3 -m hdx_cli.main sources kafka delete --disable-confirmation-prompt test_kafka_source",
 #			      "python3 -m hdx_cli.main unset"]
 #expected_output = 'Created source test_kafka_source.'
 #
 #[[test]]
 #name = "Kafka sources can be deleted"
-#setup = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kafka create {HDXCLI_TESTS_DIR}/tests_data/kafka_source_settings.json test_kafka_source"]
+#setup = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kafka create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_kafka_source"]
 #commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kafka delete --disable-confirmation-prompt test_kafka_source"]
 #expected_output = 'Deleted test_kafka_source'
 #
@@ -249,14 +261,14 @@ expected_output = 'Created project test_project.'
 ######################################################### Kinesis #######################################################
 #[[test]]
 #name = "Kinesis sources can be created"
-#commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/kinesis_source_settings.json test_kinesis_source"]
+#commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_kinesis_source"]
 #teardown = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table sources kinesis delete --disable-confirmation-prompt test_kinesis_source"]
 #expected_output = 'Created source test_kinesis_source.'
 #
 #[[test]]
 #name = "Kinesis sources can be deleted"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-#		     "python3 -m hdx_cli.main sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/kinesis_source_settings.json test_kinesis_source"]
+#		     "python3 -m hdx_cli.main sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_kinesis_source"]
 #commands_under_test = ["python3 -m hdx_cli.main sources kinesis delete --disable-confirmation-prompt test_kinesis_source"]
 #teardown = ["python3 -m hdx_cli.main unset"]
 #expected_output = 'Deleted test_kinesis_source'
@@ -297,7 +309,7 @@ expected_output = 'Created project test_project.'
 #[[test]]
 #name = "SIEM sources can be created"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-#commands_under_test = ["python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/siem_source_settings.json test_siem_source"]
+#commands_under_test = ["python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
 #teardown = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source",
 #			      "python3 -m hdx_cli.main unset"]
 #expected_output = 'Created source test_siem_source.'
@@ -305,7 +317,7 @@ expected_output = 'Created project test_project.'
 #[[test]]
 #name = "SIEM sources can be deleted"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-#		     "python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/siem_source_settings.json test_siem_source"]
+#		     "python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
 #commands_under_test = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source"]
 #teardown = ["python3 -m hdx_cli.main unset"]
 #expected_output = 'Deleted test_siem_source'
@@ -345,13 +357,13 @@ expected_output = 'Created project test_project.'
 ######################################################### Storage #######################################################
 #[[test]]
 #name = "Storages can be created"
-#commands_under_test = ["python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storage_settings.json test_storage"]
+#commands_under_test = ["python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
 #teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_storage"]
 #expected_output = 'Created storage test_storage.'
 #
 #[[test]]
 #name = "Storages can be deleted"
-#setup = ["python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storage_settings.json test_storage"]
+#setup = ["python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
 #commands_under_test = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_storage"]
 #expected_output = 'Deleted test_storage'
 #
@@ -393,7 +405,7 @@ expected_output = 'Created project test_project.'
 #[[test]]
 #name = "Batch jobs can be started"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-#commands_under_test = ["python3 -m hdx_cli.main job batch ingest test_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch_job_settings.json"]
+#commands_under_test = ["python3 -m hdx_cli.main --transform test_ci_transform job batch ingest test_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_settings.json"]
 #teardown = ["python3 -m hdx_cli.main job batch cancel test_batch_job",
 #            "python3 -m hdx_cli.main job batch delete --disable-confirmation-prompt test_batch_job",
 #			      "python3 -m hdx_cli.main unset"]
@@ -430,11 +442,48 @@ expected_output = 'Created project test_project.'
 #[[test]]
 #name = "Batch jobs can be deleted"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-#		     "python3 -m hdx_cli.main job batch ingest test_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch_job_settings.json",
+#		     "python3 -m hdx_cli.main --transform test_ci_transform job batch ingest test_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_settings.json",
 #		     "python3 -m hdx_cli.main job batch cancel test_batch_job"]
 #commands_under_test = ["python3 -m hdx_cli.main job batch delete test_batch_job --disable-confirmation-prompt"]
 #teardown = ["python3 -m hdx_cli.main unset"]
 #expected_output = 'Deleted test_batch_job'
+#
+#
+######################################################### Stream ########################################################
+#[[test]]
+#name = "Stream ingest can be created using CSV file"
+#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+#commands_under_test = ["python3 -m hdx_cli.main --transform test_csv_transform stream ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.csv"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output = 'Created stream ingest'
+#
+#[[test]]
+#name = "Stream ingest can be created using JSON file"
+#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+#commands_under_test = ["python3 -m hdx_cli.main --transform test_json_transform stream ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.json"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output = 'Created stream ingest'
+#
+#[[test]]
+#name = "Stream ingest can be created using GZIP compressed file"
+#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+#commands_under_test = ["python3 -m hdx_cli.main --transform test_gzip_transform stream ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.gz"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output = 'Created stream ingest'
+#
+#[[test]]
+#name = "Stream ingest can be created using ZIP compressed file"
+#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+#commands_under_test = ["python3 -m hdx_cli.main --transform test_zip_transform stream ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.zip"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output = 'Created stream ingest'
+#
+#[[test]]
+#name = "Stream ingest can be created using ZLIB compressed file"
+#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+#commands_under_test = ["python3 -m hdx_cli.main --transform test_zlib_transform stream ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.zlib"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output = 'Created stream ingest'
 #
 #
 ######################################################## Function #######################################################
@@ -451,7 +500,7 @@ expected_output = 'Created project test_project.'
 #
 #[[test]]
 #name = "Functions can be created from json file"
-#commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project function create -f {HDXCLI_TESTS_DIR}/tests_data/function_settings.json test_function"]
+#commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project function create -f {HDXCLI_TESTS_DIR}/tests_data/functions/function_settings.json test_function"]
 #teardown = ["python3 -m hdx_cli.main --project test_ci_project function delete --disable-confirmation-prompt test_function"]
 #expected_output = 'Created function test_function.'
 #
@@ -482,14 +531,14 @@ expected_output = 'Created project test_project.'
 #[[test]]
 #name = "Dictionaries can be created"
 #setup = ["python3 -m hdx_cli.main set test_ci_project"]
-#commands_under_test = ["python3 -m hdx_cli.main dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionary_settings.json test_ci_dictionary_file test_dictionary"]
+#commands_under_test = ["python3 -m hdx_cli.main dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_settings.json test_ci_dictionary_file test_dictionary"]
 #teardown = ["python3 -m hdx_cli.main dictionary delete --disable-confirmation-prompt test_dictionary",
 #            "python3 -m hdx_cli.main unset"]
 #expected_output = 'Created test_dictionary.'
 #
 #[[test]]
 #name = "Dictionaries can be deleted"
-#setup = ["python3 -m hdx_cli.main --project test_ci_project dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionary_settings.json test_ci_dictionary_file test_dictionary"]
+#setup = ["python3 -m hdx_cli.main --project test_ci_project dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_settings.json test_ci_dictionary_file test_dictionary"]
 #commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project dictionary delete --disable-confirmation-prompt test_dictionary"]
 #expected_output = 'Deleted test_dictionary'
 #
@@ -517,14 +566,14 @@ expected_output = 'Created project test_project.'
 #[[test]]
 #name = "Dictionary files can be uploaded"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-#commands_under_test = ["python3 -m hdx_cli.main dictionary files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/country_dictionary.csv test_dictionary_file"]
+#commands_under_test = ["python3 -m hdx_cli.main dictionary files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_file.csv test_dictionary_file"]
 #teardown = ["python3 -m hdx_cli.main dictionary files delete test_dictionary_file",
 #            "python3 -m hdx_cli.main unset"]
 #expected_output_expr = 'result.startswith("Uploaded dictionary file from") and result.endswith("test_dictionary_file.")'
 #
 #[[test]]
 #name = "Dictionary files can be deleted"
-#setup = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/country_dictionary.csv test_dictionary_file"]
+#setup = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_file.csv test_dictionary_file"]
 #commands_under_test = ["python3 -m hdx_cli.main --project test_ci_project --table test_ci_table dictionary files delete test_dictionary_file"]
 #expected_output = 'Deleted test_dictionary_file'
 #

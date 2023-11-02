@@ -1,7 +1,7 @@
 {
    "type": "json",
    "settings": {
-      "is_default": false,
+      "is_default": true,
       "output_columns": [
          {
             "name": "datetime_second_s_indexed_valid",
