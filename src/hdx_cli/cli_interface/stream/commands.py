@@ -6,6 +6,14 @@ from ...library_api.utility.decorators import report_error_and_exit
 from ..common.cached_operations import find_projects, find_tables, find_transforms
 
 
+def _get_content_type(obj_type):
+    content_types = {
+        'csv': 'text/csv',
+        'json': 'application/json'
+    }
+    return content_types.get(obj_type, 'text/csv')
+
+
 @click.group(help="Stream-related operations")
 @click.pass_context
 def stream(ctx):
@@ -28,28 +36,32 @@ def ingest(ctx: click.Context,
             f"No project/table parameters provided and "
             f"no project/table set in profile '{profile.profilename}'")
 
+    transform_name = profile.transformname
+    transforms_list = find_transforms(profile)
+    try:
+        if transform_name:
+            transform_name, transform_type = [(t['name'], t['type']) for t in transforms_list
+                                              if t['name'] == transform_name][0]
+        else:
+            transform_name, transform_type = [(t['name'], t['type']) for t in transforms_list
+                                              if t['settings']['is_default']][0]
+    except IndexError as exc:
+        raise ResourceNotFoundException('No default transform found to apply ingest command and '
+                                        'no --transform passed') from exc
+
+    with open(stream_data_file, 'rb') as data_file:
+        data = data_file.read()
+
     hostname = profile.hostname
     scheme = profile.scheme
     url = f'{scheme}://{hostname}{resource_path}'
     token = profile.auth
     headers = {
         'Authorization': f'{token.token_type} {token.token}',
-        'content-type': 'text/csv'}
-
-    transformname = profile.transformname
-    if not transformname:
-        transforms_list = find_transforms(profile)
-        try:
-            transformname = [t['name'] for t in transforms_list if t['settings']['is_default']][0]
-        except IndexError as exc:
-            raise ResourceNotFoundException('No default transform found to apply ingest command and '
-                                            'no --transform passed') from exc
-
-    headers['x-hdx-table'] = f'{profile.projectname}.{profile.tablename}'
-    headers['x-hdx-transform'] = transformname
-    with open(stream_data_file, 'rb') as data_file:
-        data = data_file.read()
-
+        'content-type': _get_content_type(transform_type),
+        'x-hdx-table': f'{profile.projectname}.{profile.tablename}',
+        'x-hdx-transform': transform_name
+    }
     rest_ops.create(url, body=data, body_type=bytes, headers=headers)
     print(f'Created stream ingest')
 
