@@ -1,6 +1,5 @@
 import click
 import json
-from functools import partial
 
 from ...library_api.utility.decorators import report_error_and_exit
 from ..common.rest_operations import delete as command_delete
@@ -8,7 +7,6 @@ from ..common.undecorated_click_commands import basic_settings
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
 from ..common.rest_operations import (list_ as command_list,
                                       show as command_show)
-from ...library_api.common import rest_operations as rest_ops
 
 
 @click.group(help="Pool-related operations")

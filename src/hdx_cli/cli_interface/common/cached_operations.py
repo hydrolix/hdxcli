@@ -143,7 +143,7 @@ def find_pools(user_ctx: ProfileUserContext):
                "Accept": "application/json"}
     result = requests.get(url, headers=headers, timeout=30)
     if result.status_code != 200:
-        raise HdxCliException(f"Error getting storages.")
+        raise HdxCliException(f"Error getting pools.")
     return json.loads(result.content)
 
 
