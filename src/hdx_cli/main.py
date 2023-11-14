@@ -22,6 +22,7 @@ from hdx_cli.cli_interface.profile import commands as profile_
 from hdx_cli.cli_interface.sources import commands as sources_
 from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.integration import commands as integration_
+from hdx_cli.cli_interface.pool import commands as pool_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.common.validation import is_valid_username, is_valid_hostname
@@ -144,9 +145,11 @@ def fail_if_token_expired(user_context: ProfileUserContext):
 @click.option('--profile-config-file', hidden=True, help='Used only for testing.',
               default=None)
 @click.option('--storage', help='Perform operation on the passed storage.',
-              default=None)
+              metavar='STORAGENAME', default=None)
 @click.option('--source', help='Source for kinesis/kafka/summary/SIEM streams.',
-              default=None)
+              metavar='SOURCENAME', default=None)
+@click.option('--pool', help='Perform operation on the passed pool.',
+              metavar='POOLNAME', default=None)
 @click.option('--uri-scheme',
               help='Scheme used.',
               type=click.Choice(['default', 'http', 'https']),
@@ -165,6 +168,7 @@ def hdx_cli(ctx, profile,
             profile_config_file,
             storage,
             source,
+            pool,
             uri_scheme):
     "Command-line entry point for hdx cli interface"
     if ctx.invoked_subcommand == 'version':
@@ -227,6 +231,8 @@ def hdx_cli(ctx, profile,
         user_context.kinesisname = source
         user_context.siemname = source
         user_context.summaryname = source
+    if pool:
+        user_context.poolname = pool
     # Unconditional default override
     ctx.obj = {'usercontext': user_context}
 
@@ -251,6 +257,7 @@ hdx_cli.add_command(profile_.profile)
 hdx_cli.add_command(sources_.sources)
 hdx_cli.add_command(migrate_.migrate)
 hdx_cli.add_command(integration_.integration)
+hdx_cli.add_command(pool_.pool)
 hdx_cli.add_command(version)
 
 

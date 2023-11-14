@@ -19,7 +19,7 @@ def _serialize_to_config_file(profile: ProfileUserContext,
         toml.dump(all_profiles, stream)
 
 
-@click.command(help='Set project and or/table to apply subsequent commands on it')
+@click.command(help='Set project and/or table to apply subsequent commands on it')
 @click.argument('projectname', metavar='PROJECT_NAME', required=False, default=None)
 @click.argument('tablename', metavar='TABLE_NAME', required=False, default=None)
 @click.pass_context
@@ -43,7 +43,7 @@ def set(ctx, projectname, tablename, scheme=None):
     print(f"Profile '{profile.profilename}' set project/table")
 
 
-@click.command(help='Remove any set projects/tables')
+@click.command(help='Remove any set project/table')
 @click.pass_context
 def unset(ctx):
     profile: ProfileUserContext = ctx.obj['usercontext']
