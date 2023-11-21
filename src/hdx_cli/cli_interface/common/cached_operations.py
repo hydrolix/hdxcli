@@ -134,6 +134,19 @@ def find_storages(user_ctx: ProfileUserContext):
     return json.loads(result.content)
 
 
+def find_pools(user_ctx: ProfileUserContext):
+    token = user_ctx.auth
+    hostname = user_ctx.hostname
+    scheme = user_ctx.scheme
+    url = f"{scheme}://{hostname}/config/v1/pools/"
+    headers = {"Authorization": f"{token.token_type} {token.token}",
+               "Accept": "application/json"}
+    result = requests.get(url, headers=headers, timeout=30)
+    if result.status_code != 200:
+        raise HdxCliException(f"Error getting pools.")
+    return json.loads(result.content)
+
+
 @find_in_disk_cache(cache_file=HDX_CLI_HOME_DIR / "cache/cache.bin",
                     namespace="transforms_ids")
 def find_transform_id(user_ctx, transform_name):
