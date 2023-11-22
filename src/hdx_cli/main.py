@@ -1,14 +1,12 @@
-import os
 import dataclasses as dc
 
 from datetime import datetime
 from pathlib import Path
 
 import functools as ft
-import sys
 
 import click
-import toml
+from trogon import tui
 
 from hdx_cli.cli_interface.project import commands as project_
 from hdx_cli.cli_interface.table import commands as table_
@@ -24,8 +22,6 @@ from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.integration import commands as integration_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
-from hdx_cli.library_api.common.validation import is_valid_username, is_valid_hostname
-from hdx_cli.library_api.common.cache import CacheDict
 from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext
 from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException
 from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
@@ -33,7 +29,7 @@ from hdx_cli.library_api.common.first_use import try_first_time_use
 from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
 
 
-VERSION = "1.0-rc42"
+VERSION = "1.0-rc43"
 
 
 from hdx_cli.library_api.common.auth import (
@@ -117,56 +113,30 @@ def fail_if_token_expired(user_context: ProfileUserContext):
         raise TokenExpiredException()
     return user_context
 
+
 # pylint: disable=line-too-long
-@click.group(help='hdx-cli is a tool to perform operations against Hydrolix cluster resources such as tables,' +
-             ' projects and transforms via different profiles. hdx-cli supports profile configuration management ' +
+@tui(help='Open textual user interface')
+@click.group(help='hdxcli is a tool to perform operations against Hydrolix cluster resources such as tables,' +
+             ' projects and transforms via different profiles. hdxcli supports profile configuration management ' +
              ' to perform operations on different profiles and sets of projects and tables.')
-@click.option('--profile', help="Perform operation with a different profile. (Default profile is 'default')",
+@click.option('--profile', help="Perform operation with a different profile (default profile is 'default').",
               metavar='PROFILENAME', default=None)
-@click.option('--project', help="Use or override project set in the profile.",
-              metavar='PROJECTNAME', default=None)
-@click.option('--table', help="Use or override table set in the profile.",
-              metavar='TABLENAME', default=None)
-@click.option('--transform',
-              help="Explicitly pass the transform name. If none is given, the default transform for the used table is used.",
-              metavar='TRANSFORMNAME', default=None)
-@click.option('--job',
-              help="Perform operation on the passed jobname.",
-              metavar='JOBNAME', default=None)
-@click.option('--function',
-              help="Perform operation on the passed function.",
-              metavar='FUNCTIONNAME', default=None)
-@click.option('--dictionary',
-              help="Perform operation on the passed dictionary.",
-              metavar='DICTIONARYNAME', default=None)
 @click.option('--password', help="Login password. If provided and the access token is expired, it will be used.",
               metavar='PASSWORD', default=None)
 @click.option('--profile-config-file', hidden=True, help='Used only for testing.',
               default=None)
-@click.option('--storage', help='Perform operation on the passed storage.',
-              default=None)
-@click.option('--source', help='Source for kinesis/kafka/summary/SIEM streams.',
-              default=None)
-@click.option('--uri-scheme',
-              help='Scheme used.',
-              type=click.Choice(['default', 'http', 'https']),
+@click.option('--uri-scheme', help='Scheme used.', type=click.Choice(['default', 'http', 'https']),
               default='default')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 # pylint: enable=line-too-long
 def hdx_cli(ctx, profile,
-            project,
-            table,
-            transform,
-            job,
-            function,
-            dictionary,
             password,
             profile_config_file,
-            storage,
-            source,
             uri_scheme):
-    "Command-line entry point for hdx cli interface"
+    """
+        Command-line entry point for hdx cli interface
+    """
     if ctx.invoked_subcommand == 'version':
         return
 
@@ -192,7 +162,7 @@ def hdx_cli(ctx, profile,
         auth_info = login(user_context.username,
                           user_context.hostname,
                           password=password,
-                          use_ssl=True if user_context.scheme == 'https' else False)
+                          use_ssl=user_context.scheme == 'https')
         user_context.auth = auth_info
         user_context.org_id = auth_info.org_id
         cache_dir_path = (Path(profile_config_file).parent
@@ -207,26 +177,7 @@ def hdx_cli(ctx, profile,
 
     if uri_scheme != 'default':
         user_context.scheme = uri_scheme
-    # Command-line overrides
-    if transform:
-        user_context.transformname = transform
-    if job:
-        user_context.batchname = job
-    if project:
-        user_context.projectname = project
-    if table:
-        user_context.tablename = table
-    if function:
-        user_context.functionname = function
-    if dictionary:
-        user_context.dictionaryname = dictionary
-    if storage:
-        user_context.storagename = storage
-    if source:
-        user_context.kafkaname = source
-        user_context.kinesisname = source
-        user_context.siemname = source
-        user_context.summaryname = source
+
     # Unconditional default override
     ctx.obj = {'usercontext': user_context}
 

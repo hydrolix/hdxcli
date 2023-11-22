@@ -1,9 +1,10 @@
 import click
 
-from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
+from ...library_api.common.exceptions import ResourceNotFoundException
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
-from ..common.cached_operations import find_projects, find_tables, find_transforms
+from ..common.cached_operations import find_transforms
+from ...library_api.common.context import ProfileUserContext
 
 
 def _get_content_type(obj_type):
@@ -15,12 +16,27 @@ def _get_content_type(obj_type):
 
 
 @click.group(help="Stream-related operations")
+@click.option('--project', 'project_name', help="Use or override project set in the profile.",
+              metavar='PROJECTNAME', default=None)
+@click.option('--table', 'table_name', help="Use or override table set in the profile.",
+              metavar='TABLENAME', default=None)
+@click.option('--transform', 'transform_name',
+              help="Explicitly pass the transform name. If none is given, "
+                   "the default transform for the used table is used.",
+              metavar='TRANSFORMNAME', default=None)
 @click.pass_context
-def stream(ctx):
-    profileinfo = ctx.parent.obj['usercontext']
-    stream_path = f'/ingest/event'
+def stream(ctx: click.Context,
+           project_name,
+           table_name,
+           transform_name):
+    user_profile = ctx.parent.obj['usercontext']
+    stream_path = '/ingest/event'
     ctx.obj = {'resource_path': stream_path,
-               'usercontext': profileinfo}
+               'usercontext': user_profile}
+    ProfileUserContext.update_context(user_profile,
+                                      projectname=project_name,
+                                      tablename=table_name,
+                                      transformname=transform_name)
 
 
 @click.command(help='Ingest data via stream.')
@@ -30,14 +46,14 @@ def stream(ctx):
 def ingest(ctx: click.Context,
            stream_data_file: str):
     resource_path = ctx.parent.obj['resource_path']
-    profile = ctx.parent.obj['usercontext']
-    if not profile.projectname or not profile.tablename:
+    user_profile = ctx.parent.obj['usercontext']
+    if not user_profile.projectname or not user_profile.tablename:
         raise ResourceNotFoundException(
             f"No project/table parameters provided and "
-            f"no project/table set in profile '{profile.profilename}'")
+            f"no project/table set in profile '{user_profile.profilename}'")
 
-    transform_name = profile.transformname
-    transforms_list = find_transforms(profile)
+    transform_name = user_profile.transformname
+    transforms_list = find_transforms(user_profile)
     try:
         if transform_name:
             transform_name, transform_type = [(t['name'], t['type']) for t in transforms_list
@@ -52,18 +68,18 @@ def ingest(ctx: click.Context,
     with open(stream_data_file, 'rb') as data_file:
         data = data_file.read()
 
-    hostname = profile.hostname
-    scheme = profile.scheme
+    hostname = user_profile.hostname
+    scheme = user_profile.scheme
     url = f'{scheme}://{hostname}{resource_path}'
-    token = profile.auth
+    token = user_profile.auth
     headers = {
         'Authorization': f'{token.token_type} {token.token}',
         'content-type': _get_content_type(transform_type),
-        'x-hdx-table': f'{profile.projectname}.{profile.tablename}',
+        'x-hdx-table': f'{user_profile.projectname}.{user_profile.tablename}',
         'x-hdx-transform': transform_name
     }
     rest_ops.create(url, body=data, body_type=bytes, headers=headers)
-    print(f'Created stream ingest')
+    print('Created stream ingest')
 
 
 stream.add_command(ingest)

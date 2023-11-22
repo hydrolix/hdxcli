@@ -5,6 +5,8 @@ import requests
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import HdxCliException, LogicException
+from ...library_api.common.context import ProfileUserContext
+from ...library_api.userdata.token import AuthInfo
 
 from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
@@ -17,13 +19,23 @@ from ..common.undecorated_click_commands import basic_create
 
 
 @click.group(help="Table-related operations")
+@click.option('--project', 'project_name', help="Use or override project set in the profile.",
+              metavar='PROJECTNAME', default=None)
+@click.option('--table', 'table_name', help="Use or override table set in the profile.",
+              metavar='TABLENAME', default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def table(ctx: click.Context):
+def table(ctx: click.Context,
+          project_name,
+          table_name):
     user_profile = ctx.parent.obj.get('usercontext')
     hostname = user_profile.hostname
-    project_name = user_profile.projectname
-    if not project_name:
+    ProfileUserContext.update_context(user_profile,
+                                      projectname=project_name,
+                                      tablename=table_name)
+
+    project = user_profile.projectname
+    if not project:
         raise LogicException(f"No project parameter provided and "
                              f"no project is set in profile '{user_profile.profilename}'")
     org_id = user_profile.org_id
@@ -35,11 +47,11 @@ def table(ctx: click.Context):
     try:
         projects_list = rest_ops.list(list_projects_url,
                                       headers=headers)
-        project_id = [p['uuid'] for p in projects_list if p['name'] == project_name]
+        project_id = [p['uuid'] for p in projects_list if p['name'] == project]
         ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/projects/{project_id[0]}/tables/',
                    'usercontext': user_profile}
     except IndexError as idx_err:
-        raise LogicException(f'Cannot find project: {project_name}') from idx_err
+        raise LogicException(f'Cannot find project: {project}') from idx_err
 
 
 @click.command(help='Create table.')
@@ -76,7 +88,7 @@ def create(ctx: click.Context,
     resource_path = ctx.parent.obj.get('resource_path')
     basic_create(user_profile, resource_path,
                  table_name, None, None)
-    print(f'Created table {table_name}.')
+    print(f'Created table {table_name}')
 
 
 def _basic_truncate(profile, resource_path, resource_name: str):
@@ -101,7 +113,7 @@ def _basic_truncate(profile, resource_path, resource_name: str):
     result = requests.post(url,
                            headers=headers,
                            timeout=5)
-    if not result.status_code in (200, 201):
+    if result.status_code not in (200, 201):
         return False
     return True
 

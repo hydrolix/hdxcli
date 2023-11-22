@@ -1,16 +1,15 @@
 import click
 import toml
 
-from ...library_api.common.exceptions import HdxCliException
 from ...library_api.utility.decorators import report_error_and_exit
-from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
-from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
+from ...library_api.common.config_constants import PROFILE_CONFIG_FILE
+from ...library_api.common.profile import save_profile, get_profile_data_from_standard_input
+
 
 @click.group(help="Profile-related operations")
 @click.pass_context
 def profile(ctx: click.Context):
     ctx.obj = {'usercontext': ctx.parent.obj['usercontext']}
-
 
 
 @click.command(help='Show profile')
@@ -21,13 +20,13 @@ def profile_show(ctx: click.Context,
                  profile_name):
     profilename = ctx.parent.obj['usercontext'].profilename if not profile_name else profile_name
     print(f'Showing [{profilename}]')
-    print(f'-' * 100)
+    print('-' * 100)
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
         cfg_dict = toml.load(config_file)
-        for cfg_name, cfg_val in cfg_dict.items():
-            if cfg_name == profilename:
-                print(f"Profile: {cfg_name}")
-                for cfg_key, cfg_val in cfg_val.items():
+        for prof_name, prof_val in cfg_dict.items():
+            if prof_name == profilename:
+                print(f"Profile: {prof_name}")
+                for cfg_key, cfg_val in prof_val.items():
                     print(f"{cfg_key}: {cfg_val}")
 
 
