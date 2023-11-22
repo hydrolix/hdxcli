@@ -17,6 +17,7 @@ from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
 from hdx_cli.cli_interface.storage import commands as storage_
 from hdx_cli.cli_interface.profile import commands as profile_
+from hdx_cli.cli_interface.pool import commands as pool_
 from hdx_cli.cli_interface.sources import commands as sources_
 from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.integration import commands as integration_
@@ -198,6 +199,7 @@ hdx_cli.add_command(function_.function)
 hdx_cli.add_command(job_.purgejobs)
 hdx_cli.add_command(dictionary_.dictionary)
 hdx_cli.add_command(storage_.storage)
+hdx_cli.add_command(pool_.pool)
 hdx_cli.add_command(profile_.profile)
 hdx_cli.add_command(sources_.sources)
 hdx_cli.add_command(migrate_.migrate)

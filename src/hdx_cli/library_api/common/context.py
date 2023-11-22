@@ -39,6 +39,7 @@ class ProfileUserContext:
     kinesisname: Optional[str] = None
     siemname: Optional[str] = None
     summaryname: Optional[str] = None
+    poolname: Optional[str] = None
     scheme: str = 'https'
 
     def as_dict_for_config(self):
