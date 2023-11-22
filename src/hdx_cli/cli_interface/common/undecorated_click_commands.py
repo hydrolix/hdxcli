@@ -3,13 +3,13 @@ from typing import Optional, List, Tuple, Dict, Any
 import json
 import click
 
-from hdx_cli.library_api.common.context import ProfileUserContext
-from hdx_cli.library_api.common.exceptions import LogicException, HdxCliException
+from ...library_api.common.exceptions import LogicException, TransformNotFoundException, HdxCliException
+from ...library_api.common import rest_operations as rest_ops
+from ...library_api.userdata.token import AuthInfo
 
 
 from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard-import
-from ...library_api.common import rest_operations as rest_ops
-from ...library_api.common.exceptions import ResourceNotFoundException
+
 
 _MAX_TIMEOUT = 30
 
@@ -96,9 +96,9 @@ def basic_show(profile,
 def basic_transform(ctx: click.Context):
     profile_info: ProfileUserContext = ctx.obj['usercontext']
     project_name, table_name = profile_info.projectname, profile_info.tablename
-    if not project_name:
-        raise HdxCliException(f"No project parameter provided and "
-                              f"no project set in profile '{profile_info.profilename}'")
+    if not project_name or not table_name:
+        raise HdxCliException(f"No project/table parameters provided and "
+                              f"no project/table set in profile '{profile_info.profilename}'")
     hostname = profile_info.hostname
     org_id = profile_info.org_id
     scheme = profile_info.scheme
@@ -431,7 +431,7 @@ def _get_resource_information(profile,
                 url = f"{scheme}://{hostname}{resource_path}{resource['uuid']}"
             break
     if not url:
-        raise ResourceNotFoundException(f'Cannot find resource.')
+        raise ResourceNotFoundException(f'Cannot find resource {resource_name}.')
 
     url += f'/{action}'
     response = rest_ops.get(url, headers=headers)

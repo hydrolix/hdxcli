@@ -1,18 +1,14 @@
 """Transform resource command. It flows down url for current table"""
 from typing import Optional
 import json
-
 import click
 
 from ..common.undecorated_click_commands import basic_transform
 from ...library_api.utility.decorators import report_error_and_exit
-from ...library_api.common import rest_operations as rest_ops
-from ...library_api.common.exceptions import (HdxCliException,
-                                              CommandLineException,
-                                              TransformNotFoundException)
+from ...library_api.common.exceptions import CommandLineException
+from ...library_api.common.context import ProfileUserContext
 
-from ..common.rest_operations import (create as command_create,
-                                      delete as command_delete,
+from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
                                       show as command_show)
 
@@ -20,19 +16,32 @@ from ...library_api.ddl.common_algo import (ddl_to_create_table_info,
                                             ddl_datatype_to_hdx_datatype,
                                             generate_transform_dict)
 
-from ...library_api.ddl.common_intermediate_representation import (
-                                    DdlCreateTableInfo,
-                                    ColumnDefinition)
+from ...library_api.ddl.common_intermediate_representation import DdlCreateTableInfo
 
-from ...library_api.common.context import ProfileUserContext
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
 
 
 @click.group(help="Transform-related operations")
+@click.option('--project', 'project_name', help="Use or override project set in the profile.",
+              metavar='PROJECTNAME', default=None)
+@click.option('--table', 'table_name', help="Use or override table set in the profile.",
+              metavar='TABLENAME', default=None)
+@click.option('--transform', 'transform_name',
+              help="Explicitly pass the transform name. If none is given, "
+                   "the default transform for the used table is used.",
+              metavar='TRANSFORMNAME', default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def transform(ctx: click.Context):
+def transform(ctx: click.Context,
+              project_name,
+              table_name,
+              transform_name):
+    user_profile = ctx.parent.obj['usercontext']
+    ProfileUserContext.update_context(user_profile,
+                                      projectname=project_name,
+                                      tablename=table_name,
+                                      transformname=transform_name)
     basic_transform(ctx)
 
 
@@ -50,10 +59,10 @@ def create(ctx: click.Context,
            body_from_file):
     user_profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']
-    with open(body_from_file, "r", encoding="utf-8") as f:
+    with open(body_from_file, "r", encoding="utf-8") as file:
         basic_create_with_body_from_string(user_profile, resource_path,
-                                           transform_name, f.read())
-    print(f'Created transform {transform_name}.')
+                                           transform_name, file.read())
+    print(f'Created transform {transform_name}')
 
 
 @click.command(help='Map a transform from a description language. (currently sql CREATE TABLE)')
@@ -122,7 +131,7 @@ def map_from(ctx: click.Context,
                                        resource_path,
                                        transform_name,
                                        body_from_string=transform_str)
-    print(f'Created transform {transform_name}.')
+    print(f'Created transform {transform_name}')
 
 
 transform.add_command(map_from)

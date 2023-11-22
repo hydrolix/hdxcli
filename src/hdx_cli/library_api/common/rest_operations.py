@@ -11,7 +11,7 @@ MAX_TIMEOUT = 30
 
 def create(url: str, *,
            headers: Headers,
-           body: Union[Dict[str, Any], bytes],
+           body: Union[Dict[str, Any], bytes] = None,
            body_type='json',
            timeout=MAX_TIMEOUT):
     if body_type == 'json':
