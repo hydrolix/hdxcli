@@ -40,7 +40,6 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 ]
 
 global_teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_ci_storage",
-                   #"python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
                    "python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
                    "python3 -m hdx_cli.main unset"]
 
