@@ -19,6 +19,7 @@ jobs:
       - name: "Run tests"
         run: poetry run python3 -m pytest -v
         env:
+          tests_protocol : "http"
           HDXCLI_TESTS_CLUSTER_PASSWORD: ${{secrets.HDXCLI_TESTS_CLUSTER_PASSWORD}}
           HDXCLI_TESTS_CLUSTER_USERNAME: ${{secrets.HDXCLI_TESTS_CLUSTER_USERNAME}}
           PYTHONPATH: ${{env.PYTHONPATH}}
