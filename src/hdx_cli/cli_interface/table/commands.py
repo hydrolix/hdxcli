@@ -1,4 +1,5 @@
 """Commands relative to project handling  operations"""
+import json
 import click
 import requests
 
@@ -15,7 +16,8 @@ from ..common.rest_operations import (delete as command_delete,
                                       stats as command_stats)
 
 from ..common.misc_operations import settings as command_settings
-from ..common.undecorated_click_commands import basic_create
+from ..common.undecorated_click_commands import (basic_create,
+                                                 basic_create_with_body_from_string)
 
 
 @click.group(help="Table-related operations")
@@ -56,9 +58,9 @@ def table(ctx: click.Context,
 
 @click.command(help='Create table.')
 @click.argument('table_name')
-@click.option('--type', '-t',
+@click.option('--type', '-t', 'table_type',
               type=click.Choice(('summary', 'turbine')),
-              help='Create a turbine (regular) table or a summary (aggregation) table',
+              help='Create a raw (regular) table or an aggregation (summary) table',
               metavar='TYPE',
               required=False,
               default='turbine')
@@ -74,21 +76,78 @@ def table(ctx: click.Context,
               metavar='SQL_QUERY_FILE',
               required=False,
               default=None)
+@click.option('--ingestion-type', '-i',
+              type=click.Choice(('stream', 'kafka', 'kinesis')),
+              help='Ingest type (for summary tables only, otherwise ignored). '
+                   'Default: stream (stream, kafka, kinesis)',
+              metavar='INGESTION_TYPE',
+              required=False,
+              default='stream')
+@click.option('--source-name', '-o',
+              type=str,
+              help='Source name if ingest type is kafka or kinesis '
+                   '(for summary tables only, otherwise ignored)',
+              metavar='SOURCE_NAME',
+              required=False,
+              default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            table_name: str,
-           type: str,
+           table_type: str,
            sql_query,
-           sql_query_file):
-    if sql_query and sql_query_file:
-        raise HdxCliException('Only one of sql_query or sql_query_file is allowed')
+           sql_query_file,
+           ingestion_type,
+           source_name):
+    if table_type == 'summary' and not (
+            (sql_query and not sql_query_file) or (sql_query_file and not sql_query)) or not ingestion_type:
+        raise HdxCliException('When creating a summary table, either SQL query or SQL query file must be provided')
+
+    if table_type == 'summary' and ingestion_type != 'stream' and not source_name:
+        raise HdxCliException('If the ingestion type is kafka or kinesis, you must specify the source name '
+                              'passing --source-name or -o')
 
     user_profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
-    basic_create(user_profile, resource_path,
-                 table_name, None, None)
+    if table_type == 'summary':
+        _summary_basic_create(user_profile, resource_path,
+                              table_name, table_type, sql_query,
+                              sql_query_file, ingestion_type,
+                              source_name)
+    else:
+        basic_create(user_profile, resource_path,
+                     table_name, None, None)
     print(f'Created table {table_name}')
+
+
+def _summary_basic_create(user_profile,
+                          resource_path,
+                          table_name,
+                          table_type,
+                          sql_query,
+                          sql_query_file,
+                          ingestion_type,
+                          source_name):
+    if sql_query_file:
+        try:
+            with open(sql_query_file, 'r') as file:
+                sql_query = file.read()
+        except Exception as e:
+            raise HdxCliException(f"reading SQL query from file '{sql_query_file}'") from e
+
+    body = {
+        'settings': {
+            'summary': {
+                'enabled': True,
+                'sql': sql_query
+            }
+        },
+        'type': table_type
+    }
+    if ingestion_type != 'stream':
+        body['settings']['summary'][ingestion_type] = {'parent_source': source_name}
+
+    basic_create_with_body_from_string(user_profile, resource_path, table_name, json.dumps(body))
 
 
 def _basic_truncate(profile, resource_path, resource_name: str):
