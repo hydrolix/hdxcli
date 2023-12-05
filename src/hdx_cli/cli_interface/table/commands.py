@@ -66,19 +66,19 @@ def table(ctx: click.Context,
               default='turbine')
 @click.option('--sql-query', '-s',
               type=str,
-              help='SQL query to use (for summary tables only, otherwise ignored)',
+              help='SQL query to use (for summary tables only)',
               metavar='SQL_QUERY',
               required=False,
               default=None)
 @click.option('--sql-query-file', '-f',
               type=str,
-              help='File path to SQL query to use (for summary tables only, otherwise ignored)',
+              help='File path to SQL query to use (for summary tables only)',
               metavar='SQL_QUERY_FILE',
               required=False,
               default=None)
 @click.option('--ingestion-type', '-i',
               type=click.Choice(('stream', 'kafka', 'kinesis')),
-              help='Ingest type (for summary tables only, otherwise ignored). '
+              help='Ingest type (for summary tables only). '
                    'Default: stream (stream, kafka, kinesis)',
               metavar='INGESTION_TYPE',
               required=False,
@@ -86,7 +86,7 @@ def table(ctx: click.Context,
 @click.option('--source-name', '-o',
               type=str,
               help='Source name if ingest type is kafka or kinesis '
-                   '(for summary tables only, otherwise ignored)',
+                   '(for summary tables only)',
               metavar='SOURCE_NAME',
               required=False,
               default=None)
@@ -100,7 +100,7 @@ def create(ctx: click.Context,
            ingestion_type,
            source_name):
     if table_type == 'summary' and not (
-            (sql_query and not sql_query_file) or (sql_query_file and not sql_query)) or not ingestion_type:
+            (sql_query and not sql_query_file) or (sql_query_file and not sql_query)):
         raise HdxCliException('When creating a summary table, either SQL query or SQL query file must be provided')
 
     if table_type == 'summary' and ingestion_type != 'stream' and not source_name:
@@ -110,7 +110,7 @@ def create(ctx: click.Context,
     user_profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     if table_type == 'summary':
-        _summary_basic_create(user_profile, resource_path,
+        _basic_summary_create(user_profile, resource_path,
                               table_name, table_type, sql_query,
                               sql_query_file, ingestion_type,
                               source_name)
@@ -120,7 +120,7 @@ def create(ctx: click.Context,
     print(f'Created table {table_name}')
 
 
-def _summary_basic_create(user_profile,
+def _basic_summary_create(user_profile,
                           resource_path,
                           table_name,
                           table_type,
