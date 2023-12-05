@@ -1,20 +1,13 @@
-import click
 import json
-import tempfile
-
-from ..common import rest_operations as ro
+import click
 
 from ...library_api.common import rest_operations as rest_ops
-from ...library_api.common.config_constants import HDX_CLI_HOME_DIR
-from ...library_api.common.dates import get_datetime_from_formatted_string
-from ...library_api.common.auth import AuthInfo, load_profile
 from ...library_api.common.context import ProfileUserContext
-from ...library_api.common.exceptions import TokenExpiredException, HdxCliException
 from ...library_api.utility.decorators import report_error_and_exit
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
 
+
 from ..common.undecorated_click_commands import basic_transform
-from ..common.misc_operations import settings as command_settings
 
 _REPO_USER = 'hydrolix/transforms'
 
@@ -29,15 +22,25 @@ def integration(ctx: click.Context):
                'usercontext': profile}
     profile.hostname = 'raw.githubusercontent.com'
 
+
 @click.group(help="Public transforms.")
+@click.option('--project', 'project_name', help="Use or override project set in the profile.",
+              metavar='PROJECTNAME', default=None)
+@click.option('--table', 'table_name', help="Use or override table set in the profile.",
+              metavar='TABLENAME', default=None)
 @click.pass_context
-def transform(ctx: click.Context):
-    profile: ProfileUserContext = ctx.parent.obj['usercontext']
+def transform(ctx: click.Context,
+              project_name,
+              table_name):
+    user_profile: ProfileUserContext = ctx.parent.obj['usercontext']
+    ProfileUserContext.update_context(user_profile,
+                                      projectname=project_name,
+                                      tablename=table_name)
     resource_path = ctx.parent.obj['resource_path']
     resource_path = f'{resource_path}dev/'
     ctx.obj = {'resource_path': resource_path,
                'cluster_hostname': ctx.parent.obj['cluster_hostname'],
-               'usercontext': profile}
+               'usercontext': user_profile}
 
 
 integration.add_command(transform)
@@ -64,6 +67,7 @@ def list_(ctx: click.Context):
 
 transform.add_command(list_, name='list')
 
+
 def _basic_show(ctx: click.Context,
                 transform_name):
     results = _github_list(ctx)
@@ -77,36 +81,37 @@ def _basic_show(ctx: click.Context,
         raise ValueError(f'No transform named {transform_name}')
 
 
-
 @click.command(help="Apply an integration transform into current table.")
 @click.argument('integration_transform_name', metavar='INTEGRATIONTRANSFORMNAME')
 @click.argument('transform_name', metavar='TRANSFORMNAME')
 @click.pass_context
+@report_error_and_exit(exctype=Exception)
 def apply(ctx: click.Context,
           integration_transform_name,
           transform_name):
     transform_contents = _basic_show(ctx, integration_transform_name)
-    ctx.parent.obj['usercontext'].hostname = ctx.parent.obj['cluster_hostname']
+    user_profile = ctx.parent.obj['usercontext']
+    user_profile.hostname = ctx.parent.obj['cluster_hostname']
+
     basic_transform(ctx)
-    user_profile = ctx.obj['usercontext']
     resource_path = ctx.obj['resource_path']
     basic_create_with_body_from_string(user_profile,
                                        resource_path,
                                        transform_name,
                                        transform_contents)
-
-transform.add_command(apply, 'apply')
+    print(f'Created transform {transform_name} from {integration_transform_name}.')
 
 
 @click.command(help="Integration transforms.")
 @click.argument('transform_name', metavar='TRANSFORMNAME')
 @click.pass_context
-@report_error_and_exit()
+@report_error_and_exit(exctype=Exception)
 def show(ctx: click.Context, transform_name):
-    results = _github_list(ctx)
-    base_resource_url = 'https://raw.githubusercontent.com/hydrolix/transforms/dev'
+    #results = _github_list(ctx)
+    #base_resource_url = 'https://raw.githubusercontent.com/hydrolix/transforms/dev'
     # 'Fastly/fastly_transform.json'
-    # print(_basic_show(ctx, transform_name))
+    print(_basic_show(ctx, transform_name))
 
 
+transform.add_command(apply, 'apply')
 transform.add_command(show)

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from ..userdata.token import AuthInfo
+from ..common.exceptions import ProfileNotFoundException
 
 
 @dataclass
@@ -38,6 +39,7 @@ class ProfileUserContext:
     kinesisname: Optional[str] = None
     siemname: Optional[str] = None
     summaryname: Optional[str] = None
+    poolname: Optional[str] = None
     scheme: str = 'https'
 
     def as_dict_for_config(self):
@@ -46,3 +48,15 @@ class ProfileUserContext:
             if attr_val := getattr(self, field_name):
                 dict_to_save[field_name] = attr_val
         return dict_to_save
+
+    @staticmethod
+    def update_context(user_profile, **kwargs):
+        """
+            Method used to update variables within the user context
+        """
+        if not user_profile:
+            raise ProfileNotFoundException('Profile not found')
+
+        for key, value in kwargs.items():
+            if hasattr(user_profile, key) and value is not None:
+                setattr(user_profile, key, value)

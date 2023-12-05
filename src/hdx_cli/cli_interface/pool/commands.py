@@ -2,6 +2,7 @@ import click
 import json
 
 from ...library_api.utility.decorators import report_error_and_exit
+from ...library_api.common.context import ProfileUserContext
 from ..common.rest_operations import delete as command_delete
 from ..common.undecorated_click_commands import basic_settings
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
@@ -10,11 +11,16 @@ from ..common.rest_operations import (list_ as command_list,
 
 
 @click.group(help="Pool-related operations")
+@click.option('--pool', 'pool_name', help="Perform operation on the passed pool.",
+              metavar='POOLNAME', default=None)
 @click.pass_context
-def pool(ctx: click.Context):
-    profile = ctx.parent.obj['usercontext']
+def pool(ctx: click.Context,
+         pool_name):
+    user_profile = ctx.parent.obj['usercontext']
+    ProfileUserContext.update_context(user_profile,
+                                      poolname=pool_name)
     ctx.obj = {'resource_path': f'/config/v1/pools/',
-               'usercontext': profile}
+               'usercontext': user_profile}
 
 
 def build_request_body(replicas, cpu, memory, storage, pool_service):
