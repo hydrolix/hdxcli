@@ -4,32 +4,24 @@ import io
 import os
 import tempfile
 from urllib.parse import urlparse
+import time
 
 import click
 import json
 import toml
 
-from ..common import rest_operations as ro
 from ...library_api.common import rest_operations as lro
 from ...library_api.common.context import ProfileLoadContext, ProfileUserContext
-from ...library_api.common.first_use import try_first_time_use
 from ...library_api.common.validation import is_valid_hostname, is_valid_username
 from ...library_api.common.auth import load_profile, save_profile_cache
 from ...library_api.common.login import login
 from ...library_api.common.generic_resource import access_resource_detailed
-from ...library_api.common.exceptions import LogicException, HdxCliException, HttpException
+from ...library_api.common.exceptions import LogicException, HttpException
 from ...library_api.utility.decorators import report_error_and_exit
-from ..common.undecorated_click_commands import (basic_create,
-                                                 basic_list,
-                                                 basic_show,
-                                                 basic_create_with_body_from_string,
-                                                 basic_settings)
-
+from ..common.undecorated_click_commands import (basic_show,
+                                                 basic_create_with_body_from_string)
 
 from .rollback import MigrateStatus, MigrationRollbackManager, DoNothingMigrationRollbackManager, MigrationEntry, ResourceKind
-
-
-from ..common.misc_operations import settings as command_settings
 
 
 def _setup_target_cluster_config(profile_config_file,
@@ -69,17 +61,13 @@ def migrate_projects(ctx: click.Context,
                                                target_resource_path,
                                                project['name'],
                                                json.dumps({'settings': show_result['settings']}))
-            # settings = basic_show(source_profile, source_resource_path, project['name'])
-            # basic_create_with_body_from_string(target_profile,
-            #                                    target_resource_path,
-            #                                    project['name'])
         except HttpException as exc:
             if exc.error_code == 400:
-                yield (project, MigrateStatus.SKIPPED)
+                yield project, MigrateStatus.SKIPPED
             else:
                 raise
         else:
-            yield (project, MigrateStatus.CREATED)
+            yield project, MigrateStatus.CREATED
 
 
 def create_tables_for_project(project_name,
@@ -92,35 +80,53 @@ def create_tables_for_project(project_name,
     source_tables_path = urlparse(f'{source_tables_url}').path
     target_tables_path = urlparse(f'{target_project_url}tables/').path
 
-    for table in source_project_tables:
-        try:
-            table_show = json.loads(basic_show(source_profile, source_tables_path, table['name']))
+    # To ensure that raw tables are created before summary tables.
+    sorted_tables = sorted(source_project_tables, key=lambda x: x['type'], reverse=True)
+
+    for table in sorted_tables:
+        attempt = 0
+        while attempt < 4:
             try:
-                table_show['settings']['autoingest'][0]['enabled'] = False
-            except IndexError:
-                pass
-            except KeyError:
-                pass
+                table_show = json.loads(basic_show(source_profile, source_tables_path, table['name']))
+                try:
+                    table_show['settings']['autoingest'][0]['enabled'] = False
+
+                    del table_show['settings']['autoingest'][0]['source']
+                    del table_show['uuid']
+                except IndexError:
+                    pass
+                except KeyError:
+                    pass
+                else:
+                    basic_create_with_body_from_string(target_profile,
+                                                       target_tables_path,
+                                                       table['name'],
+                                                       json.dumps(table_show))
+            except HttpException as exc:
+                # Attempts are necessary for summary tables.
+                # The migration is fast and sometimes summary table fails due the previous
+                # table "not found" (getting false negatives initially due to a delay in resource recognition).
+                attempt += 1
+                if attempt < 4:
+                    time.sleep(1)
+                    continue
+
+                if exc.error_code == 400:
+                    yield table, MigrateStatus.SKIPPED
+                    break
+                else:
+                    raise
             else:
-                del table_show['settings']['autoingest'][0]['source']
-                basic_create_with_body_from_string(target_profile,
-                                                   target_tables_path,
-                                                   table['name'],
-                                                   json.dumps({'settings': table_show['settings']}))
-        except HttpException as exc:
-            if exc.error_code == 400:
-                yield (table, MigrateStatus.SKIPPED)
-            else:
-                raise
-        else:
-            yield (table, MigrateStatus.CREATED)
+                yield table, MigrateStatus.CREATED
+                break
 
 
 def create_functions_for_project(project_name,
                                  source_profile: ProfileUserContext,
                                  target_profile: ProfileUserContext):
     source_project_functions, source_functions_url = access_resource_detailed(source_profile,
-                                                                        [('projects', project_name), ('functions', None)])
+                                                                              [('projects', project_name),
+                                                                               ('functions', None)])
     _, target_function_url = access_resource_detailed(target_profile, [('projects', project_name)])
 
     source_functions_path = urlparse(f'{source_functions_url}').path
@@ -136,11 +142,11 @@ def create_functions_for_project(project_name,
                                                json.dumps({'sql': function_show['sql']}))
         except HttpException as exc:
             if exc.error_code == 400:
-                yield (function, MigrateStatus.SKIPPED)
+                yield function, MigrateStatus.SKIPPED
             else:
                 raise
         else:
-            yield (function, MigrateStatus.CREATED)
+            yield function, MigrateStatus.CREATED
 
 
 def create_dictionaries_for_project(project_name,
@@ -163,7 +169,8 @@ def create_dictionaries_for_project(project_name,
         query_endpoint = f'{source_profile.scheme}://{source_profile.hostname}/query/?query=SELECT * FROM {table_name} FORMAT {d_format}'
         headers = {'Authorization': f'{source_profile.auth.token_type} {source_profile.auth.token}',
                    'Accept': '*/*'}
-        contents = lro.get(query_endpoint, headers=headers, fmt='verbatim')
+        timeout = source_profile.timeout
+        contents = lro.get(query_endpoint, headers=headers, timeout=timeout, fmt='verbatim')
         try:
             if d_file not in dictionary_files_so_far:
                 _create_dictionary_file_for_project(project_name, d_file, contents,
@@ -172,7 +179,7 @@ def create_dictionaries_for_project(project_name,
         except HttpException as exc:
             # Dictionary file existed, no need to create it
             if exc.error_code == 400:
-                yield (dic, MigrateStatus.SKIPPED)
+                yield dic, MigrateStatus.SKIPPED
             # Genuine error, abort
             else:
                 raise
@@ -184,10 +191,10 @@ def create_dictionaries_for_project(project_name,
                                                    json.dumps({'settings': d_settings}))
             except HttpException as exc:
                 if exc.error_code == 400:
-                    yield (dic, MigrateStatus.SKIPPED)
+                    yield dic, MigrateStatus.SKIPPED
                 raise
             else:
-                yield (dic, MigrateStatus.CREATED)
+                yield dic, MigrateStatus.CREATED
 
 
 def _create_dictionary_file_for_project(project_name,
@@ -200,9 +207,11 @@ def _create_dictionary_file_for_project(project_name,
     headers = {'Authorization': f'{profile.auth.token_type} {profile.auth.token}',
                'Accept': '*/*'}
     file_url = f'{project_url}dictionaries/files/'
+    timeout = profile.timeout
     lro.create_file(file_url, headers=headers,
                     file_stream=io.BytesIO(contents),
-                    remote_filename=dict_file)
+                    remote_filename=dict_file,
+                    timeout=timeout)
 
 
 def create_transforms_for_table(project_name,
@@ -225,17 +234,19 @@ def create_transforms_for_table(project_name,
     for transform in source_table_transforms:
         transform_show = json.loads(basic_show(source_profile, source_transforms_path, transform['name']))
         try:
+            del transform_show['uuid']
             basic_create_with_body_from_string(target_profile,
                                                target_transforms_path,
                                                transform['name'],
                                                json.dumps(transform_show))
         except HttpException as exc:
+            print(exc)
             if exc.error_code == 400:
-                yield (transform, MigrateStatus.SKIPPED)
+                yield transform, MigrateStatus.SKIPPED
             else:
                 raise
         else:
-            yield (transform, MigrateStatus.CREATED)
+            yield transform, MigrateStatus.CREATED
 
 
 @click.command(help="Migrate projects to a target cluster. The migrate command takes care of migrating"
@@ -290,6 +301,7 @@ def migrate(ctx: click.Context,
     target_user_profile = load_profile(target_load_ctx)
     target_user_profile.auth = auth_info
     target_user_profile.org_id = auth_info.org_id
+    target_user_profile.timeout = ctx.parent.obj['usercontext'].timeout
 
     save_profile_cache(target_user_profile,
                        token=target_user_profile.auth.token,
@@ -338,7 +350,7 @@ def migrate(ctx: click.Context,
                 migration_rollback_manager.push_entry(m_entry)
             elif status == MigrateStatus.SKIPPED:
                 print('skipped creation (was found).')
-            
+
             for func, func_status in create_functions_for_project(project['name'],
                                                                   ctx.parent.obj['usercontext'],
                                                                   target_user_profile):
@@ -347,7 +359,7 @@ def migrate(ctx: click.Context,
                     print('created')
                     m_entry = MigrationEntry(func['name'], 
                                              ResourceKind.FUNCTION,
-                                            [project['name']])
+                                             [project['name']])
                     migration_rollback_manager.push_entry(m_entry)
                 elif func_status == MigrateStatus.SKIPPED:
                     print('skipped creation (was found).')
@@ -371,11 +383,17 @@ def migrate(ctx: click.Context,
                 if tbl_status == MigrateStatus.CREATED:
                     print('created')
                     m_entry = MigrationEntry(table['name'], 
-                                         ResourceKind.TABLE,
-                                         [project['name']])
+                                             ResourceKind.TABLE,
+                                             [project['name']])
                     migration_rollback_manager.push_entry(m_entry)
                 elif tbl_status == MigrateStatus.SKIPPED:
                     print('skipped creation (was found).')
+
+                # If the table migrated is a summary, transforms and sources will be created automatically.
+                # Therefore, there is no need to migrate them.
+                if table.get('type') and table['type'] == 'summary':
+                    continue
+
                 for transform, transform_status in create_transforms_for_table(project['name'],
                                                                             table['name'],
                                                                             ctx.parent.obj['usercontext'],

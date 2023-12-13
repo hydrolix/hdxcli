@@ -37,12 +37,14 @@ def function(ctx: click.Context,
                              f"no project set in profile '{user_profile.profilename}'")
     org_id = user_profile.org_id
     scheme = user_profile.scheme
+    timeout = user_profile.timeout
     list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
     auth_token: AuthInfo = user_profile.auth
     headers = {'Authorization': f'{auth_token.token_type} {auth_token.token}',
                'Accept': 'application/json'}
     projects_list = rest_ops.list(list_projects_url,
-                                  headers=headers)
+                                  headers=headers,
+                                  timeout=timeout)
     project_id = [p['uuid'] for p in projects_list if p['name'] == project]
     ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/projects/{project_id[0]}/functions/',
                'usercontext': user_profile}
@@ -80,6 +82,7 @@ def create(ctx: click.Context,
     profile = ctx.parent.obj['usercontext']
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     url = f'{scheme}://{hostname}{resource_path}'
     token = profile.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
@@ -92,7 +95,7 @@ def create(ctx: click.Context,
     elif inline_sql:
         body['name'] = f'{function_name}'
         body['sql'] = inline_sql
-    rest_ops.create(url, body=body, headers=headers)
+    rest_ops.create(url, body=body, headers=headers, timeout=timeout)
     print(f'Created function {function_name}')
 
 

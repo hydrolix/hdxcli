@@ -11,21 +11,19 @@ from ...library_api.userdata.token import AuthInfo
 from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard-import
 
 
-_MAX_TIMEOUT = 30
-
-
 def basic_create(profile,
                  resource_path,
                  resource_name: str,
                  body_from_file: Optional[str]=None,
-                 body_from_file_type='json',
-                 timeout=_MAX_TIMEOUT):
+                 body_from_file_type='json'):
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     url = f'{scheme}://{hostname}{resource_path}'
     token = profile.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
+
     body = {}
     body_stream = None
     if body_from_file:
@@ -40,14 +38,16 @@ def basic_create(profile,
         body = {'name': f'{resource_name}',
                 'description': 'Created with hdxcli tool'}
     if body_from_file_type == 'json':
-        rest_ops.create(url, body=body, headers=headers)
+        rest_ops.create(url, body=body, headers=headers, timeout=timeout)
     elif body_from_file and body_stream:
-        rest_ops.create_file(url, headers=headers, file_stream=body_stream,
-                             remote_filename=resource_name, timeout=timeout)
+        rest_ops.create_file(url, headers=headers,
+                             file_stream=body_stream,
+                             remote_filename=resource_name,
+                             timeout=timeout)
         if body_stream:
             body_stream.close()
     else:
-        rest_ops.create(url, body=body, headers=headers)
+        rest_ops.create(url, body=body, headers=headers, timeout=timeout)
 
 
 def basic_create_with_body_from_string(profile,
@@ -57,6 +57,7 @@ def basic_create_with_body_from_string(profile,
                                        body_from_string_type='json'):
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     url = f'{scheme}://{hostname}{resource_path}'
     token = profile.auth
 
@@ -73,7 +74,10 @@ def basic_create_with_body_from_string(profile,
                    'Accept': 'application/json'}
         body = json.loads(body_from_string)
         body['name'] = f'{resource_name}'
-    rest_ops.create(url, body=body, headers=headers, body_type=body_from_string_type)
+    rest_ops.create(url, body=body,
+                    headers=headers,
+                    body_type=body_from_string_type,
+                    timeout=timeout)
 
 
 def basic_show(profile,
@@ -82,11 +86,12 @@ def basic_show(profile,
                indent: Optional[int] = None):
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     list_url = f'{scheme}://{hostname}{resource_path}'
     auth_info: AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
+    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
     for resource in resources:
         if resource.get('name') == resource_name:
             return json.dumps(resource, indent=indent)
@@ -102,26 +107,30 @@ def basic_transform(ctx: click.Context):
     hostname = profile_info.hostname
     org_id = profile_info.org_id
     scheme = profile_info.scheme
+    timeout = profile_info.timeout
     list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
     token = profile_info.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
     projects_list = rest_ops.list(list_projects_url,
-                                  headers=headers)
+                                  headers=headers,
+                                  timeout=timeout)
 
     try:
         project_id = [p['uuid'] for p in projects_list if p['name'] == project_name][0]
 
         list_tables_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/{project_id}/tables'
         tables_list = rest_ops.list(list_tables_url,
-                                    headers=headers)
+                                    headers=headers,
+                                    timeout=timeout)
         table_id = [t['uuid'] for t in tables_list if t['name'] == table_name][0]
 
         transforms_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/'
         transforms_url = f'{scheme}://{hostname}{transforms_path}'
 
         transforms_list = rest_ops.list(transforms_url,
-                                        headers=headers)
+                                        headers=headers,
+                                        timeout=timeout)
     except IndexError as idx_err:
         raise LogicException('Cannot find resource.') from idx_err
 
@@ -322,11 +331,14 @@ def basic_settings(profile,
     """Given a resource type, it returns the settings that can be used for it"""
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     settings_url = f"{scheme}://{hostname}{resource_path}"
     auth = profile.auth
     headers = {"Authorization": f"{auth.token_type} {auth.token}",
                "Accept": "application/json"}
-    options = rest_ops.options(settings_url, headers=headers)["actions"]["POST"]
+    options = rest_ops.options(settings_url,
+                               headers=headers,
+                               timeout=timeout)["actions"]["POST"]
     resource_kind_plural, resource_kind = (
         _heuristically_get_resource_kind(resource_path))
     if not getattr(profile, resource_kind + "name"):
@@ -355,12 +367,14 @@ def basic_settings(profile,
             resource = _settings_update(resource, key, value)
             rest_ops.update_with_put(this_resource_url,
                                      headers=headers,
+                                     timeout=timeout,
                                      body=resource,
                                      params=params)
         except:
             patch_data = _create_dict_from_dotted_key_and_value(key, value)
             rest_ops.update_with_patch(this_resource_url,
                                        headers=headers,
+                                       timeout=timeout,
                                        body=patch_data,
                                        params=params)
         print(f'Updated {resource["name"]} {key}')
@@ -373,11 +387,14 @@ def basic_delete(profile,
                  params=None):
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     list_url = f'{scheme}://{hostname}{resource_path}'
     auth = profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
+    resources = rest_ops.list(list_url,
+                              headers=headers,
+                              timeout=timeout)
     url = None
     for a_resource in resources:
         if a_resource['name'] == resource_name:
@@ -388,18 +405,21 @@ def basic_delete(profile,
             break
     if not url:
         return False
-    rest_ops.delete(url, headers=headers, params=params)
+    rest_ops.delete(url, headers=headers, timeout=timeout, params=params)
     return True
 
 
 def basic_list(profile, resource_path):
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     list_url = f'{scheme}://{hostname}{resource_path}'
     auth_info: AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
+    resources = rest_ops.list(list_url,
+                              headers=headers,
+                              timeout=timeout)
     for resource in resources:
         if isinstance(resource, str):
             print(resource)
@@ -417,11 +437,14 @@ def _get_resource_information(profile,
                               indent: Optional[int] = None):
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     list_url = f'{scheme}://{hostname}{resource_path}'
     auth_info: AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
+    resources = rest_ops.list(list_url,
+                              headers=headers,
+                              timeout=timeout)
     url = None
     for resource in resources:
         if resource['name'] == resource_name:
@@ -434,7 +457,7 @@ def _get_resource_information(profile,
         raise ResourceNotFoundException(f'Cannot find resource {resource_name}.')
 
     url += f'/{action}'
-    response = rest_ops.get(url, headers=headers)
+    response = rest_ops.get(url, headers=headers, timeout=timeout)
     return json.dumps(response, indent=indent)
 
 

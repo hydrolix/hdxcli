@@ -38,12 +38,13 @@ def purgejobs(ctx: click.Context):
     purgejobs_path = f'/config/v1/orgs/{org_id}/purgejobs/'
     hostname = user_profile.hostname
     scheme = user_profile.scheme
+    timeout = user_profile.timeout
     purgejobs_url = f'{scheme}://{hostname}{purgejobs_path}'
 
     auth = user_profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
-    rest_ops.create(purgejobs_url, body=None, headers=headers)
+    rest_ops.create(purgejobs_url, headers=headers, timeout=timeout)
     print('All jobs purged')
 
 
@@ -119,6 +120,7 @@ def ingest(ctx: click.Context,
 
     hostname = user_profile.hostname
     scheme = user_profile.scheme
+    timeout = user_profile.timeout
     url = f'{scheme}://{hostname}{resource_path}'
     token = user_profile.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
@@ -137,7 +139,7 @@ def ingest(ctx: click.Context,
                 raise LogicException('No default transform found to apply ingest command and '
                                      'no --transform passed') from exc
         body['settings']['source']['transform'] = transformname
-        rest_ops.create(url, body=body, headers=headers)
+        rest_ops.create(url, body=body, headers=headers, timeout=timeout)
     print(f'Started job {jobname}')
 
 
@@ -151,11 +153,14 @@ def cancel(ctx: click.Context,
     user_profile = ctx.parent.obj['usercontext']
     hostname = user_profile.hostname
     scheme = user_profile.scheme
+    timeout = user_profile.timeout
     list_url = f'{scheme}://{hostname}{resource_path}'
     auth = user_profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
+    resources = rest_ops.list(list_url,
+                              headers=headers,
+                              timeout=timeout)
     job_id = None
     for a_resource in resources:
         if a_resource['name'] == job_name:
@@ -165,7 +170,7 @@ def cancel(ctx: click.Context,
         print(f'Could not cancel {ctx.parent.command.name} {job_name}. Not found.')
     else:
         cancel_job_url = f'{list_url}{job_id}/cancel'
-        rest_ops.create(cancel_job_url, headers=headers)
+        rest_ops.create(cancel_job_url, headers=headers, timeout=timeout)
         print(f'Cancelled {job_name}')
 
 
@@ -179,11 +184,12 @@ def retry(ctx,
     user_profile = ctx.parent.obj['usercontext']
     hostname = user_profile.hostname
     scheme = user_profile.scheme
+    timeout = user_profile.timeout
     list_url = f'{scheme}://{hostname}{resource_path}'
     auth = user_profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
+    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
     job_id = None
     for a_resource in resources:
         if a_resource['name'] == job_name:
@@ -193,7 +199,7 @@ def retry(ctx,
         print(f'Could not retry {ctx.parent.command.name} {job_name}. Not found.')
     else:
         retry_job_url = f'{list_url}{job_id}/retry'
-        rest_ops.create(retry_job_url, headers=headers)
+        rest_ops.create(retry_job_url, headers=headers, timeout=timeout)
         print(f'Retrying {job_name}')
 
 

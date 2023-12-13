@@ -1,4 +1,5 @@
 """Commands relative to project handling  operations"""
+import json
 import click
 import requests
 
@@ -15,7 +16,8 @@ from ..common.rest_operations import (delete as command_delete,
                                       stats as command_stats)
 
 from ..common.misc_operations import settings as command_settings
-from ..common.undecorated_click_commands import basic_create
+from ..common.undecorated_click_commands import (basic_create,
+                                                 basic_create_with_body_from_string)
 
 
 @click.group(help="Table-related operations")
@@ -40,13 +42,15 @@ def table(ctx: click.Context,
                              f"no project is set in profile '{user_profile.profilename}'")
     org_id = user_profile.org_id
     scheme = user_profile.scheme
+    timeout = user_profile.timeout
     list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
     auth_token: AuthInfo = user_profile.auth
     headers = {'Authorization': f'{auth_token.token_type} {auth_token.token}',
                'Accept': 'application/json'}
     try:
         projects_list = rest_ops.list(list_projects_url,
-                                      headers=headers)
+                                      headers=headers,
+                                      timeout=timeout)
         project_id = [p['uuid'] for p in projects_list if p['name'] == project]
         ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/projects/{project_id[0]}/tables/',
                    'usercontext': user_profile}
@@ -56,49 +60,107 @@ def table(ctx: click.Context,
 
 @click.command(help='Create table.')
 @click.argument('table_name')
-@click.option('--type', '-t',
+@click.option('--type', '-t', 'table_type',
               type=click.Choice(('summary', 'turbine')),
-              help='Create a turbine (regular) table or a summary (aggregation) table',
+              help='Create a raw (regular) table or an aggregation (summary) table',
               metavar='TYPE',
               required=False,
               default='turbine')
 @click.option('--sql-query', '-s',
               type=str,
-              help='SQL query to use (for summary tables only, otherwise ignored)',
+              help='SQL query to use (for summary tables only)',
               metavar='SQL_QUERY',
               required=False,
               default=None)
 @click.option('--sql-query-file', '-f',
               type=str,
-              help='File path to SQL query to use (for summary tables only, otherwise ignored)',
+              help='File path to SQL query to use (for summary tables only)',
               metavar='SQL_QUERY_FILE',
+              required=False,
+              default=None)
+@click.option('--ingestion-type', '-i',
+              type=click.Choice(('stream', 'kafka', 'kinesis')),
+              help='Ingest type (for summary tables only). '
+                   'Default: stream (stream, kafka, kinesis)',
+              metavar='INGESTION_TYPE',
+              required=False,
+              default='stream')
+@click.option('--source-name', '-o',
+              type=str,
+              help='Source name if ingest type is kafka or kinesis '
+                   '(for summary tables only)',
+              metavar='SOURCE_NAME',
               required=False,
               default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            table_name: str,
-           type: str,
+           table_type: str,
            sql_query,
-           sql_query_file):
-    if sql_query and sql_query_file:
-        raise HdxCliException('Only one of sql_query or sql_query_file is allowed')
+           sql_query_file,
+           ingestion_type,
+           source_name):
+    if table_type == 'summary' and not (
+            (sql_query and not sql_query_file) or (sql_query_file and not sql_query)):
+        raise HdxCliException('When creating a summary table, either SQL query or SQL query file must be provided')
+
+    if table_type == 'summary' and ingestion_type != 'stream' and not source_name:
+        raise HdxCliException('If the ingestion type is kafka or kinesis, you must specify the source name '
+                              'passing --source-name or -o')
 
     user_profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
-    basic_create(user_profile, resource_path,
-                 table_name, None, None)
+    if table_type == 'summary':
+        _basic_summary_create(user_profile, resource_path,
+                              table_name, table_type, sql_query,
+                              sql_query_file, ingestion_type,
+                              source_name)
+    else:
+        basic_create(user_profile, resource_path,
+                     table_name, None, None)
     print(f'Created table {table_name}')
+
+
+def _basic_summary_create(user_profile,
+                          resource_path,
+                          table_name,
+                          table_type,
+                          sql_query,
+                          sql_query_file,
+                          ingestion_type,
+                          source_name):
+    if sql_query_file:
+        try:
+            with open(sql_query_file, 'r') as file:
+                sql_query = file.read()
+        except Exception as e:
+            raise HdxCliException(f"reading SQL query from file '{sql_query_file}'") from e
+
+    body = {
+        'settings': {
+            'summary': {
+                'enabled': True,
+                'sql': sql_query
+            }
+        },
+        'type': table_type
+    }
+    if ingestion_type != 'stream':
+        body['settings']['summary'][ingestion_type] = {'parent_source': source_name}
+
+    basic_create_with_body_from_string(user_profile, resource_path, table_name, json.dumps(body))
 
 
 def _basic_truncate(profile, resource_path, resource_name: str):
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     list_url = f'{scheme}://{hostname}{resource_path}'
     auth = profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
+    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
     url = None
     for a_resource in resources:
         if a_resource['name'] == resource_name:
@@ -112,7 +174,7 @@ def _basic_truncate(profile, resource_path, resource_name: str):
     url = f'{url}/truncate'
     result = requests.post(url,
                            headers=headers,
-                           timeout=5)
+                           timeout=timeout)
     if result.status_code not in (200, 201):
         return False
     return True

@@ -110,8 +110,7 @@ def upload_file_dict(ctx: click.Context,
     basic_create(profile, resource_path,
                  dictionary_filename,
                  dictionary_file_to_upload,
-                 body_from_file_type,
-                 timeout=3000)
+                 body_from_file_type)
     print(f'Uploaded dictionary file from {dictionary_file_to_upload} '
           f'with name {dictionary_filename}.')
 
@@ -125,11 +124,12 @@ def dict_file_delete(ctx: click.Context, dictionary_filename):
     resource_path = ctx.parent.obj['resource_path']
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     resource_url = f'{scheme}://{hostname}{resource_path}/{dictionary_filename}'
     auth = profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
-    rest_ops.delete(resource_url, headers=headers)
+    rest_ops.delete(resource_url, headers=headers, timeout=timeout)
     print(f'Deleted {dictionary_filename}')
 
 

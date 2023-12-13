@@ -1,0 +1,1 @@
+SELECT toStartOfMinute(datetime_second_s_indexed_valid) as min FROM test_ci_project.test_ci_table GROUP BY min SETTINGS hdx_primary_key = 'min'

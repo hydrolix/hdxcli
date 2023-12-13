@@ -17,17 +17,22 @@ def any_source_impl(ctx: click.Context, source_name):
     hostname = user_profile.hostname
     org_id = user_profile.org_id
     scheme = user_profile.scheme
+    timeout = user_profile.timeout
     list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
     token = user_profile.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
-    projects_list = rest_ops.list(list_projects_url, headers=headers)
+    projects_list = rest_ops.list(list_projects_url,
+                                  headers=headers,
+                                  timeout=timeout)
 
     try:
         project_id = [p['uuid'] for p in projects_list if p['name'] == project_name][0]
 
         list_tables_url = f'{list_projects_url}{project_id}/tables/'
-        tables_list = rest_ops.list(list_tables_url, headers=headers)
+        tables_list = rest_ops.list(list_tables_url,
+                                    headers=headers,
+                                    timeout=timeout)
         table_id = [t['uuid'] for t in tables_list if t['name'] == table_name][0]
 
         sources_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/sources/'

@@ -16,10 +16,6 @@ from .common_commands import any_source_impl
               metavar='PROJECTNAME', default=None)
 @click.option('--table', 'table_name', help="Use or override table set in the profile.",
               metavar='TABLENAME', default=None)
-@click.option('--transform', 'transform_name',
-              help="Explicitly pass the transform name. If none is given, "
-                   "the default transform for the used table is used.",
-              metavar='TRANSFORMNAME', default=None)
 @click.option('--source', 'source_name', help='Source for kinesis/kafka/summary/SIEM streams.',
               metavar='SOURCENAME', default=None)
 @click.pass_context
@@ -27,13 +23,11 @@ from .common_commands import any_source_impl
 def kafka(ctx: click.Context,
           project_name,
           table_name,
-          transform_name,
           source_name):
     user_profile = ctx.parent.obj['usercontext']
     ProfileUserContext.update_context(user_profile,
                                       projectname=project_name,
                                       tablename=table_name,
-                                      transformname=transform_name,
                                       kafkaname=source_name)
     any_source_impl(ctx, 'kafka')
 

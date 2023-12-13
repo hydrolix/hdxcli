@@ -34,17 +34,20 @@ def access_resource_detailed(ctx: ProfileUserContext,
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
     scheme = profile_info.scheme
+    timeout = profile_info.timeout
     resource_url = (f'{scheme}://{hostname}/config/v1/orgs/{org_id}/' if not base_path else
                     f'{scheme}://{hostname}{base_path}')
     if not resource_kind_and_name:
         resource = rest_ops.list(resource_url,
-                                 headers=headers)
+                                 headers=headers,
+                                 timeout=timeout)
         return (resource, resource_url)
 
     for resource, resource_name in resource_kind_and_name:
         resource_url = f'{resource_url}{resource}/'
         resource_list = rest_ops.list(resource_url,
-                                      headers=headers)
+                                      headers=headers,
+                                      timeout=timeout)
         if resource_name is None:
             return (resource_list, resource_url)
         try:
@@ -56,7 +59,6 @@ def access_resource_detailed(ctx: ProfileUserContext,
         pass
 
     return (a_resource, resource_url)
-
 
 
 def access_resource(ctx: ProfileUserContext,

@@ -51,7 +51,8 @@ def _github_list(ctx: click.Context):
     resource_path = ctx.parent.obj['resource_path']
     resource_path = f'{resource_path}index.json'
     url = f'{profile.scheme}://{profile.hostname}{resource_path}'
-    return rest_ops.list(url, headers={})
+    timeout = profile.timeout
+    return rest_ops.list(url, headers={}, timeout=timeout)
 
 
 @click.command(help="Integration transforms.")
@@ -75,7 +76,9 @@ def _basic_show(ctx: click.Context,
     for res in results:
         if res['name'] == transform_name:
             resource_url = f'{base_resource_url}{res["url"]}'
-            result = rest_ops.list(resource_url, headers={})
+            user_profile = ctx.parent.obj['usercontext']
+            timeout = user_profile.timeout
+            result = rest_ops.list(resource_url, headers={}, timeout=timeout)
             return json.dumps(result)
     else:
         raise ValueError(f'No transform named {transform_name}')
