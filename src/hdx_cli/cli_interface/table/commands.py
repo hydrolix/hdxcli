@@ -42,13 +42,15 @@ def table(ctx: click.Context,
                              f"no project is set in profile '{user_profile.profilename}'")
     org_id = user_profile.org_id
     scheme = user_profile.scheme
+    timeout = user_profile.timeout
     list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
     auth_token: AuthInfo = user_profile.auth
     headers = {'Authorization': f'{auth_token.token_type} {auth_token.token}',
                'Accept': 'application/json'}
     try:
         projects_list = rest_ops.list(list_projects_url,
-                                      headers=headers)
+                                      headers=headers,
+                                      timeout=timeout)
         project_id = [p['uuid'] for p in projects_list if p['name'] == project]
         ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/projects/{project_id[0]}/tables/',
                    'usercontext': user_profile}
@@ -153,11 +155,12 @@ def _basic_summary_create(user_profile,
 def _basic_truncate(profile, resource_path, resource_name: str):
     hostname = profile.hostname
     scheme = profile.scheme
+    timeout = profile.timeout
     list_url = f'{scheme}://{hostname}{resource_path}'
     auth = profile.auth
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url, headers=headers)
+    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
     url = None
     for a_resource in resources:
         if a_resource['name'] == resource_name:
@@ -171,7 +174,7 @@ def _basic_truncate(profile, resource_path, resource_name: str):
     url = f'{url}/truncate'
     result = requests.post(url,
                            headers=headers,
-                           timeout=5)
+                           timeout=timeout)
     if result.status_code not in (200, 201):
         return False
     return True

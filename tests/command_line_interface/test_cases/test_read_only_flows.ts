@@ -41,7 +41,7 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 ]
 
 global_teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_ci_storage",
-                   "python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
+                   #"python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
                    "python3 -m hdx_cli.main unset"]
 
 
@@ -171,7 +171,7 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 name = "Summary (stream) tables can be created"
 setup = ["python3 -m hdx_cli.main unset"]
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project create -t summary -f {HDXCLI_TESTS_DIR}/tests_data/summary/stream/sql.txt test_summary_table_stream"]
-teardown = ["python3 -m hdx_cli.main table --project test_ci_project delete --disable-confirmation-prompt test_summary_table_stream"]
+#teardown = ["python3 -m hdx_cli.main table --project test_ci_project delete --disable-confirmation-prompt test_summary_table_stream"]
 expected_output = 'Created table test_summary_table_stream'
 
 [[test]]

@@ -23,7 +23,7 @@ from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.integration import commands as integration_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
-from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext
+from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext, DEFAULT_TIMEOUT
 from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException
 from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import try_first_time_use
@@ -128,13 +128,16 @@ def fail_if_token_expired(user_context: ProfileUserContext):
               default=None)
 @click.option('--uri-scheme', help='Scheme used.', type=click.Choice(['default', 'http', 'https']),
               default='default')
+@click.option('--timeout', help=f'Set request timeout in seconds (default: {DEFAULT_TIMEOUT}).',
+              type=int, default=DEFAULT_TIMEOUT)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 # pylint: enable=line-too-long
 def hdx_cli(ctx, profile,
             password,
             profile_config_file,
-            uri_scheme):
+            uri_scheme,
+            timeout):
     """
         Command-line entry point for hdx cli interface
     """
@@ -178,6 +181,8 @@ def hdx_cli(ctx, profile,
 
     if uri_scheme != 'default':
         user_context.scheme = uri_scheme
+    if timeout != DEFAULT_TIMEOUT:
+        user_context.timeout = timeout
 
     # Unconditional default override
     ctx.obj = {'usercontext': user_context}

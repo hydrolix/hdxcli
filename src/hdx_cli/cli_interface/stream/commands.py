@@ -70,6 +70,7 @@ def ingest(ctx: click.Context,
 
     hostname = user_profile.hostname
     scheme = user_profile.scheme
+    timeout = user_profile.timeout
     url = f'{scheme}://{hostname}{resource_path}'
     token = user_profile.auth
     headers = {
@@ -78,7 +79,10 @@ def ingest(ctx: click.Context,
         'x-hdx-table': f'{user_profile.projectname}.{user_profile.tablename}',
         'x-hdx-transform': transform_name
     }
-    rest_ops.create(url, body=data, body_type=bytes, headers=headers)
+    rest_ops.create(url, body=data,
+                    body_type=bytes,
+                    headers=headers,
+                    timeout=timeout)
     print('Created stream ingest')
 
 

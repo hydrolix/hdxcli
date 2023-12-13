@@ -8,13 +8,15 @@ from ..common.exceptions import ProfileNotFoundException
 
 @dataclass
 class ProfileLoadContext:
-    profilename : str
-    profile_config_file : Optional[Path] = None
+    profilename: str
+    profile_config_file: Optional[Path] = None
 
 
 _PROFILE_USER_CONTEXT_SAVE_FIELDS = ['username', 'hostname',
                                      'projectname', 'tablename',
                                      'scheme']
+
+DEFAULT_TIMEOUT = 30
 
 
 @dataclass
@@ -41,6 +43,7 @@ class ProfileUserContext:
     summaryname: Optional[str] = None
     poolname: Optional[str] = None
     scheme: str = 'https'
+    timeout: int = DEFAULT_TIMEOUT
 
     def as_dict_for_config(self):
         dict_to_save = {}
