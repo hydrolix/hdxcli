@@ -12,6 +12,7 @@ from ...library_api.common.context import ProfileUserContext
 class MigrateStatus(Enum):
     CREATED = 0
     SKIPPED = 1
+    POSTPONED = 2
 
 
 class ResourceKind(Enum):
@@ -20,6 +21,7 @@ class ResourceKind(Enum):
     TRANSFORM = 2
     FUNCTION = 3
     DICTIONARY = 4
+
 
 @dataclass(frozen=True)
 class MigrationEntry:
