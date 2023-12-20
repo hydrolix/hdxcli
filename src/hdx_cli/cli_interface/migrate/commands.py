@@ -80,12 +80,11 @@ def create_tables_for_project(project_name,
     source_tables_path = urlparse(f'{source_tables_url}').path
     target_tables_path = urlparse(f'{target_project_url}tables/').path
 
-    # To ensure that raw tables are created before summary tables.
-    sorted_tables = sorted(source_project_tables, key=lambda x: x['type'], reverse=True)
-
-    for table in sorted_tables:
-        attempt = 0
-        while attempt < 4:
+    for table in source_project_tables:
+        # All summary tables will be migrated at the end of the process
+        if table.get('type') and table.get('type') == 'summary':
+            yield table, MigrateStatus.POSTPONED
+        else:
             try:
                 table_show = json.loads(basic_show(source_profile, source_tables_path, table['name']))
                 try:
@@ -103,22 +102,47 @@ def create_tables_for_project(project_name,
                                                        table['name'],
                                                        json.dumps(table_show))
             except HttpException as exc:
-                # Attempts are necessary for summary tables.
-                # The migration is fast and sometimes summary table fails due the previous
-                # table "not found" (getting false negatives initially due to a delay in resource recognition).
-                attempt += 1
-                if attempt < 4:
-                    time.sleep(1)
-                    continue
-
                 if exc.error_code == 400:
                     yield table, MigrateStatus.SKIPPED
-                    break
                 else:
                     raise
             else:
                 yield table, MigrateStatus.CREATED
-                break
+
+
+def create_postponed_tables(project_name,
+                            source_profile: ProfileUserContext,
+                            target_profile: ProfileUserContext,
+                            table):
+    source_project_tables, source_tables_url = access_resource_detailed(source_profile,
+                                                                        [('projects', project_name), ('tables', None)])
+    _, target_project_url = access_resource_detailed(target_profile, [('projects', project_name)])
+
+    source_tables_path = urlparse(f'{source_tables_url}').path
+    target_tables_path = urlparse(f'{target_project_url}tables/').path
+    try:
+        table_show = json.loads(basic_show(source_profile, source_tables_path, table['name']))
+        try:
+            table_show['settings']['autoingest'][0]['enabled'] = False
+
+            del table_show['settings']['autoingest'][0]['source']
+            del table_show['uuid']
+        except IndexError:
+            pass
+        except KeyError:
+            pass
+        else:
+            basic_create_with_body_from_string(target_profile,
+                                               target_tables_path,
+                                               table['name'],
+                                               json.dumps(table_show))
+    except HttpException as exc:
+        if exc.error_code == 400:
+            return MigrateStatus.SKIPPED
+        else:
+            raise
+    else:
+        return MigrateStatus.CREATED
 
 
 def create_functions_for_project(project_name,
@@ -337,6 +361,7 @@ def migrate(ctx: click.Context,
     if no_rollback:
         mrm = DoNothingMigrationRollbackManager
     with mrm(target_user_profile, ) as migration_rollback_manager:
+        postponed_tables = []
         for project, status in migrate_projects(ctx,
                                                 ctx.parent.obj['usercontext'],
                                                 target_user_profile,
@@ -349,7 +374,7 @@ def migrate(ctx: click.Context,
                                          ResourceKind.PROJECT)
                 migration_rollback_manager.push_entry(m_entry)
             elif status == MigrateStatus.SKIPPED:
-                print('skipped creation (was found).')
+                print('skipped creation (was found)')
 
             for func, func_status in create_functions_for_project(project['name'],
                                                                   ctx.parent.obj['usercontext'],
@@ -362,7 +387,7 @@ def migrate(ctx: click.Context,
                                              [project['name']])
                     migration_rollback_manager.push_entry(m_entry)
                 elif func_status == MigrateStatus.SKIPPED:
-                    print('skipped creation (was found).')
+                    print('skipped creation (was found)')
             for dictionary, dict_status in create_dictionaries_for_project(project['name'],
                                                              ctx.parent.obj['usercontext'],
                                                              target_user_profile):
@@ -374,7 +399,7 @@ def migrate(ctx: click.Context,
                                              [project['name']])
                     migration_rollback_manager.push_entry(m_entry)
                 elif dict_status == MigrateStatus.SKIPPED:
-                    print('skipped creation (was found).')
+                    print('skipped creation (was found)')
 
             for table, tbl_status in create_tables_for_project(project['name'],
                                                             ctx.parent.obj['usercontext'],
@@ -387,11 +412,14 @@ def migrate(ctx: click.Context,
                                              [project['name']])
                     migration_rollback_manager.push_entry(m_entry)
                 elif tbl_status == MigrateStatus.SKIPPED:
-                    print('skipped creation (was found).')
-
-                # If the table migrated is a summary, transforms and sources will be created automatically.
-                # Therefore, there is no need to migrate them.
-                if table.get('type') and table['type'] == 'summary':
+                    print('skipped creation (was found)')
+                elif tbl_status == MigrateStatus.POSTPONED:
+                    # The creation of the summary tables is postponed
+                    # until the end of the migration process.
+                    print('postponed creation (summary table)')
+                    postponed_tables.append((table, project['name']))
+                    # If the table migrated is a summary, transforms and sources will be created automatically.
+                    # Therefore, there is no need to migrate them.
                     continue
 
                 for transform, transform_status in create_transforms_for_table(project['name'],
@@ -406,5 +434,23 @@ def migrate(ctx: click.Context,
                                                  [project['name'], table['name']])
                         migration_rollback_manager.push_entry(m_entry)
                     elif transform_status == MigrateStatus.SKIPPED:
-                        print('skipped creation (was found).')
+                        print('skipped creation (was found)')
                 print()
+
+        # Postponed tables
+        # Here interation a list of postponed tables to be created.
+        print('Postponed tables creation...')
+        for table, project_name in postponed_tables:
+            tbl_status = create_postponed_tables(project_name,
+                                                 ctx.parent.obj['usercontext'],
+                                                 target_user_profile,
+                                                 table)
+            print(f'\tProject {project_name}. Table {table["name"]}: ', end='')
+            if tbl_status == MigrateStatus.CREATED:
+                print('created')
+                m_entry = MigrationEntry(table['name'],
+                                         ResourceKind.TABLE,
+                                         [project_name])
+                migration_rollback_manager.push_entry(m_entry)
+            elif tbl_status == MigrateStatus.SKIPPED:
+                print('skipped creation (was found)')
