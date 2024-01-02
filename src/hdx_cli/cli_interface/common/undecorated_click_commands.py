@@ -83,7 +83,9 @@ def basic_create_with_body_from_string(profile,
 def basic_show(profile,
                resource_path,
                resource_name,
-               indent: Optional[int] = None):
+               indent: Optional[int] = None,
+               filter_field: Optional[str] = 'name'
+               ):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -93,7 +95,7 @@ def basic_show(profile,
                'Accept': 'application/json'}
     resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
     for resource in resources:
-        if resource.get('name') == resource_name:
+        if resource.get(filter_field) == resource_name:
             return json.dumps(resource, indent=indent)
     raise ResourceNotFoundException('Cannot find resource.')
 
@@ -384,7 +386,8 @@ def basic_delete(profile,
                  resource_path,
                  resource_name: str,
                  *,
-                 params=None):
+                 params=None,
+                 filter_field='name'):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -397,7 +400,7 @@ def basic_delete(profile,
                               timeout=timeout)
     url = None
     for a_resource in resources:
-        if a_resource['name'] == resource_name:
+        if a_resource[filter_field] == resource_name:
             if 'url' in a_resource:
                 url = a_resource['url'].replace('https://', f'{scheme}://')
             else:

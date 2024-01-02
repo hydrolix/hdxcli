@@ -42,6 +42,7 @@ class ProfileUserContext:
     siemname: Optional[str] = None
     summaryname: Optional[str] = None
     poolname: Optional[str] = None
+    useremail: Optional[str] = None
     scheme: str = 'https'
     timeout: int = DEFAULT_TIMEOUT
 
