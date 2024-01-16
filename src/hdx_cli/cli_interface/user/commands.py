@@ -1,16 +1,15 @@
 from functools import partial
-import click
 import re
 import json
+import click
 
-from ...library_api.common.exceptions import LogicException, InvalidEmailException, InvalidRoleException
+from ...library_api.common.exceptions import LogicException
 from ...library_api.userdata.token import AuthInfo
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from ...library_api.common.context import ProfileUserContext
-
-from ..common.undecorated_click_commands import basic_delete, basic_show
+from ..common.undecorated_click_commands import basic_delete, basic_show, basic_create_from_dict_body
 
 
 @click.group(help="User-related operations")
@@ -20,7 +19,7 @@ from ..common.undecorated_click_commands import basic_delete, basic_show
 def user(ctx: click.Context,
          user_email):
     user_profile = ctx.parent.obj['usercontext']
-    ctx.obj = {'resource_path': f'/config/v1/users/',
+    ctx.obj = {'resource_path': '/config/v1/users/',
                'usercontext': user_profile}
     ProfileUserContext.update_context(user_profile,
                                       useremail=user_email)
@@ -37,24 +36,71 @@ def list_(ctx: click.Context):
 
 @click.command(help='Show user. If not resource_name is provided, it will show the default '
                     'if there is one.')
-@click.option('-i', '--indent', type=int, help='Number of spaces for indentation in the output.')
+@click.option('-i', '--indent', type=int,
+              help='Number of spaces for indentation in the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def show(ctx: click.Context, indent: int):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     if not (resource_name := getattr(profile, 'useremail')):
-        raise LogicException(f'No default user found in profile.')
+        raise LogicException('No default user found in profile.')
     print(basic_show(profile, resource_path,
                      resource_name,
                      indent=indent,
                      filter_field='email'))
 
 
+# Regular expression to validate a simple email address.
+EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+
+def _validate_email(ctx, param, email: str):
+    """
+    Validates if the email address is valid using regex.
+    """
+    if not re.match(EMAIL_REGEX, email):
+        raise click.BadParameter(f"'{email}' is not a valid email address.")
+    return email
+
+
+def _validate_role(ctx, param, roles):
+    """
+    Checks if each name in the 'roles' list exists in the created Hydrolix roles.
+    """
+    profile = ctx.parent.obj.get('usercontext')
+    hostname = profile.hostname
+    scheme = profile.scheme
+    timeout = profile.timeout
+    list_url = f'{scheme}://{hostname}/config/v1/roles/'
+    auth_info: AuthInfo = profile.auth
+    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
+               'Accept': 'application/json'}
+    resources = rest_ops.list(list_url,
+                              headers=headers,
+                              timeout=timeout)
+
+    roles = list(set(roles))
+    existing_roles = [item['name'] for item in resources]
+    valid_roles, invalid_roles = [], []
+    for role_name in roles:
+        if role_name not in existing_roles:
+            invalid_roles.append(role_name)
+        else:
+            valid_roles.append(role_name)
+
+    if invalid_roles:
+        raise click.BadParameter(
+            f"Invalid role(s): {', '.join(invalid_roles)}.")
+    return valid_roles
+
+
 @click.command(help='Send invitation to a new user.')
-@click.argument('email', metavar='USER_EMAIL')
-@click.option('-r', '--role', 'roles', help='Specify the role for the new user (can be used multiple times).',
-              multiple=True, default=None, required=True)
+@click.argument('email', metavar='USER_EMAIL', callback=_validate_email)
+@click.option('-r', '--role', 'roles',
+              help='Specify the role for the new user (can be used multiple times).',
+              multiple=True, default=None, required=True,
+              callback=_validate_role)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def invite(ctx: click.Context,
@@ -62,26 +108,14 @@ def invite(ctx: click.Context,
            roles):
     resource_path = '/config/v1/invite/'
     profile = ctx.parent.obj.get('usercontext')
-    _validate_email(email)
-    valid_roles = _validate_role(profile, roles)
 
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    list_url = f'{scheme}://{hostname}{resource_path}'
-    auth_info: AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
     org_id = profile.org_id
-
     body = {
         'email': email,
         'org': org_id,
-        'roles': valid_roles
+        'roles': roles
     }
-    rest_ops.create(list_url, headers=headers,
-                    timeout=timeout,
-                    body=body)
+    basic_create_from_dict_body(profile, resource_path, body)
     print(f'Invitation successfully sent to {email}')
 
 
@@ -111,8 +145,10 @@ def delete(ctx: click.Context, email: str,
 
 @click.command(name='assign-role', help='Assign roles to a user.')
 @click.argument('email', metavar='USER_EMAIL')
-@click.option('-r', '--role', 'roles', help='Specify roles to assign to a user (can be used multiple times).',
-              multiple=True, default=None, required=True)
+@click.option('-r', '--role', 'roles',
+              help='Specify roles to assign to a user (can be used multiple times).',
+              multiple=True, default=None, required=True,
+              callback=_validate_role)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def assign(ctx: click.Context,
@@ -126,22 +162,11 @@ def assign(ctx: click.Context,
     if not user_uuid:
         raise LogicException(f'There was an error with the user {email}.')
 
-    valid_roles = _validate_role(profile, roles)
-
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    add_roles_url = f'{scheme}://{hostname}{resource_path}{user_uuid}/add_roles/'
-    auth_info: AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
-
+    resource_path = f"{resource_path}{user_uuid}/add_roles/"
     body = {
-        'roles': valid_roles
+        'roles': roles
     }
-    rest_ops.create(add_roles_url, headers=headers,
-                    timeout=timeout,
-                    body=body)
+    basic_create_from_dict_body(profile, resource_path, body)
     print(f'Roles added to {email}')
 
 
@@ -171,19 +196,11 @@ def remove(ctx: click.Context,
         raise LogicException(f'User {email} lacks {list(set_roles_to_remove - set_user_roles)} '
                              f'role(s) for removal.')
 
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    add_roles_url = f'{scheme}://{hostname}{resource_path}{user_uuid}/remove_roles/'
-    auth_info: AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
+    resource_path = f"{resource_path}{user_uuid}/remove_roles/"
     body = {
         'roles': list(roles)
     }
-    rest_ops.create(add_roles_url, headers=headers,
-                    timeout=timeout,
-                    body=body)
+    basic_create_from_dict_body(profile, resource_path, body)
     print(f'Roles removed from {email}')
 
 
@@ -202,43 +219,6 @@ def _basic_list(profile, resource_path):
         roles_name = resource.get("roles")
         print(f'Email: {resource["email"]}', end=' | ')
         print(f'Roles: {(", ".join(roles_name))}')
-
-
-def _validate_email(email: str):
-    """Validates if the email address is valid using regex."""
-    # Regular expression to validate a simple email address.
-    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    if not re.match(pattern, email):
-        raise InvalidEmailException(f"'{email}' is not a valid email address.")
-
-
-def _validate_role(profile, roles: tuple) -> list:
-    """Checks if each name in the 'roles' list exists in the created Hydrolix roles."""
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    list_url = f'{scheme}://{hostname}/config/v1/roles/'
-    auth_info: AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
-    resources = rest_ops.list(list_url,
-                              headers=headers,
-                              timeout=timeout)
-
-    roles = list(set(roles))
-    existing_roles = [item['name'] for item in resources]
-    valid_roles, invalid_roles = [], []
-    for role_name in roles:
-        if role_name not in existing_roles:
-            invalid_roles.append(role_name)
-        else:
-            valid_roles.append(role_name)
-
-    if invalid_roles:
-        raise InvalidRoleException(
-            f"Invalid role(s) {', '.join(invalid_roles)}.")
-
-    return valid_roles
 
 
 user.add_command(list_)

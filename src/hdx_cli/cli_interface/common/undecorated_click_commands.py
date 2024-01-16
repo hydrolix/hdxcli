@@ -80,6 +80,21 @@ def basic_create_with_body_from_string(profile,
                     timeout=timeout)
 
 
+def basic_create_from_dict_body(profile,
+                                resource_path,
+                                body: dict):
+    hostname = profile.hostname
+    scheme = profile.scheme
+    timeout = profile.timeout
+    list_url = f'{scheme}://{hostname}{resource_path}'
+    auth_info: AuthInfo = profile.auth
+    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
+               'Accept': 'application/json'}
+    rest_ops.create(list_url, headers=headers,
+                    timeout=timeout,
+                    body=body)
+
+
 def basic_show(profile,
                resource_path,
                resource_name,
@@ -404,7 +419,11 @@ def basic_delete(profile,
             if 'url' in a_resource:
                 url = a_resource['url'].replace('https://', f'{scheme}://')
             else:
-                url = f"{scheme}://{hostname}{resource_path}{a_resource['uuid']}"
+                try:
+                    url = f"{scheme}://{hostname}{resource_path}{a_resource['uuid']}"
+                except KeyError:
+                    # the role resource is the only one with id instead of uuid
+                    url = f"{scheme}://{hostname}{resource_path}{a_resource['id']}"
             break
     if not url:
         return False

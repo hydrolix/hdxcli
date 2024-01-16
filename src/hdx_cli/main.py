@@ -22,6 +22,7 @@ from hdx_cli.cli_interface.sources import commands as sources_
 from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.integration import commands as integration_
 from hdx_cli.cli_interface.user import commands as user_
+from hdx_cli.cli_interface.role import commands as role_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext, DEFAULT_TIMEOUT
@@ -211,6 +212,7 @@ hdx_cli.add_command(sources_.sources)
 hdx_cli.add_command(migrate_.migrate)
 hdx_cli.add_command(integration_.integration)
 hdx_cli.add_command(user_.user)
+hdx_cli.add_command(role_.role)
 hdx_cli.add_command(version)
 
 
