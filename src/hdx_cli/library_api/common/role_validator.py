@@ -7,12 +7,7 @@ from ..userdata.token import AuthInfo
 from ..common import rest_operations as rest_ops
 
 
-AVAILABLE_SCOPE_TYPE = ('user', 'pool', 'role', 'invite', 'org', 'project',
-                        'alterjob', 'batchjob', 'catalog', 'hdxstorage',
-                        'dictionary', 'dictionaryfile', 'function', 'table',
-                        'kafkasource', 'siemsource', 'kinesissource',
-                        'summarysource', 'transform', 'view')
-ALL_PERMISSIONS = ('user', 'pool', 'role', 'invite', 'org')
+AVAILABLE_SCOPE_TYPE = []
 
 
 class Policy(BaseModel):
@@ -27,11 +22,22 @@ class Role(BaseModel):
     policies: List[Policy]
 
 
-def is_valid_scope_type(scope_type) -> bool:
+def get_available_scope_type_list(profile, resource_path) -> list:
+    global AVAILABLE_SCOPE_TYPE
+
+    if AVAILABLE_SCOPE_TYPE:
+        return AVAILABLE_SCOPE_TYPE
+
+    permissions_list = get_permissions_list(profile, resource_path)
+    AVAILABLE_SCOPE_TYPE = [item['scope_type'] for item in permissions_list]
+    return AVAILABLE_SCOPE_TYPE
+
+
+def is_valid_scope_type(profile, resource_path, scope_type) -> bool:
     """
     Check if the given scope_type is valid.
     """
-    return scope_type in AVAILABLE_SCOPE_TYPE
+    return scope_type in get_available_scope_type_list(profile, resource_path)
 
 
 def is_valid_rolename(input_string) -> bool:
@@ -50,7 +56,7 @@ def is_valid_uuid(value) -> bool:
         return False
 
 
-def get_permission_list(profile, resource_path, scope_type=None) -> list:
+def get_permissions_list(profile, resource_path) -> list:
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -61,15 +67,22 @@ def get_permission_list(profile, resource_path, scope_type=None) -> list:
     permissions_list = rest_ops.list(list_url,
                                      headers=headers,
                                      timeout=timeout)
+    return permissions_list
+
+
+def get_permissions_by_scope_type(profile, resource_path, scope_type=None) -> list:
+    permissions_list = get_permissions_list(profile, resource_path)
     response = []
-    if not scope_type:
-        scope_type = ALL_PERMISSIONS
 
     for item in permissions_list:
-        if item.get('scope_type') in scope_type:
-            response.extend(item.get('permissions'))
+        if scope_type and item.get('scope_type') == scope_type:
+            return item.get('permissions')
 
-    return response
+        elif not scope_type:
+            response += item.get('permissions')
+
+    # Represent all possible permissions without duplication.
+    return list(set(response))
 
 
 def get_role_data_from_standard_input(profile, resource_path) -> Union[Role, None]:
@@ -154,9 +167,9 @@ def get_data_for_policy(profile, resource_path) -> Policy:
     if has_scope:
         scope_type = input("Specify the type of scope for the role (e.g., project): ").lower()
 
-        while not is_valid_scope_type(scope_type):
+        while not is_valid_scope_type(profile, resource_path, scope_type):
             print(f"Invalid scope type. Please choose from the available types: "
-                  f"{', '.join(AVAILABLE_SCOPE_TYPE)}.")
+                  f"{', '.join(get_available_scope_type_list(profile, resource_path))}.")
             scope_type = input(
                 "Specify the type of scope for the role: ").lower()
 
@@ -174,7 +187,7 @@ def get_data_for_policy(profile, resource_path) -> Policy:
 
 
 def _select_permissions_from_scope(profile, resource_path, scope_type) -> list:
-    permission_list = get_permission_list(profile, resource_path, scope_type)
+    permission_list = get_permissions_by_scope_type(profile, resource_path, scope_type)
     last_index = None
     for index, item in enumerate(permission_list, start=1):
         print(f"{index} - {item}")
@@ -290,9 +303,9 @@ def modify_policy(profile, resource_path, role):
     scope_type = input(f"Specify the scope type (currently: {policy.scope_type}, "
                        f"press enter to skip): ")
 
-    while scope_type and not is_valid_scope_type(scope_type):
+    while scope_type and not is_valid_scope_type(profile, resource_path, scope_type):
         print(f"Invalid scope type. Please choose from the available types: "
-              f"{', '.join(AVAILABLE_SCOPE_TYPE)}.")
+              f"{', '.join(get_available_scope_type_list(profile, resource_path))}.")
         scope_type = input(
             "Specify the scope type (press enter to skip): ").lower()
 

@@ -51,19 +51,6 @@ def show(ctx: click.Context, indent: int):
                      filter_field='email'))
 
 
-# Regular expression to validate a simple email address.
-EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-
-
-def _validate_email(ctx, param, email: str):
-    """
-    Validates if the email address is valid using regex.
-    """
-    if not re.match(EMAIL_REGEX, email):
-        raise click.BadParameter(f"'{email}' is not a valid email address.")
-    return email
-
-
 def _validate_role(ctx, param, roles):
     """
     Checks if each name in the 'roles' list exists in the created Hydrolix roles.
@@ -96,7 +83,7 @@ def _validate_role(ctx, param, roles):
 
 
 @click.command(help='Send invitation to a new user.')
-@click.argument('email', metavar='USER_EMAIL', callback=_validate_email)
+@click.argument('email', metavar='USER_EMAIL')
 @click.option('-r', '--role', 'roles',
               help='Specify the role for the new user (can be used multiple times).',
               multiple=True, default=None, required=True,
