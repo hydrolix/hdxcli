@@ -6,7 +6,7 @@ from typing import overload, Union
 
 import toml
 
-from .config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
+from .config_constants import HDX_CONFIG_DIR, PROFILE_CONFIG_FILE
 from .exceptions import ProfileNotFoundException, CacheFileNotFoundException, LogicException
 from .context import ProfileUserContext, ProfileLoadContext
 from .cache import CacheDict
@@ -78,7 +78,7 @@ def save_profile_cache(a_profile: ProfileUserContext,
 def _compose_profile_cache_filename(load_ctx: ProfileLoadContext) -> Path:
     if load_ctx.profile_config_file:
         return Path(load_ctx.profile_config_file).parent / load_ctx.profilename
-    return HDX_CLI_HOME_DIR / load_ctx.profilename
+    return HDX_CONFIG_DIR / load_ctx.profilename
 
 
 def _try_load_profile_cache_data(load_ctx: ProfileLoadContext) -> CacheDict:
