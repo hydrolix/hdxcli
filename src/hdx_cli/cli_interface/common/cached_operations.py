@@ -4,8 +4,12 @@ import requests
 from ...library_api.common.exceptions import HdxCliException, ResourceNotFoundException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.utility.decorators import find_in_disk_cache
-from ...library_api.common.config_constants import HDX_CLI_HOME_DIR
 from ...library_api.common.generic_resource import access_resource
+try:
+    from ...library_api.common.config_constants import HDX_CONFIG_DIR
+except ValueError as e:
+    print(f"Error: {e}")
+    exit(1)
 
 
 def find_kafka(user_ctx: ProfileUserContext):
@@ -57,7 +61,7 @@ def find_batch(user_ctx: ProfileUserContext):
     return json.loads(result.content)
 
 
-@find_in_disk_cache(cache_file=HDX_CLI_HOME_DIR / "cache/cache.bin",
+@find_in_disk_cache(cache_file=HDX_CONFIG_DIR / "cache/cache.bin",
                     namespace="projects_ids")
 def find_project_id(user_ctx, project_name):
     projects = find_projects(user_ctx)
@@ -92,7 +96,7 @@ def find_functions(user_ctx: ProfileUserContext):
     return _find_project_resource(user_ctx, 'functions')
 
 
-@find_in_disk_cache(cache_file=HDX_CLI_HOME_DIR / "cache/cache.bin",
+@find_in_disk_cache(cache_file=HDX_CONFIG_DIR / "cache/cache.bin",
                     namespace="tables_ids")
 def find_table_id(user_ctx, table_name):
     tables = find_tables(user_ctx)
@@ -151,7 +155,7 @@ def find_pools(user_ctx: ProfileUserContext):
     return json.loads(result.content)
 
 
-@find_in_disk_cache(cache_file=HDX_CLI_HOME_DIR / "cache/cache.bin",
+@find_in_disk_cache(cache_file=HDX_CONFIG_DIR / "cache/cache.bin",
                     namespace="transforms_ids")
 def find_transform_id(user_ctx, transform_name):
     transforms = find_transforms(user_ctx)
