@@ -11,6 +11,9 @@ from ...library_api.userdata.token import AuthInfo
 from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard-import
 
 
+DEFAULT_INDENTATION = 4
+
+
 def basic_create(profile,
                  resource_path,
                  resource_name: str,
@@ -83,7 +86,7 @@ def basic_create_with_body_from_string(profile,
 def basic_show(profile,
                resource_path,
                resource_name,
-               indent: Optional[int] = None):
+               indent: Optional[bool] = False):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -91,10 +94,11 @@ def basic_show(profile,
     auth_info: AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
+    indentation = DEFAULT_INDENTATION if indent else None
     resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
     for resource in resources:
         if resource.get('name') == resource_name:
-            return json.dumps(resource, indent=indent)
+            return json.dumps(resource, indent=indentation)
     raise ResourceNotFoundException('Cannot find resource.')
 
 
@@ -434,7 +438,7 @@ def _get_resource_information(profile,
                               resource_path,
                               resource_name,
                               action,
-                              indent: Optional[int] = None):
+                              indent: Optional[bool] = False):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -446,6 +450,7 @@ def _get_resource_information(profile,
                               headers=headers,
                               timeout=timeout)
     url = None
+    indentation = DEFAULT_INDENTATION if indent else None
     for resource in resources:
         if resource['name'] == resource_name:
             if 'url' in resource:
@@ -458,7 +463,7 @@ def _get_resource_information(profile,
 
     url += f'/{action}'
     response = rest_ops.get(url, headers=headers, timeout=timeout)
-    return json.dumps(response, indent=indent)
+    return json.dumps(response, indent=indentation)
 
 
 def basic_stats(profile, resource_path, resource_name, indent):
