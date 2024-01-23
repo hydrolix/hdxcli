@@ -12,4 +12,4 @@ PROFILE_CACHE_DIR = HDX_CONFIG_DIR
 
 
 if HDX_CONFIG_DIR_ENV and not HDX_CONFIG_DIR.exists():
-    raise ValueError(f"The specified directory in 'HDX_CONFIG_DIR': {HDX_CONFIG_DIR} does not exist.")
+    raise FileNotFoundError(f"The specified directory in 'HDX_CONFIG_DIR': {HDX_CONFIG_DIR} does not exist.")

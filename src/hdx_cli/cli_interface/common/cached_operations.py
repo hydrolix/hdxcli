@@ -1,3 +1,4 @@
+import sys
 import json
 import requests
 
@@ -5,11 +6,12 @@ from ...library_api.common.exceptions import HdxCliException, ResourceNotFoundEx
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.utility.decorators import find_in_disk_cache
 from ...library_api.common.generic_resource import access_resource
+
 try:
     from ...library_api.common.config_constants import HDX_CONFIG_DIR
-except ValueError as e:
+except FileNotFoundError as e:
     print(f"Error: {e}")
-    exit(1)
+    sys.exit(1)
 
 
 def find_kafka(user_ctx: ProfileUserContext):
