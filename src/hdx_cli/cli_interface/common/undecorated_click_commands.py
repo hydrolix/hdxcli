@@ -83,10 +83,27 @@ def basic_create_with_body_from_string(profile,
                     timeout=timeout)
 
 
+def basic_create_from_dict_body(profile,
+                                resource_path,
+                                body: dict):
+    hostname = profile.hostname
+    scheme = profile.scheme
+    timeout = profile.timeout
+    list_url = f'{scheme}://{hostname}{resource_path}'
+    auth_info: AuthInfo = profile.auth
+    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
+               'Accept': 'application/json'}
+    rest_ops.create(list_url, headers=headers,
+                    timeout=timeout,
+                    body=body)
+
+
 def basic_show(profile,
                resource_path,
                resource_name,
-               indent: Optional[bool] = False):
+               indent: Optional[bool] = False,
+               filter_field: Optional[str] = 'name'
+               ):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -97,7 +114,7 @@ def basic_show(profile,
     indentation = DEFAULT_INDENTATION if indent else None
     resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
     for resource in resources:
-        if resource.get('name') == resource_name:
+        if resource.get(filter_field) == resource_name:
             return json.dumps(resource, indent=indentation)
     raise ResourceNotFoundException('Cannot find resource.')
 
@@ -388,7 +405,8 @@ def basic_delete(profile,
                  resource_path,
                  resource_name: str,
                  *,
-                 params=None):
+                 params=None,
+                 filter_field='name'):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -401,11 +419,15 @@ def basic_delete(profile,
                               timeout=timeout)
     url = None
     for a_resource in resources:
-        if a_resource['name'] == resource_name:
+        if a_resource[filter_field] == resource_name:
             if 'url' in a_resource:
                 url = a_resource['url'].replace('https://', f'{scheme}://')
             else:
-                url = f"{scheme}://{hostname}{resource_path}{a_resource['uuid']}"
+                try:
+                    url = f"{scheme}://{hostname}{resource_path}{a_resource['uuid']}"
+                except KeyError:
+                    # the role resource is the only one with id instead of uuid
+                    url = f"{scheme}://{hostname}{resource_path}{a_resource['id']}"
             break
     if not url:
         return False
