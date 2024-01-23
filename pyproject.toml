@@ -7,7 +7,7 @@ maintainers = [
 
 [tool.poetry]
 name = "hdxcli"
-version = "1.0-rc46"
+version = "1.0-rc45"
 description = "Hydrolix command line utility to do CRUD operations on projects, tables, transforms and other resources in Hydrolix clusters"
 authors = ["German Diago Gomez <german@hydrolix.io>", "Agustin Actis <agustin@hydrolix.io>"]
 license = "MIT license"
@@ -31,7 +31,6 @@ requests = "^2.28.1"
 toml = "^0.10.2"
 sqlglot = "^10.5.10"
 trogon = "^0.5.0"
-pydantic = "^2.5.3"
 
 [tool.poetry.dev-dependencies]
 # pyinstaller = "^5.3"

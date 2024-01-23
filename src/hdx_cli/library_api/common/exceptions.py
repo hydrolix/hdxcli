@@ -74,15 +74,3 @@ class InvalidFormatFileException(HdxCliException):
 
 class MissingSettingsException(InvalidFormatFileException):
     pass
-
-
-class InvalidRoleException(HdxCliException):
-    pass
-
-
-class InvalidDataException(HdxCliException):
-    pass
-
-
-class InvalidEmailException(InvalidDataException):
-    pass
