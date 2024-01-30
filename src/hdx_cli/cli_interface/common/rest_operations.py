@@ -96,10 +96,11 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 
 @click.command(help='Show resource. If not resource_name is provided, it will show the default '
                     'if there is one.')
-@click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
+@click.option("-i", "--indent", is_flag=True, default=False,
+              help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def show(ctx: click.Context, indent: int):
+def show(ctx: click.Context, indent: bool):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     _, resource_kind = _heuristically_get_resource_kind(resource_path)
@@ -112,10 +113,11 @@ def show(ctx: click.Context, indent: int):
 
 @click.command(help='Display the activity of a resource. If not resource_name is provided, '
                     'it will show the default if there is one.')
-@click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
+@click.option("-i", "--indent", is_flag=True, default=False,
+              help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def activity(ctx: click.Context, indent: int):
+def activity(ctx: click.Context, indent: bool):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     _, resource_kind = _heuristically_get_resource_kind(resource_path)
@@ -126,10 +128,11 @@ def activity(ctx: click.Context, indent: int):
 
 @click.command(help='Display statistics for a resource. If not resource_name is provided, '
                     'it will show the default if there is one.')
-@click.option("-i", "--indent", type=int, help='Number of spaces for indentation in the output.')
+@click.option("-i", "--indent", is_flag=True, default=False,
+              help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def stats(ctx: click.Context, indent: int):
+def stats(ctx: click.Context, indent: bool):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     _, resource_kind = _heuristically_get_resource_kind(resource_path)

@@ -27,12 +27,12 @@ from hdx_cli.cli_interface.role import commands as role_
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext, DEFAULT_TIMEOUT
 from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException
-from hdx_cli.library_api.common.config_constants import HDX_CLI_HOME_DIR, PROFILE_CONFIG_FILE
+from hdx_cli.library_api.common.config_constants import HDX_CONFIG_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import try_first_time_use
 from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
 
 
-VERSION = "1.0-rc46"
+VERSION = "1.0-rc47"
 
 
 from hdx_cli.library_api.common.auth import (
@@ -172,7 +172,7 @@ def hdx_cli(ctx, profile,
         user_context.auth = auth_info
         user_context.org_id = auth_info.org_id
         cache_dir_path = (Path(profile_config_file).parent
-                          if profile_config_file else HDX_CLI_HOME_DIR)
+                          if profile_config_file else HDX_CONFIG_DIR)
         save_profile_cache(user_context,
                            token=auth_info.token,
                            expiration_time=auth_info.expires_at,
