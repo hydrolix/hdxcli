@@ -10,6 +10,7 @@ from ..common.rest_operations import (delete as command_delete,
                                       activity as command_activity,
                                       stats as command_stats)
 from ..common.misc_operations import settings as command_settings
+from ..common.migration import migrate_a_project
 
 
 @click.group(help="Project-related operations")
@@ -42,6 +43,37 @@ def create(ctx: click.Context,
     print(f'Created project {project_name}')
 
 
+@click.command(help='Migrate a project.')
+@click.argument('project_name', metavar='PROJECT_NAME', required=True, default=None)
+@click.option('-tp', '--target-profile', required=False, default=None)
+@click.option('-h', '--target-cluster-hostname', required=False, default=None)
+@click.option('-u', '--target-cluster-username', required=False, default=None)
+@click.option('-p', '--target-cluster-password', required=False, default=None)
+@click.option('-s', '--target-cluster-uri-scheme', required=False, default='https')
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def migrate(ctx: click.Context,
+            project_name: str,
+            target_profile,
+            target_cluster_hostname,
+            target_cluster_username,
+            target_cluster_password,
+            target_cluster_uri_scheme):
+    if target_profile is None and not (target_cluster_hostname and target_cluster_username
+                                       and target_cluster_password and target_cluster_uri_scheme):
+        raise click.BadParameter('Either provide a --target-profile or all four target cluster options.')
+
+    user_profile = ctx.parent.obj['usercontext']
+    migrate_a_project(user_profile,
+                      project_name,
+                      target_profile,
+                      target_cluster_hostname,
+                      target_cluster_username,
+                      target_cluster_password,
+                      target_cluster_uri_scheme)
+    print(f'Migrated project {project_name}')
+
+
 project.add_command(command_list)
 project.add_command(create)
 project.add_command(command_delete)
@@ -49,3 +81,4 @@ project.add_command(command_show)
 project.add_command(command_settings)
 project.add_command(command_activity)
 project.add_command(command_stats)
+project.add_command(migrate)

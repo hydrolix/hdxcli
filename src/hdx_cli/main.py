@@ -1,9 +1,5 @@
 import dataclasses as dc
-
 from datetime import datetime
-from pathlib import Path
-
-import functools as ft
 
 import click
 from trogon import tui
@@ -31,8 +27,9 @@ from hdx_cli.library_api.common.config_constants import HDX_CONFIG_DIR, PROFILE_
 from hdx_cli.library_api.common.first_use import try_first_time_use
 from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
 
+from hdx_cli.library_api.common.auth_utils import load_user_context
 
-VERSION = "1.0-rc47"
+VERSION = "1.0-rc48"
 
 
 from hdx_cli.library_api.common.auth import (
@@ -145,47 +142,18 @@ def hdx_cli(ctx, profile,
     """
     if ctx.invoked_subcommand == 'version':
         return
+    profile = 'default' if not profile else profile
+    profile_config_file = profile_config_file if profile_config_file else PROFILE_CONFIG_FILE
 
-    try_first_time_use(_first_time_use_config,
-                       profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
+    try_first_time_use(_first_time_use_config, profile_config_file)
 
-    load_context = ProfileLoadContext('default' if not profile else profile,
-                                      profile_config_file if profile_config_file else PROFILE_CONFIG_FILE)
-    user_context = load_profile(load_context)
-    load_set_params = ft.partial(load_set_config_parameters,
-                                 load_context=load_context)
-    # Load profile from cache
-    user_context = _chain_calls_ignore_exc(try_load_profile_from_cache_data,
-                                           fail_if_token_expired,
-                                           load_set_params,
-                                           # Parameters to first function
-                                           load_ctx=load_context,
-                                           # _chain_calls_ignore_exc Function configuration
-                                           exctype=HdxCliException)
+    load_context = ProfileLoadContext(profile, profile_config_file)
 
-    if not user_context:
-        user_context: ProfileUserContext = load_profile(load_context)
-        auth_info = login(user_context.username,
-                          user_context.hostname,
-                          password=password,
-                          use_ssl=user_context.scheme == 'https')
-        user_context.auth = auth_info
-        user_context.org_id = auth_info.org_id
-        cache_dir_path = (Path(profile_config_file).parent
-                          if profile_config_file else HDX_CONFIG_DIR)
-        save_profile_cache(user_context,
-                           token=auth_info.token,
-                           expiration_time=auth_info.expires_at,
-                           token_type=auth_info.token_type,
-                           org_id=auth_info.org_id,
-                           cache_dir_path=cache_dir_path)
-        user_context.auth = auth_info
-
-    if uri_scheme != 'default':
-        user_context.scheme = uri_scheme
-    if timeout != DEFAULT_TIMEOUT:
-        user_context.timeout = timeout
-
+    user_context = load_user_context(load_context,
+                                     password=password,
+                                     profile_config_file=profile_config_file,
+                                     uri_scheme=uri_scheme,
+                                     timeout=timeout)
     # Unconditional default override
     ctx.obj = {'usercontext': user_context}
 
