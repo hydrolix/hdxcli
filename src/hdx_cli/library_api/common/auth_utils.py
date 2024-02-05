@@ -1,8 +1,12 @@
+import os
+import tempfile
 from datetime import datetime
 import dataclasses as dc
 
 import functools as ft
 from pathlib import Path
+
+import toml
 
 from .auth import load_profile, try_load_profile_from_cache_data, save_profile_cache
 from .context import ProfileUserContext, ProfileLoadContext, DEFAULT_TIMEOUT
@@ -50,6 +54,48 @@ def load_user_context(load_context, **args):
     return user_context
 
 
+def generate_temporal_profile(cluster_hostname,
+                              cluster_username,
+                              cluster_password,
+                              cluster_uri_scheme):
+    target_profiles_file = Path(tempfile.gettempdir() + os.sep +
+                                cluster_username + '_' +
+                                cluster_hostname + '.toml')
+    _setup_target_cluster_config(target_profiles_file,
+                                 cluster_username,
+                                 cluster_hostname,
+                                 cluster_uri_scheme)
+    target_load_ctx = ProfileLoadContext('default', target_profiles_file)
+    auth_info = login(cluster_username,
+                      cluster_hostname,
+                      password=cluster_password,
+                      use_ssl=(cluster_uri_scheme == 'https'))
+    temp_profile = load_profile(target_load_ctx)
+    temp_profile.auth = auth_info
+    temp_profile.org_id = auth_info.org_id
+
+    save_profile_cache(temp_profile,
+                       token=temp_profile.auth.token,
+                       org_id=temp_profile.org_id,
+                       token_type='Bearer',
+                       expiration_time=temp_profile.auth.expires_at,
+                       cache_dir_path=temp_profile.profile_config_file.parent)
+    return temp_profile
+
+
+def _setup_target_cluster_config(profile_config_file,
+                                 target_cluster_username,
+                                 target_cluster_hostname,
+                                 target_cluster_scheme):
+    username = target_cluster_username
+    hostname = target_cluster_hostname
+    scheme = target_cluster_scheme
+    config_data = {'default': {'username': username, 'hostname': hostname, 'scheme': scheme}}
+    os.makedirs(Path(profile_config_file).parent, exist_ok=True)
+    with open(profile_config_file, 'w+', encoding='utf-8') as config_file:
+        toml.dump(config_data, config_file)
+
+
 def _chain_calls_ignore_exc(*funcs, **kwargs):
     """
     Chain calls and return on_error_return on failure. Exceptions are considered failure if
@@ -83,7 +129,7 @@ def _chain_calls_ignore_exc(*funcs, **kwargs):
 
 
 def _load_set_config_parameters(user_context: ProfileUserContext,
-                               load_context: ProfileLoadContext):
+                                load_context: ProfileLoadContext):
     """Given a profile to load and an old profile, it returns the user_context
     with the config parameters projectname and tablename loaded."""
     config_params = {'projectname':

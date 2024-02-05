@@ -1,62 +1,14 @@
-import os
 import io
-from pathlib import Path
 
-import tempfile
 from urllib.parse import urlparse
-import toml
 
-from ...library_api.common.auth_utils import load_user_context
+from ...library_api.common.auth_utils import load_user_context, generate_temporal_profile
 from ...library_api.common.context import ProfileLoadContext, ProfileUserContext
 from ...library_api.common.exceptions import HttpException
 from ...library_api.common import rest_operations as lro
-from ...library_api.common.login import login
-from ...library_api.common.auth import load_profile, save_profile_cache
 from ...library_api.common.generic_resource import access_resource_detailed
 from ...library_api.common.config_constants import PROFILE_CONFIG_FILE
 from ..common.undecorated_click_commands import basic_create_from_dict_body
-
-
-def _setup_target_cluster_config(profile_config_file,
-                                 target_cluster_username,
-                                 target_cluster_hostname,
-                                 target_cluster_scheme):
-    username = target_cluster_username
-    hostname = target_cluster_hostname
-    scheme = target_cluster_scheme
-    config_data = {'default': {'username': username, 'hostname': hostname, 'scheme': scheme}}
-    os.makedirs(Path(profile_config_file).parent, exist_ok=True)
-    with open(profile_config_file, 'w+', encoding='utf-8') as config_file:
-        toml.dump(config_data, config_file)
-
-
-def generate_target_profile(target_cluster_hostname,
-                            target_cluster_username,
-                            target_cluster_password,
-                            target_cluster_uri_scheme):
-    target_profiles_file = Path(tempfile.gettempdir() + os.sep +
-                                target_cluster_username + '_' +
-                                target_cluster_hostname + '.toml')
-    _setup_target_cluster_config(target_profiles_file,
-                                 target_cluster_username,
-                                 target_cluster_hostname,
-                                 target_cluster_uri_scheme)
-    target_load_ctx = ProfileLoadContext('default', target_profiles_file)
-    auth_info = login(target_cluster_username,
-                      target_cluster_hostname,
-                      password=target_cluster_password,
-                      use_ssl=(target_cluster_uri_scheme == 'https'))
-    target_profile = load_profile(target_load_ctx)
-    target_profile.auth = auth_info
-    target_profile.org_id = auth_info.org_id
-
-    save_profile_cache(target_profile,
-                       token=target_profile.auth.token,
-                       org_id=target_profile.org_id,
-                       token_type='Bearer',
-                       expiration_time=target_profile.auth.expires_at,
-                       cache_dir_path=target_profile.profile_config_file.parent)
-    return target_profile
 
 
 def migrate_a_project(source_profile,
@@ -78,7 +30,10 @@ def migrate_a_project(source_profile,
     target_projects_path = urlparse(target_projects_url).path
 
     # Deleting invalid keys for table creation.
-    remove_keys(source_project_body, 'uuid')
+    try:
+        del source_project_body['uuid']
+    except KeyError:
+        pass
     # Creating resource on target cluster.
     basic_create_from_dict_body(target_profile, target_projects_path, source_project_body)
 
@@ -106,7 +61,11 @@ def migrate_a_table(source_profile,
                                                      ('tables', None)])
     target_tables_path = urlparse(target_tables_url).path
 
-    remove_keys(source_table_body, 'uuid', ('settings', 'autoingest', 0, 'source'))
+    try:
+        del source_table_body['uuid']
+        del source_table_body['settings']['autoingest'][0]['source']
+    except KeyError:
+        pass
     basic_create_from_dict_body(target_profile, target_tables_path, source_table_body)
 
 
@@ -136,7 +95,10 @@ def migrate_a_transform(source_profile,
                                                          ('transforms', None)])
     target_transforms_path = urlparse(target_transforms_url).path
 
-    remove_keys(source_transform_body, 'uuid')
+    try:
+        del source_transform_body['uuid']
+    except KeyError:
+        pass
     basic_create_from_dict_body(target_profile, target_transforms_path, source_transform_body)
 
 
@@ -166,7 +128,10 @@ def migrate_a_dictionary(source_profile,
     _migrate_dict_file(source_profile, target_profile, source_dictionaries_body,
                        source_profile.projectname, target_project_name)
 
-    remove_keys(source_dictionaries_body, 'uuid')
+    try:
+        del source_dictionaries_body['uuid']
+    except KeyError:
+        pass
     basic_create_from_dict_body(target_profile, target_dictionaries_path, source_dictionaries_body)
 
 
@@ -193,7 +158,10 @@ def migrate_a_function(source_profile,
                                                         ('functions', None)])
     target_functions_path = urlparse(target_functions_url).path
 
-    remove_keys(source_function_body, 'uuid')
+    try:
+        del source_function_body['uuid']
+    except KeyError:
+        pass
     basic_create_from_dict_body(target_profile, target_functions_path, source_function_body)
 
 
@@ -217,7 +185,10 @@ def migrate_a_storage(source_profile,
                                                       [('storages', None)])
     target_storages_path = urlparse(target_storages_url).path
 
-    remove_keys(source_storages_body, 'uuid')
+    try:
+        del source_storages_body['uuid']
+    except KeyError:
+        pass
     basic_create_from_dict_body(target_profile, target_storages_path, source_storages_body)
 
 
@@ -231,10 +202,10 @@ def get_target_profile(target_profile_name,
         load_context = ProfileLoadContext(target_profile_name, PROFILE_CONFIG_FILE)
         target_profile = load_user_context(load_context)
     else:
-        target_profile = generate_target_profile(target_cluster_hostname,
-                                                 target_cluster_username,
-                                                 target_cluster_password,
-                                                 target_cluster_uri_scheme)
+        target_profile = generate_temporal_profile(target_cluster_hostname,
+                                                   target_cluster_username,
+                                                   target_cluster_password,
+                                                   target_cluster_uri_scheme)
     target_profile.timeout = target_timeout
     return target_profile
 
@@ -276,26 +247,26 @@ def _create_dictionary_file_for_project(project_name,
                     timeout=timeout)
 
 
-def remove_keys(resource, *args):
-    for key in args:
-        if isinstance(key, tuple):
-            current_level = resource
-            for nested_key in key[:-1]:
-                if (isinstance(current_level, list) and isinstance(nested_key, int)
-                        and 0 <= nested_key < len(current_level)):
-                    current_level = current_level[nested_key]
-                elif nested_key in current_level:
-                    current_level = current_level[nested_key]
-                else:
-                    # If any of the nested keys doesn't exist, simply return without doing anything.
-                    return
-
-            last_key = key[-1]
-            if (isinstance(current_level, list) and isinstance(last_key, int)
-                    and 0 <= last_key < len(current_level)):
-                del current_level[last_key]
-            elif last_key in current_level:
-                del current_level[last_key]
-        else:
-            if key in resource:
-                del resource[key]
+# def remove_keys(resource, *args):
+#     for key in args:
+#         if isinstance(key, tuple):
+#             current_level = resource
+#             for nested_key in key[:-1]:
+#                 if (isinstance(current_level, list) and isinstance(nested_key, int)
+#                         and 0 <= nested_key < len(current_level)):
+#                     current_level = current_level[nested_key]
+#                 elif nested_key in current_level:
+#                     current_level = current_level[nested_key]
+#                 else:
+#                     # If any of the nested keys doesn't exist, simply return without doing anything.
+#                     return
+#
+#             last_key = key[-1]
+#             if (isinstance(current_level, list) and isinstance(last_key, int)
+#                     and 0 <= last_key < len(current_level)):
+#                 del current_level[last_key]
+#             elif last_key in current_level:
+#                 del current_level[last_key]
+#         else:
+#             if key in resource:
+#                 del resource[key]
