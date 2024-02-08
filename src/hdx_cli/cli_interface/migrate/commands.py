@@ -2,19 +2,16 @@ from pathlib import Path
 
 import io
 import os
-import tempfile
 from urllib.parse import urlparse
-import time
 
 import click
 import json
 import toml
 
 from ...library_api.common import rest_operations as lro
-from ...library_api.common.context import ProfileLoadContext, ProfileUserContext
+from ...library_api.common.auth_utils import generate_temporal_profile
+from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.validation import is_valid_hostname, is_valid_username
-from ...library_api.common.auth import load_profile, save_profile_cache
-from ...library_api.common.login import login
 from ...library_api.common.generic_resource import access_resource_detailed
 from ...library_api.common.exceptions import LogicException, HttpException
 from ...library_api.utility.decorators import report_error_and_exit
@@ -310,29 +307,10 @@ def migrate(ctx: click.Context,
     if not target_cluster_hostname or not is_valid_hostname(target_cluster_hostname):
         raise LogicException('Incorrect host name')
 
-    target_profiles_file = Path(tempfile.gettempdir() + os.sep +
-                                target_cluster_username + '_' +
-                                target_cluster_hostname + '.toml')
-    _setup_target_cluster_config(target_profiles_file,
-                                 target_cluster_username,
-                                 target_cluster_hostname,
-                                 target_cluster_uri_scheme)
-    target_load_ctx = ProfileLoadContext('default', target_profiles_file)
-    auth_info = login(target_cluster_username,
-                      target_cluster_hostname,
-                      password=target_cluster_password,
-                      use_ssl=(target_cluster_uri_scheme == 'https'))
-    target_user_profile = load_profile(target_load_ctx)
-    target_user_profile.auth = auth_info
-    target_user_profile.org_id = auth_info.org_id
-    target_user_profile.timeout = ctx.parent.obj['usercontext'].timeout
-
-    save_profile_cache(target_user_profile,
-                       token=target_user_profile.auth.token,
-                       org_id=target_user_profile.org_id,
-                       token_type='Bearer',
-                       expiration_time=target_user_profile.auth.expires_at,
-                       cache_dir_path=target_user_profile.profile_config_file.parent)
+    target_user_profile = generate_temporal_profile(target_cluster_hostname,
+                                                    target_cluster_username,
+                                                    target_cluster_password,
+                                                    target_cluster_uri_scheme)
 
     print(f"Cluster to migrate to is '{target_cluster_hostname}'")
     print(f"User for cluster to migrate data is '{target_cluster_username}'")

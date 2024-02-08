@@ -2,6 +2,7 @@ import json
 from functools import partial
 import click
 
+from ..common.migration import migrate_a_storage
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from ...library_api.common.context import ProfileUserContext
@@ -89,8 +90,40 @@ def settings(ctx: click.Context,
     basic_settings(user_profile, resource_path, key, the_value, params=params)
 
 
+@click.command(help='Migrate a storage.')
+@click.argument('storage_name', metavar='STORAGE_NAME', required=True, default=None)
+@click.option('-tp', '--target-profile', required=False, default=None)
+@click.option('-h', '--target-cluster-hostname', required=False, default=None)
+@click.option('-u', '--target-cluster-username', required=False, default=None)
+@click.option('-p', '--target-cluster-password', required=False, default=None)
+@click.option('-s', '--target-cluster-uri-scheme', required=False, default='https')
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def migrate(ctx: click.Context,
+            storage_name: str,
+            target_profile,
+            target_cluster_hostname,
+            target_cluster_username,
+            target_cluster_password,
+            target_cluster_uri_scheme):
+    if target_profile is None and not (target_cluster_hostname and target_cluster_username
+                                       and target_cluster_password and target_cluster_uri_scheme):
+        raise click.BadParameter('Either provide a --target-profile or all four target cluster options.')
+
+    user_profile = ctx.parent.obj['usercontext']
+    migrate_a_storage(user_profile,
+                      storage_name,
+                      target_profile,
+                      target_cluster_hostname,
+                      target_cluster_username,
+                      target_cluster_password,
+                      target_cluster_uri_scheme)
+    print(f'Migrated storage {storage_name}')
+
+
 storage.add_command(command_list)
 storage.add_command(create)
 storage.add_command(delete)
 storage.add_command(command_show)
 storage.add_command(settings)
+storage.add_command(migrate)

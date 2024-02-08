@@ -2,6 +2,7 @@
 import json
 import click
 
+from ..common.migration import migrate_a_dictionary
 from ...library_api.common.generic_resource import access_resource
 
 from ...library_api.utility.decorators import report_error_and_exit
@@ -133,6 +134,40 @@ def dict_file_delete(ctx: click.Context, dictionary_filename):
     print(f'Deleted {dictionary_filename}')
 
 
+@click.command(help='Migrate a dictionary.', name='migrate')
+@click.argument('dictionary_name', metavar='DICTIONARY_NAME', required=True, default=None)
+@click.option('-tp', '--target-profile', required=False, default=None)
+@click.option('-h', '--target-cluster-hostname', required=False, default=None)
+@click.option('-u', '--target-cluster-username', required=False, default=None)
+@click.option('-p', '--target-cluster-password', required=False, default=None)
+@click.option('-s', '--target-cluster-uri-scheme', required=False, default='https')
+@click.option('-P', '--target-project-name', required=True, default=None)
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def migrate_dictionary(ctx: click.Context,
+                       dictionary_name: str,
+                       target_profile,
+                       target_cluster_hostname,
+                       target_cluster_username,
+                       target_cluster_password,
+                       target_cluster_uri_scheme,
+                       target_project_name):
+    if target_profile is None and not (target_cluster_hostname and target_cluster_username
+                                       and target_cluster_password and target_cluster_uri_scheme):
+        raise click.BadParameter('Either provide a --target-profile or all four target cluster options.')
+
+    user_profile = ctx.parent.obj['usercontext']
+    migrate_a_dictionary(user_profile,
+                         dictionary_name,
+                         target_profile,
+                         target_cluster_hostname,
+                         target_cluster_username,
+                         target_cluster_password,
+                         target_cluster_uri_scheme,
+                         target_project_name)
+    print(f'Migrated dictionary {dictionary_name}')
+
+
 dictionary.add_command(create_dict, name='create')
 dictionary.add_command(files)
 files.add_command(upload_file_dict, name='upload')
@@ -143,3 +178,4 @@ dictionary.add_command(command_list)
 dictionary.add_command(command_delete)
 dictionary.add_command(command_show)
 dictionary.add_command(command_settings)
+dictionary.add_command(migrate_dictionary)
