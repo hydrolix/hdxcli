@@ -13,10 +13,13 @@ from ...library_api.userdata.token import AuthInfo
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
 from ..common.undecorated_click_commands import basic_create_with_body_from_string, basic_show
 from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
                                       show as command_show)
+
+logger = get_logger()
 
 
 @click.group(help="Role-related operations")
@@ -116,9 +119,9 @@ def create(ctx: click.Context,
                                            resource_path,
                                            role_obj.name,
                                            role_obj.model_dump_json(by_alias=True, exclude_none=True))
-        print(f"Created role {role_obj.name}")
+        logger.info(f"Created role {role_obj.name}")
     else:
-        print("Role creation was cancelled")
+        logger.info("Role creation was cancelled")
 
 
 @click.command(help='Modify an existing role.')
@@ -139,8 +142,9 @@ def edit(ctx: click.Context,
         update_role_request(profile,
                             resource_path,
                             role_to_update.model_dump(by_alias=True, exclude_none=True))
+        logger.info(f"Updated role '{role_name}'")
     else:
-        print("Update was cancelled")
+        logger.info("Update was cancelled")
 
 
 @click.command(name='add-user', help='Add users to a role.')
@@ -160,7 +164,7 @@ def add(ctx: click.Context,
                             role_name,
                             users,
                             action='add')
-    print(f'Users added to {role_name} role')
+    logger.info(f'Added user(s) to {role_name} role')
 
 
 @click.command(name='remove-user', help='Remove users from a role.')
@@ -180,7 +184,7 @@ def remove(ctx: click.Context,
                             role_name,
                             users,
                             action='remove')
-    print(f'Users removed from {role_name} role')
+    logger.info(f'Removed user(s) from {role_name} role')
 
 
 @click.group(help="Permission-related operations.")
@@ -223,12 +227,12 @@ def _basic_list(profile, resource_path, scope_type=None):
         for resource in resources:
             if resource.get("scope_type") == scope_type:
                 for perm in resource.get("permissions"):
-                    print(f'{perm}')
+                    logger.info(f'{perm}')
     else:
         for resource in resources:
-            print(f'Scope type: {resource.get("scope_type")}')
+            logger.info(f'Scope type: {resource.get("scope_type")}')
             for perm in resource.get("permissions"):
-                print(f'  {perm}')
+                logger.info(f'  {perm}')
 
 
 def _validate_role(profile, roles: tuple) -> list:

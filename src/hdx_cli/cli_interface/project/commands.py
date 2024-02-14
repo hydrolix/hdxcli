@@ -4,6 +4,7 @@ import click
 from ..common.undecorated_click_commands import basic_create
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
 from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
                                       show as command_show,
@@ -11,6 +12,8 @@ from ..common.rest_operations import (delete as command_delete,
                                       stats as command_stats)
 from ..common.misc_operations import settings as command_settings
 from ..common.migration import migrate_a_project
+
+logger = get_logger()
 
 
 @click.group(help="Project-related operations")
@@ -40,7 +43,7 @@ def create(ctx: click.Context,
                  project_name,
                  None,
                  None)
-    print(f'Created project {project_name}')
+    logger.info(f'Created project {project_name}')
 
 
 @click.command(help='Migrate a project.')
@@ -71,7 +74,7 @@ def migrate(ctx: click.Context,
                       target_cluster_username,
                       target_cluster_password,
                       target_cluster_uri_scheme)
-    print(f'Migrated project {project_name}')
+    logger.info(f'Migrated project {project_name}')
 
 
 project.add_command(command_list)

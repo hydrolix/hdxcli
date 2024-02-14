@@ -32,6 +32,7 @@ toml = "^0.10.2"
 sqlglot = "^10.5.10"
 trogon = "^0.5.0"
 pydantic = "^2.5.3"
+logging = "^0.4.9.6"
 
 [tool.poetry.dev-dependencies]
 # pyinstaller = "^5.3"

@@ -1,4 +1,5 @@
 import dataclasses as dc
+import logging
 from datetime import datetime
 
 import click
@@ -28,6 +29,7 @@ from hdx_cli.library_api.common.first_use import try_first_time_use
 from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
 
 from hdx_cli.library_api.common.auth_utils import load_user_context
+from hdx_cli.library_api.common.logging import set_debug_logger, set_info_logger, get_logger
 
 VERSION = "1.0-rc48"
 
@@ -41,21 +43,25 @@ from hdx_cli.cli_interface.set import commands as set_commands
 from hdx_cli.library_api.common.login import login
 
 
+logger = get_logger()
+
+
 def _first_time_use_config(profile_config_file):
-    print('No configuration was found to access your hydrolix cluster.')
-    print('A new configuration will be created now.')
-    print()
+    logger.info('No configuration was found to access your hydrolix cluster.')
+    logger.info('A new configuration will be created now.')
+    logger.info('')
     profile_wizard_info = get_profile_data_from_standard_input()
     if not profile_wizard_info:
-        print('Configuration creation aborted')
+        logger.info('Configuration creation aborted')
         return
     save_profile(profile_wizard_info.username,
                  profile_wizard_info.hostname,
                  profile_config_file,
                  'default',
                  scheme=profile_wizard_info.scheme)
-    print(f'\nYour configuration with profile [default] has been created at {profile_config_file}')
-    print('-' * 100)
+    logger.info('')
+    logger.info(f'Your configuration with profile [default] has been created at {profile_config_file}')
+    logger.info('-' * 100)
 
 
 def _chain_calls_ignore_exc(*funcs, **kwargs):
@@ -114,21 +120,31 @@ def fail_if_token_expired(user_context: ProfileUserContext):
     return user_context
 
 
+def configure_logger(debug=False):
+    if debug:
+        set_debug_logger()
+        return
+    set_info_logger()
+
+
 # pylint: disable=line-too-long
 @tui(help='Open textual user interface')
 @click.group(help='hdxcli is a tool to perform operations against Hydrolix cluster resources such as tables,' +
              ' projects and transforms via different profiles. hdxcli supports profile configuration management ' +
              ' to perform operations on different profiles and sets of projects and tables.')
-@click.option('--profile', help="Perform operation with a different profile (default profile is 'default').",
-              metavar='PROFILENAME', default=None)
-@click.option('--password', help="Login password. If provided and the access token is expired, it will be used.",
-              metavar='PASSWORD', default=None)
-@click.option('--profile-config-file', hidden=True, help='Used only for testing.',
-              default=None)
-@click.option('--uri-scheme', help='Scheme used.', type=click.Choice(['default', 'http', 'https']),
-              default='default')
-@click.option('--timeout', help=f'Set request timeout in seconds (default: {DEFAULT_TIMEOUT}).',
-              type=int, default=DEFAULT_TIMEOUT)
+@click.option('--profile', metavar='PROFILENAME', default=None,
+              help="Perform operation with a different profile (default profile is 'default').")
+@click.option('--password', metavar='PASSWORD', default=None,
+              help="Login password. If provided and the access token is expired, it will be used.")
+@click.option('--profile-config-file', hidden=True, default=None,
+              help='Used only for testing.')
+@click.option('--uri-scheme', default='default', type=click.Choice(['default', 'http', 'https']),
+              help='Scheme used.')
+@click.option('--timeout', type=int, default=DEFAULT_TIMEOUT,
+              help=f'Set request timeout in seconds (default: {DEFAULT_TIMEOUT}).')
+@click.option('--debug', hidden=True, is_flag=True, default=False,
+              help=f'Enable debug mode, which displays additional information and '
+                   f'debug messages for troubleshooting purposes.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 # pylint: enable=line-too-long
@@ -136,12 +152,16 @@ def hdx_cli(ctx, profile,
             password,
             profile_config_file,
             uri_scheme,
-            timeout):
+            timeout,
+            debug):
     """
         Command-line entry point for hdx cli interface
     """
+    configure_logger(debug)
+
     if ctx.invoked_subcommand == 'version':
         return
+
     profile = 'default' if not profile else profile
     profile_config_file = profile_config_file if profile_config_file else PROFILE_CONFIG_FILE
 
@@ -160,7 +180,7 @@ def hdx_cli(ctx, profile,
 
 @click.command(help='Print hdxcli version')
 def version():
-    print(VERSION)
+    logger.info(VERSION)
 
 
 hdx_cli.add_command(project_.project)

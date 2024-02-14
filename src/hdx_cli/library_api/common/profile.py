@@ -8,9 +8,11 @@ import toml
 
 from .context import ProfileUserContext
 from .validation import is_valid_username, is_valid_hostname
+from .logging import get_logger
 
 from hdx_cli.library_api.common.validation import is_valid_username, is_valid_hostname
 
+logger = get_logger()
 
 @dataclass
 class ProfileWizardInfo:
@@ -31,27 +33,30 @@ def get_profile_data_from_standard_input(hostname: Optional[str] = None,
     try:
         default_hostname = f'(default: {hostname})' if hostname else ''
         while not good_hostname:
-            input_hostname = input(f'Please, type the host name of your cluster {default_hostname}: ')
+            logger.info(f'Please, type the host name of your cluster {default_hostname}: [!n]')
+            input_hostname = input('')
             if not input_hostname and default_hostname:
                 input_hostname = hostname
             good_hostname = is_valid_hostname(input_hostname)
             if not good_hostname:
-                print('Invalid host name. Please, try again')
+                logger.info('Invalid host name. Please, try again')
 
         assert(input_hostname)
         default_username = f'(default: {username})' if username else ''
         while not good_username:
-            input_username = input(f'Please, type the user name of your cluster {default_username}: ')
+            logger.info(f'Please, type the user name of your cluster {default_username}: [!n]')
+            input_username = input('')
             if not input_username and default_username:
                 input_username = username
             good_username = is_valid_username(input_username)
             if not good_username:
-                print('Invalid user name. Please, try again')
+                logger.info('Invalid user name. Please, try again')
 
         assert(input_username)
         default_scheme = f'(default: {http_scheme})' if http_scheme else ''
         while not good_scheme_choice:
-            http_scheme_choice = input(f'Will you be using https {default_scheme} (Y/N): ')
+            logger.info(f'Will you be using https {default_scheme} (Y/N): [!n]')
+            http_scheme_choice = input('')
             if http_scheme_choice.lower() == 'y':
                 input_http_scheme = 'https'
                 good_scheme_choice = True

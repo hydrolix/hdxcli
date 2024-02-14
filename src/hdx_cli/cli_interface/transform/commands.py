@@ -8,19 +8,19 @@ from ..common.undecorated_click_commands import basic_transform
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import CommandLineException
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
 
 from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
                                       show as command_show)
-
 from ...library_api.ddl.common_algo import (ddl_to_create_table_info,
                                             ddl_datatype_to_hdx_datatype,
                                             generate_transform_dict)
-
 from ...library_api.ddl.common_intermediate_representation import DdlCreateTableInfo
-
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
+
+logger = get_logger()
 
 
 @click.group(help="Transform-related operations")
@@ -63,7 +63,7 @@ def create(ctx: click.Context,
     with open(body_from_file, "r", encoding="utf-8") as file:
         basic_create_with_body_from_string(user_profile, resource_path,
                                            transform_name, file.read())
-    print(f'Created transform {transform_name}')
+    logger.info(f'Created transform {transform_name}')
 
 
 @click.command(help='Map a transform from a description language. (currently sql CREATE TABLE)')
@@ -123,7 +123,7 @@ def map_from(ctx: click.Context,
                                              transform_type=create_table_info.ingest_type)
     transform_str = json.dumps(transform_dict)
     if no_apply:
-        print(transform_str)
+        logger.info(transform_str)
         return
 
     user_profile = ctx.parent.obj['usercontext']
@@ -132,7 +132,7 @@ def map_from(ctx: click.Context,
                                        resource_path,
                                        transform_name,
                                        body_from_string=transform_str)
-    print(f'Created transform {transform_name}')
+    logger.info(f'Created transform {transform_name}')
 
 
 @click.command(help='Migrate a table.')
@@ -169,7 +169,7 @@ def migrate(ctx: click.Context,
                         target_cluster_uri_scheme,
                         target_project_name,
                         target_table_name)
-    print(f'Migrated transform {transform_name}')
+    logger.info(f'Migrated transform {transform_name}')
 
 
 transform.add_command(map_from)

@@ -34,7 +34,7 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main job batch --project test_ci_project --table test_ci_table ingest test_ci_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_ci_settings.json",
                 "python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_ci_kafka_source",
                 "python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_ci_kinesis_source",
-                #"python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_ci_siem_source",
+                "python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_ci_siem_source",
                 "python3 -m hdx_cli.main function --project test_ci_project create -s '(x,k,b)->k*x+b' test_ci_function",
                 "python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storages/storage_ci_settings.json test_ci_storage",
                 "python3 -m hdx_cli.main unset"
@@ -89,11 +89,10 @@ commands_under_test = ["python3 -m hdx_cli.main project stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
 expected_output_expr = 'not result.startswith("Error:") and "name" in result and "total_partitions" in result and "total_storage_size" in result and "test_ci_project" in result'
 
-# Error 500 v4.2.1
-#[[test]]
-#name = "Project activities can be shown"
-#commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project activity"]
-#expected_output_expr = 'not result.startswith("Error:") and "results" in result and "count" in result and "num_pages" in result and "test_ci_project" in result'
+[[test]]
+name = "Project activities can be shown"
+commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project activity"]
+expected_output_expr = 'not result.startswith("Error:") and "created" in result and "test_ci_project" in result'
 
 
 ######################################################### Table #########################################################
@@ -159,11 +158,10 @@ commands_under_test = ["python3 -m hdx_cli.main table stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
 expected_output_expr = 'not result.startswith("Error:") and "name" in result and "total_partitions" in result and "total_storage_size" in result and "test_ci_table" in result'
 
-# Failing. The name of the table is not included in the output. v4.2.1
-#[[test]]
-#name = "Table activities can be shown"
-#commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table activity"]
-#expected_output_expr = 'not result.startswith("Error:") and "results" in result and "count" in result and "num_pages" in result and "test_ci_table" in result'
+[[test]]
+name = "Table activities can be shown"
+commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table activity"]
+expected_output_expr = 'not result.startswith("Error:") and "created" in result and "test_ci_table" in result'
 
 
 #################################################### Summary Table #####################################################
@@ -332,41 +330,40 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 
 
 ########################################################## SIEM #########################################################
-# Failing all test cases. There is an issue in the endpoint /sources/siem. v4.2.1
+[[test]]
+name = "SIEM sources can be created"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
+teardown = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source",
+			      "python3 -m hdx_cli.main unset"]
+expected_output = 'Created source test_siem_source'
+
+[[test]]
+name = "SIEM sources can be deleted"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
+		     "python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
+commands_under_test = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output = 'Deleted test_siem_source'
+
+[[test]]
+name = "SIEM sources can be listed"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main sources siem list"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output_re = '.*?test_ci_siem_source.*'
+
+[[test]]
+name = "SIEM source settings can be shown"
+commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings"]
+expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_siem_source" in result'
+
+# failing because of the pool is crashing
 #[[test]]
-#name = "SIEM sources can be created"
-#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-#commands_under_test = ["python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
-#teardown = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source",
-#			      "python3 -m hdx_cli.main unset"]
-#expected_output = 'Created source test_siem_source'
-#
-#[[test]]
-#name = "SIEM sources can be deleted"
-#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-#		     "python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
-#commands_under_test = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source"]
-#teardown = ["python3 -m hdx_cli.main unset"]
-#expected_output = 'Deleted test_siem_source'
-#
-#[[test]]
-#name = "SIEM sources can be listed"
-#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-#commands_under_test = ["python3 -m hdx_cli.main sources siem list"]
-#teardown = ["python3 -m hdx_cli.main unset"]
-#expected_output_re = '.*?test_ci_siem_source.*'
-#
-#[[test]]
-#name = "SIEM source settings can be shown"
-#commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings"]
-#expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_siem_source" in result'
-#
-## failing because of the pool is crashing
-##[[test]]
-##name = "SIEM source name can be modified"
-##commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings name new_siem_name"]
-##teardown = ["python3 -m hdx_cli.main sources --project test_ci_project --table test_ci_table --source new_siem_name siem settings name test_ci_siem_source"]
-##expected_output = 'Updated test_ci_siem_source name'
+#name = "SIEM source name can be modified"
+#commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings name new_siem_name"]
+#teardown = ["python3 -m hdx_cli.main sources --project test_ci_project --table test_ci_table --source new_siem_name siem settings name test_ci_siem_source"]
+#expected_output = 'Updated test_ci_siem_source name'
 #
 #[[test]]
 #name = "SIEM source type can be shown"
@@ -379,7 +376,7 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 #commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
 #teardown = ["python3 -m hdx_cli.main unset"]
 #expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "\"subtype\": \"siem\"" in result'
-#
+
 
 ######################################################## Storage #######################################################
 [[test]]

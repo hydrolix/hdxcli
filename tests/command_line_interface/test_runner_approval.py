@@ -59,6 +59,7 @@ class ExpectedOutput(Enum):
 
 
 def _assert_test_output(result, expected_output_tpl: Tuple[ExpectedOutput, str]):
+    print(f'{result} ------------------------------------------------------')
     if expected_output_tpl[0] == ExpectedOutput.VERBATIM:
         assert result == expected_output_tpl[1]
     elif expected_output_tpl[0] == ExpectedOutput.REGEX:

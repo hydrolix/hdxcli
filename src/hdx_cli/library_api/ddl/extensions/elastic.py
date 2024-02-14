@@ -12,6 +12,9 @@ from ..interfaces import (ComposedTypeParser, SourceToTableInfoProcessor,
                           PostProcessingHook)
 
 from ...common.exceptions import NotSupportedException
+from ...common.logging import get_logger
+
+logger = get_logger()
 
 __all__ = ['ElasticSourceToTableInfoProcessor',
            'ElasticComposedTypeParser']
@@ -101,7 +104,7 @@ def _select_array_columns(fields):
             fields_chosen.add(field)
             fields.pop(idx)
         except KeyboardInterrupt:
-            print()
+            logger.info('')
             break
     return fields_chosen
 
@@ -122,13 +125,13 @@ class ElasticPostProcessingHook(PostProcessingHook):
                     assert isinstance(col_data_type, str)
                     col_data_type = ['array', col_data_type]
                 except ValueError:
-                    print(f'WARNING: ignored inexistent field {field} in elastic.array_fields')
+                    logger.warning(f'WARNING: ignored inexistent field {field} in elastic.array_fields')
             used_choices['array_fields'] = True
         if not used_choices.get('array_fields'):
             the_cols = set({c for c in ddl_create_table_info.columns
                             if not c.column_comes_from_object_field})
             sorted_columns = sorted(the_cols, key=lambda c: c.identifier)
-            print('Press Ctrl-C when you are done.')
+            logger.info('Press Ctrl-C when you are done.')
             chosen_columns = _select_array_columns(sorted_columns)
             for col in chosen_columns:
                 col.hdx_datatype = ['array', col.hdx_datatype]

@@ -7,6 +7,9 @@ import toml
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
+
+logger = get_logger()
 
 
 def _serialize_to_config_file(profile: ProfileUserContext,
@@ -40,7 +43,7 @@ def set(ctx, projectname, tablename, scheme=None):
     if tablename:
         profile.tablename = tablename
     _serialize_to_config_file(profile, profile.profile_config_file)
-    print(f"Profile '{profile.profilename}' set project/table")
+    logger.info(f"Profile '{profile.profilename}' set project/table")
 
 
 @click.command(help='Remove any set project/table')
@@ -51,4 +54,4 @@ def unset(ctx):
     profile.projectname = None
 
     _serialize_to_config_file(profile, profile.profile_config_file)
-    print(f"Profile '{profile.profilename}' unset project/table")
+    logger.info(f"Profile '{profile.profilename}' unset project/table")

@@ -1,6 +1,10 @@
 from typing import Any, Optional, Tuple, Sequence
 from copy import deepcopy
 
+from .logging import get_logger
+
+logger = get_logger()
+
 __all__ = ['choose_interactively',
            'choose_from_elements_interactively']
 
@@ -14,7 +18,8 @@ def choose_interactively(prompt, *,
     if valid_choices and not isinstance(valid_choices, str):
         valid_choices = list(map(str, valid_choices))
     while not choice or choice not in valid_choices:
-        choice = input(prompt)
+        logger.info(f'{prompt}[!n]')
+        choice = input('')
         if choice == '' and default:
             return default
         if not valid_choices:
@@ -34,7 +39,7 @@ def choose_interactively(prompt, *,
                              ', '.join(valid_choices_failed[0:_SHOW_MAX_ITEMS // 2]) + '...' +
                              ', '.join(valid_choices_failed[(-_SHOW_MAX_ITEMS - 1) // 2:-1]) + '. ' +
                              f'({len(valid_choices_failed)} choices in total)')
-        print(f'Invalid choice {choice}. Valid values are {valid_choices_str}')
+        logger.info(f'Invalid choice {choice}. Valid values are {valid_choices_str}')
 
 
 def choose_from_elements_interactively(elements: Sequence[Any]) -> Tuple[int, str]:
@@ -42,8 +47,8 @@ def choose_from_elements_interactively(elements: Sequence[Any]) -> Tuple[int, st
     and the field name
     """
     for i, a_field in enumerate(elements, 1):
-        print(f'{i}. {a_field}')
-    print()
+        logger.info(f'{i}. {a_field}')
+    logger.info('')
     element_index = int(choose_interactively(
         'Please choose an index from the list: ',
         valid_choices=[str(x + 1) for x in range(len(elements))]))

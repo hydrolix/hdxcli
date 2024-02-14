@@ -5,11 +5,11 @@ import click
 
 from ...library_api.common.exceptions import LogicException, TransformNotFoundException, HdxCliException
 from ...library_api.common import rest_operations as rest_ops
+from ...library_api.common.logging import get_logger
 from ...library_api.userdata.token import AuthInfo
-
-
 from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard-import
 
+logger = get_logger()
 
 DEFAULT_INDENTATION = 4
 
@@ -259,9 +259,9 @@ def _format_settings_header(headers_and_spacing: List[Tuple[str, int]]):
     format_strings = []
     for key, spacing in headers_and_spacing:
         format_strings.append(f"{key:<{spacing}}")
-    format_strings.append("\n")
-    format_strings.append(
-        "-" * sum((header[1] for header in headers_and_spacing)))
+    #format_strings.append("\n")
+    #format_strings.append(
+    #    "-" * sum((header[1] for header in headers_and_spacing)))
     return "".join(format_strings)
 
 
@@ -283,8 +283,8 @@ def _do_for_each_setting(settings_dict, prefix="", resource=None):
                 the_value_in_resource = _get_dotted_key_from_dict(full_key_name, resource)
             except KeyError:
                 the_value_in_resource = KeyAbsent()
-            print(_format_setting(full_key_name, setting_val.get("type"),
-                                  the_value_in_resource))
+            logger.info(_format_setting(full_key_name, setting_val.get("type"),
+                                        the_value_in_resource))
 
 
 def _for_each_setting(settings_dict, prefix="",
@@ -374,14 +374,15 @@ def basic_settings(profile,
 
     if not key:
         # project_str = f'Project: {profile.projectname}'
-        print(f'{"-" * (90 + 30 + 40)}')
-        print(_format_settings_header([("name", 90), ("type", 30), ("value", 40)]))
+        logger.info(f'{"-" * (90 + 30 + 40)}')
+        logger.info(_format_settings_header([("name", 90), ("type", 30), ("value", 40)]))
+        logger.info(f'{"-" * (90 + 30 + 40)}')
         _for_each_setting(options, resource=resource)
     elif key and not value:
         try:
-            print(f"{key}: {_get_dotted_key_from_dict(key, resource)}")
+            logger.info(f"{key}: {_get_dotted_key_from_dict(key, resource)}")
         except KeyError:
-            print(f'Key not found in {resource["name"]}: {key}')
+            logger.info(f"Key '{key}' not found in {resource['name']}.")
     else:
         this_resource_url = f'{settings_url}{resource["uuid"]}'
         try:
@@ -398,7 +399,7 @@ def basic_settings(profile,
                                        timeout=timeout,
                                        body=patch_data,
                                        params=params)
-        print(f'Updated {resource["name"]} {key}')
+        logger.info(f'Updated {resource["name"]} {key}')
 
 
 def basic_delete(profile,
@@ -448,12 +449,12 @@ def basic_list(profile, resource_path):
                               timeout=timeout)
     for resource in resources:
         if isinstance(resource, str):
-            print(resource)
+            logger.info(resource)
         else:
-            print(resource['name'], end='')
             if (settings := resource.get('settings')) and settings.get('is_default'):
-                print(' (default)', end='')
-            print()
+                logger.info(f"{resource['name']} (default)")
+            else:
+                logger.info(f"{resource['name']}")
 
 
 def _get_resource_information(profile,

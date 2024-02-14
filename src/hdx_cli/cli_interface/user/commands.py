@@ -9,7 +9,10 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
 from ..common.undecorated_click_commands import basic_delete, basic_show, basic_create_from_dict_body
+
+logger = get_logger()
 
 
 @click.group(help="User-related operations")
@@ -45,10 +48,9 @@ def show(ctx: click.Context, indent: int):
     resource_path = ctx.parent.obj.get('resource_path')
     if not (resource_name := getattr(profile, 'useremail')):
         raise LogicException('No default user found in profile.')
-    print(basic_show(profile, resource_path,
-                     resource_name,
-                     indent=indent,
-                     filter_field='email'))
+
+    logger.info(basic_show(profile, resource_path, resource_name,
+                     indent=indent, filter_field='email'))
 
 
 def _validate_role(ctx, param, roles):
@@ -103,7 +105,7 @@ def invite(ctx: click.Context,
         'roles': roles
     }
     basic_create_from_dict_body(profile, resource_path, body)
-    print(f'Invitation successfully sent to {email}')
+    logger.info(f'Invitation sent to {email}')
 
 
 _confirmation_prompt = partial(dynamic_confirmation_prompt,
@@ -125,9 +127,9 @@ def delete(ctx: click.Context, email: str,
     resource_path = ctx.parent.obj.get('resource_path')
     user_profile = ctx.parent.obj.get('usercontext')
     if basic_delete(user_profile, resource_path, email, filter_field='email'):
-        print(f'Deleted {email}')
+        logger.info(f'Deleted {email}')
     else:
-        print(f'Could not delete {email}. Not found.')
+        logger.info(f'Could not delete {email}. Not found')
 
 
 @click.command(name='assign-role', help='Assign roles to a user.')
@@ -154,7 +156,7 @@ def assign(ctx: click.Context,
         'roles': roles
     }
     basic_create_from_dict_body(profile, resource_path, body)
-    print(f'Roles added to {email}')
+    logger.info(f'Added role(s) to {email}')
 
 
 @click.command(name='remove-role', help='Remove roles from a user.')
@@ -188,7 +190,7 @@ def remove(ctx: click.Context,
         'roles': list(roles)
     }
     basic_create_from_dict_body(profile, resource_path, body)
-    print(f'Roles removed from {email}')
+    logger.info(f'Removed role(s) from {email}')
 
 
 def _basic_list(profile, resource_path):
@@ -204,8 +206,8 @@ def _basic_list(profile, resource_path):
                               timeout=timeout)
     for resource in resources:
         roles_name = resource.get("roles")
-        print(f'Email: {resource["email"]}', end=' | ')
-        print(f'Roles: {(", ".join(roles_name))}')
+        logger.info(f'Email: {resource["email"]}', end=' | ')
+        logger.info(f'Roles: {(", ".join(roles_name))}')
 
 
 user.add_command(list_)
