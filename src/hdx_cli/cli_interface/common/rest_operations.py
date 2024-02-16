@@ -99,7 +99,7 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 
 @click.command(help='Show resource. If not resource_name is provided, it will show the default '
                     'if there is one.')
-@click.option("-i", "--indent", is_flag=True, default=False,
+@click.option('-i', '--indent', is_flag=True, default=False,
               help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -115,7 +115,7 @@ def show(ctx: click.Context, indent: bool):
 
 @click.command(help='Display the activity of a resource. If not resource_name is provided, '
                     'it will show the default if there is one.')
-@click.option("-i", "--indent", is_flag=True, default=False,
+@click.option('-i', '--indent', is_flag=True, default=False,
               help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -130,7 +130,7 @@ def activity(ctx: click.Context, indent: bool):
 
 @click.command(help='Display statistics for a resource. If not resource_name is provided, '
                     'it will show the default if there is one.')
-@click.option("-i", "--indent", is_flag=True, default=False,
+@click.option('-i', '--indent', is_flag=True, default=False,
               help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)

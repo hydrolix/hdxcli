@@ -257,7 +257,7 @@ def _display_role_details(role):
     logger.info("-" * 40)
     logger.info("Review Role Details")
     logger.info("-" * 40)
-    logger.info("Role Name:", role.name)
+    logger.info(f"Role Name: {role.name}")
     for index, policy in enumerate(role.policies, start=1):
         logger.info(f"Policy {index}:")
         if policy.scope_type:
@@ -268,10 +268,10 @@ def _display_role_details(role):
 
 def _display_policies(policies):
     for index, policy in enumerate(policies, start=1):
-        logger.info(f"{index}. Policy:", end=' -> ')
+        logger.info(f"{index}. Policy: -> [!n]")
         if policy.scope_type:
-            logger.info(f"Scope Type: {policy.scope_type}", end=' | ')
-            logger.info(f"Scope ID: {policy.scope_id}", end=' | ')
+            logger.info(f"Scope Type: {policy.scope_type} | [!n]")
+            logger.info(f"Scope ID: {policy.scope_id} | [!n]")
         logger.info(f"Permissions: {', '.join(policy.permissions)}")
 
 

@@ -22,9 +22,9 @@ from ..common.rest_operations import (delete as command_delete,
 logger = get_logger()
 
 
-@click.group(help="Role-related operations")
-@click.option('--role', 'role_name', help='Perform operation on the passed role.',
-              metavar='ROLE_NAME', default=None)
+@click.group(help='Role-related operations')
+@click.option('--role', 'role_name', metavar='ROLE_NAME', default=None,
+              help='Perform operation on the passed role.')
 @click.pass_context
 def role(ctx: click.Context,
          role_name):
@@ -61,30 +61,16 @@ def validate_uuid(ctx, param, value):
                     'If no options are provided, the HDXCLI will prompt you with questions '
                     'to configure the new role. '
                     'Simply press Enter to start the interactive configuration process.')
-@click.option('--name', '-n', 'role_name',
-              type=str,
-              help='Name of the role.',
-              metavar='ROLE_NAME',
-              required=False,
-              default=None)
-@click.option('--scope-type', '-t', 'scope_type',
-              type=click.Choice(AVAILABLE_SCOPE_TYPE),
-              help='Type of scope for the role.',
-              metavar='SCOPE_TYPE',
-              required=False,
-              default=None)
-@click.option('--scope-id', '-i', 'scope_id',
-              type=str,
+@click.option('--name', '-n', 'role_name', metavar='ROLE_NAME', type=str, required=False, default=None,
+              help='Name of the role.')
+@click.option('--scope-type', '-t', 'scope_type', type=click.Choice(AVAILABLE_SCOPE_TYPE), metavar='SCOPE_TYPE',
+              required=False, default=None,
+              help='Type of scope for the role.')
+@click.option('--scope-id', '-i', 'scope_id', metavar='SCOPE_ID', type=str, required=False, default=None,
               help='Identifier for the scope (UUID).',
-              metavar='SCOPE_ID',
-              callback=validate_uuid,
-              required=False,
-              default=None)
-@click.option('--permission', '-p', 'permissions',
-              help='Specify permissions for the new role (can be used multiple times).',
-              required=False,
-              multiple=True,
-              default=None)
+              callback=validate_uuid)
+@click.option('--permission', '-p', 'permissions', required=False, multiple=True, default=None,
+              help='Specify permissions for the new role (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
@@ -119,9 +105,9 @@ def create(ctx: click.Context,
                                            resource_path,
                                            role_obj.name,
                                            role_obj.model_dump_json(by_alias=True, exclude_none=True))
-        logger.info(f"Created role {role_obj.name}")
+        logger.info(f'Created role {role_obj.name}')
     else:
-        logger.info("Role creation was cancelled")
+        logger.info('Role creation was cancelled')
 
 
 @click.command(help='Modify an existing role.')
@@ -136,22 +122,20 @@ def edit(ctx: click.Context,
     role_obj = Role(**json_data)
     role_to_update = modify_role_data_from_standard_input(profile, resource_path, role_obj)
 
-    resource_path = f"{resource_path}{role_to_update.id}/"
-
     if role_to_update:
+        resource_path = f'{resource_path}{role_to_update.id}/'
         update_role_request(profile,
                             resource_path,
                             role_to_update.model_dump(by_alias=True, exclude_none=True))
-        logger.info(f"Updated role '{role_name}'")
+        logger.info(f'Updated role {role_name}')
     else:
-        logger.info("Update was cancelled")
+        logger.info('Update was cancelled')
 
 
 @click.command(name='add-user', help='Add users to a role.')
 @click.argument('role_name', metavar='ROLE_NAME')
-@click.option('-u', '--user', 'users',
-              help='Specify users to add to a role (can be used multiple times).',
-              multiple=True, default=None, required=True)
+@click.option('-u', '--user', 'users', multiple=True, default=None, required=True,
+              help='Specify users to add to a role (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def add(ctx: click.Context,
@@ -169,9 +153,8 @@ def add(ctx: click.Context,
 
 @click.command(name='remove-user', help='Remove users from a role.')
 @click.argument('role_name', metavar='ROLE_NAME')
-@click.option('-u', '--user', 'users',
-              help='Specify users to remove from a role (can be used multiple times).',
-              multiple=True, default=None, required=True)
+@click.option('-u', '--user', 'users', multiple=True, default=None, required=True,
+              help='Specify users to remove from a role (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def remove(ctx: click.Context,
@@ -187,7 +170,7 @@ def remove(ctx: click.Context,
     logger.info(f'Removed user(s) from {role_name} role')
 
 
-@click.group(help="Permission-related operations.")
+@click.group(help='Permission-related operations')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def permission(ctx: click.Context):
@@ -197,12 +180,9 @@ def permission(ctx: click.Context):
 
 
 @click.command(help='List permissions.', name='list')
-@click.option('--scope-type', '-t', 'scope_type',
-              type=click.Choice(AVAILABLE_SCOPE_TYPE),
-              help='Filter the permissions by a specific scope type.',
-              metavar='SCOPE_TYPE',
-              required=False,
-              default=None)
+@click.option('--scope-type', '-t', 'scope_type', type=click.Choice(AVAILABLE_SCOPE_TYPE), metavar='SCOPE_TYPE',
+              required=False, default=None,
+              help='Filter the permissions by a specific scope type.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context,
@@ -225,45 +205,14 @@ def _basic_list(profile, resource_path, scope_type=None):
                               timeout=timeout)
     if scope_type:
         for resource in resources:
-            if resource.get("scope_type") == scope_type:
+            if resource.get('scope_type') == scope_type:
                 for perm in resource.get("permissions"):
                     logger.info(f'{perm}')
     else:
         for resource in resources:
             logger.info(f'Scope type: {resource.get("scope_type")}')
-            for perm in resource.get("permissions"):
+            for perm in resource.get('permissions'):
                 logger.info(f'  {perm}')
-
-
-def _validate_role(profile, roles: tuple) -> list:
-    """
-    Checks if each name in the 'roles' list exists in the created Hydrolix roles.
-    """
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    list_url = f'{scheme}://{hostname}/config/v1/roles/'
-    auth_info: AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
-    resources = rest_ops.list(list_url,
-                              headers=headers,
-                              timeout=timeout)
-
-    roles = list(set(roles))
-    existing_roles = [item['name'] for item in resources]
-    valid_roles, invalid_roles = [], []
-    for role_name in roles:
-        if role_name not in existing_roles:
-            invalid_roles.append(role_name)
-        else:
-            valid_roles.append(role_name)
-
-    if invalid_roles:
-        raise InvalidRoleException(
-            f"Invalid role(s) {', '.join(invalid_roles)}.")
-
-    return valid_roles
 
 
 def _get_users_uuid(profile, users):
@@ -301,8 +250,8 @@ def _manage_users_from_role(profile, resource_path,
         raise ResourceNotFoundException('Cannot find some user.')
 
     # Creating body with each uuid
-    user_body_list = [{"uuid": user_uuid} for user_uuid in users_uuid]
-    body = {"users": user_body_list}
+    user_body_list = [{'uuid': user_uuid} for user_uuid in users_uuid]
+    body = {'users': user_body_list}
 
     hostname = profile.hostname
     scheme = profile.scheme

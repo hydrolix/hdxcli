@@ -4,7 +4,8 @@ import pickle
 import atexit
 import sys
 
-from ..common.exceptions import HdxCliException
+from .json_util import http_error_pretty_format
+from ..common.exceptions import HdxCliException, HttpException
 from ..common.logging import get_logger
 
 logger = get_logger()
@@ -17,7 +18,11 @@ def report_error_and_exit(exctype=Exception, exit_code=-1):
             try:
                 return func(*args, **kwargs)
             except exctype as exc:
-                logger.error(f'Error: {exc}')
+                logger.debug(f'{exc}')
+                if isinstance(exc, HttpException):
+                    logger.error(f'Error: {http_error_pretty_format(exc)}')
+                else:
+                    logger.error(f'Error: {exc}')
                 sys.exit(exit_code)
         return report_wrapper
     return report_deco

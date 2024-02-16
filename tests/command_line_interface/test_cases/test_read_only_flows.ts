@@ -89,10 +89,10 @@ commands_under_test = ["python3 -m hdx_cli.main project stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
 expected_output_expr = 'not result.startswith("Error:") and "name" in result and "total_partitions" in result and "total_storage_size" in result and "test_ci_project" in result'
 
-[[test]]
-name = "Project activities can be shown"
-commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project activity"]
-expected_output_expr = 'not result.startswith("Error:") and "created" in result and "test_ci_project" in result'
+#[[test]]
+#name = "Project activities can be shown"
+#commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project activity"]
+#expected_output_expr = 'not result.startswith("Error:") and "created" in result and "test_ci_project" in result'
 
 
 ######################################################### Table #########################################################

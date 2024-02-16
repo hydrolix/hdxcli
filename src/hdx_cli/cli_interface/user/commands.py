@@ -3,7 +3,7 @@ import re
 import json
 import click
 
-from ...library_api.common.exceptions import LogicException
+from ...library_api.common.exceptions import LogicException, HttpException
 from ...library_api.userdata.token import AuthInfo
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import (report_error_and_exit,
@@ -15,9 +15,9 @@ from ..common.undecorated_click_commands import basic_delete, basic_show, basic_
 logger = get_logger()
 
 
-@click.group(help="User-related operations")
-@click.option('--user', 'user_email', help='Perform operation on the passed user.',
-              metavar='USER_EMAIL', default=None)
+@click.group(help='User-related operations')
+@click.option('--user', 'user_email', metavar='USER_EMAIL', default=None,
+              help='Perform operation on the passed user.')
 @click.pass_context
 def user(ctx: click.Context,
          user_email):
@@ -37,59 +37,25 @@ def list_(ctx: click.Context):
     _basic_list(profile, resource_path)
 
 
-@click.command(help='Show user. If not resource_name is provided, it will show the default '
-                    'if there is one.')
-@click.option('-i', '--indent', type=int,
+@click.command(help='Show user. If not resource_name is provided, it will show the default if there is one.')
+@click.option('-i', '--indent', is_flag=True, default=False,
               help='Number of spaces for indentation in the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def show(ctx: click.Context, indent: int):
+def show(ctx: click.Context, indent: bool):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     if not (resource_name := getattr(profile, 'useremail')):
         raise LogicException('No default user found in profile.')
 
     logger.info(basic_show(profile, resource_path, resource_name,
-                     indent=indent, filter_field='email'))
-
-
-def _validate_role(ctx, param, roles):
-    """
-    Checks if each name in the 'roles' list exists in the created Hydrolix roles.
-    """
-    profile = ctx.parent.obj.get('usercontext')
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    list_url = f'{scheme}://{hostname}/config/v1/roles/'
-    auth_info: AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
-    resources = rest_ops.list(list_url,
-                              headers=headers,
-                              timeout=timeout)
-
-    roles = list(set(roles))
-    existing_roles = [item['name'] for item in resources]
-    valid_roles, invalid_roles = [], []
-    for role_name in roles:
-        if role_name not in existing_roles:
-            invalid_roles.append(role_name)
-        else:
-            valid_roles.append(role_name)
-
-    if invalid_roles:
-        raise click.BadParameter(
-            f"Invalid role(s): {', '.join(invalid_roles)}.")
-    return valid_roles
+                           indent=indent, filter_field='email'))
 
 
 @click.command(help='Send invitation to a new user.')
 @click.argument('email', metavar='USER_EMAIL')
-@click.option('-r', '--role', 'roles',
-              help='Specify the role for the new user (can be used multiple times).',
-              multiple=True, default=None, required=True,
-              callback=_validate_role)
+@click.option('-r', '--role', 'roles', multiple=True, default=None, required=True,
+              help='Specify the role for the new user (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def invite(ctx: click.Context,
@@ -115,9 +81,8 @@ _confirmation_prompt = partial(dynamic_confirmation_prompt,
 
 
 @click.command(help='Delete user.')
-@click.option('--disable-confirmation-prompt',
-              is_flag=True,
-              help='Suppress confirmation to delete resource.', show_default=True, default=False)
+@click.option('--disable-confirmation-prompt', is_flag=True, show_default=True, default=False,
+              help='Suppress confirmation to delete resource.')
 @click.argument('email', metavar='USER_EMAIL')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -134,10 +99,8 @@ def delete(ctx: click.Context, email: str,
 
 @click.command(name='assign-role', help='Assign roles to a user.')
 @click.argument('email', metavar='USER_EMAIL')
-@click.option('-r', '--role', 'roles',
-              help='Specify roles to assign to a user (can be used multiple times).',
-              multiple=True, default=None, required=True,
-              callback=_validate_role)
+@click.option('-r', '--role', 'roles', multiple=True, default=None, required=True,
+              help='Specify roles to assign to a user (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def assign(ctx: click.Context,
@@ -151,7 +114,7 @@ def assign(ctx: click.Context,
     if not user_uuid:
         raise LogicException(f'There was an error with the user {email}.')
 
-    resource_path = f"{resource_path}{user_uuid}/add_roles/"
+    resource_path = f'{resource_path}{user_uuid}/add_roles/'
     body = {
         'roles': roles
     }
@@ -161,9 +124,8 @@ def assign(ctx: click.Context,
 
 @click.command(name='remove-role', help='Remove roles from a user.')
 @click.argument('email', metavar='USER_EMAIL')
-@click.option('-r', '--role', 'roles',
-              help='Specify roles to remove from a user (can be used multiple times).',
-              multiple=True, default=None, required=True)
+@click.option('-r', '--role', 'roles', multiple=True, default=None, required=True,
+              help='Specify roles to remove from a user (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def remove(ctx: click.Context,
@@ -185,7 +147,7 @@ def remove(ctx: click.Context,
         raise LogicException(f'User {email} lacks {list(set_roles_to_remove - set_user_roles)} '
                              f'role(s) for removal.')
 
-    resource_path = f"{resource_path}{user_uuid}/remove_roles/"
+    resource_path = f'{resource_path}{user_uuid}/remove_roles/'
     body = {
         'roles': list(roles)
     }
@@ -206,8 +168,7 @@ def _basic_list(profile, resource_path):
                               timeout=timeout)
     for resource in resources:
         roles_name = resource.get("roles")
-        logger.info(f'Email: {resource["email"]}', end=' | ')
-        logger.info(f'Roles: {(", ".join(roles_name))}')
+        logger.info(f'Email: {resource["email"]} | Roles: {(", ".join(roles_name))}')
 
 
 user.add_command(list_)
