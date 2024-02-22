@@ -5,6 +5,9 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
 from ..common.cached_operations import find_transforms
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
+
+logger = get_logger()
 
 
 def _get_content_type(obj_type):
@@ -83,7 +86,7 @@ def ingest(ctx: click.Context,
                     body_type=bytes,
                     headers=headers,
                     timeout=timeout)
-    print('Created stream ingest')
+    logger.info('Created stream ingest')
 
 
 stream.add_command(ingest)

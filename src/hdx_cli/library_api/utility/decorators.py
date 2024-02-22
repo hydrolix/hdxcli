@@ -4,7 +4,11 @@ import pickle
 import atexit
 import sys
 
-from ..common.exceptions import HdxCliException
+from .json_util import http_error_pretty_format
+from ..common.exceptions import HdxCliException, HttpException
+from ..common.logging import get_logger
+
+logger = get_logger()
 
 
 def report_error_and_exit(exctype=Exception, exit_code=-1):
@@ -14,7 +18,11 @@ def report_error_and_exit(exctype=Exception, exit_code=-1):
             try:
                 return func(*args, **kwargs)
             except exctype as exc:
-                print(f'Error: {exc}')
+                logger.debug(f'{exc}')
+                if isinstance(exc, HttpException):
+                    logger.error(f'Error: {http_error_pretty_format(exc)}')
+                else:
+                    logger.error(f'Error: {exc}')
                 sys.exit(exit_code)
         return report_wrapper
     return report_deco
@@ -25,7 +33,8 @@ def dynamic_confirmation_prompt(prompt, confirmation_message, fail_message,
                                 prompt_active=False):
     if not prompt_active:
         return
-    the_input = input(prompt)
+    logger.info(f'{prompt}[!n]')
+    the_input = input('')
     if the_input != confirmation_message:
         raise HdxCliException(fail_message)
 
@@ -43,6 +52,7 @@ def confirmation_prompt(prompt, confirmation_message,
 
 
 _CACHE_DICT = None
+
 
 def _save_cache(cache_file_path):
     global _CACHE_DICT

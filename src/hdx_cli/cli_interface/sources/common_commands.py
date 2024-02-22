@@ -3,8 +3,11 @@ import click
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.exceptions import HdxCliException, LogicException
+from ...library_api.common.logging import get_logger
 
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
+
+logger = get_logger()
 
 
 def any_source_impl(ctx: click.Context, source_name):
@@ -57,4 +60,4 @@ def create(ctx: click.Context,
     with open(source_filename, "r", encoding="utf-8") as file:
         basic_create_with_body_from_string(user_profile, resource_path,
                                            source_name, file.read())
-    print(f'Created source {source_name}')
+    logger.info(f'Created source {source_name}')

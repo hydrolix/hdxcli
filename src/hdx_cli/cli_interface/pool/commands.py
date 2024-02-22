@@ -2,12 +2,15 @@ import click
 import json
 
 from ...library_api.utility.decorators import report_error_and_exit
+from ...library_api.common.logging import get_logger
 from ...library_api.common.context import ProfileUserContext
 from ..common.rest_operations import delete as command_delete
 from ..common.undecorated_click_commands import basic_settings
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
 from ..common.rest_operations import (list_ as command_list,
                                       show as command_show)
+
+logger = get_logger()
 
 
 @click.group(help="Pool-related operations")
@@ -75,7 +78,7 @@ def create(ctx: click.Context,
 
     body = build_request_body(replicas, cpu, memory, storage, pool_service)
     basic_create_with_body_from_string(user_profile, resource_path, pool_name, json.dumps(body))
-    print(f'Created pool {pool_name}')
+    logger.info(f'Created pool {pool_name}')
 
 
 @click.command(help="Get, set or list settings on a resource. When invoked with "

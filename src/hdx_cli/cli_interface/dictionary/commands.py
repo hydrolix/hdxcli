@@ -4,14 +4,13 @@ import click
 
 from ..common.migration import migrate_a_dictionary
 from ...library_api.common.generic_resource import access_resource
-
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import (ResourceNotFoundException,
                                               MissingSettingsException,
                                               InvalidFormatFileException)
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileUserContext
-
+from ...library_api.common.logging import get_logger
 from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
                                       show as command_show)
@@ -19,6 +18,8 @@ from ..common.rest_operations import (delete as command_delete,
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import (basic_create,
                                                  basic_create_with_body_from_string)
+
+logger = get_logger()
 
 
 @click.group(help="Dictionary-related operations")
@@ -89,7 +90,7 @@ def create_dict(ctx: click.Context,
                                        resource_path,
                                        dictionary_name,
                                        json.dumps(dictionary_body))
-    print(f'Created {dictionary_name}')
+    logger.info(f'Created {dictionary_name}')
 
 
 @click.command(help='Upload a dictionary file.')
@@ -112,8 +113,8 @@ def upload_file_dict(ctx: click.Context,
                  dictionary_filename,
                  dictionary_file_to_upload,
                  body_from_file_type)
-    print(f'Uploaded dictionary file from {dictionary_file_to_upload} '
-          f'with name {dictionary_filename}.')
+    logger.info(f'Uploaded dictionary file from {dictionary_file_to_upload} '
+                f'with name {dictionary_filename}.')
 
 
 @click.command(help='Delete dictionary file.')
@@ -131,7 +132,7 @@ def dict_file_delete(ctx: click.Context, dictionary_filename):
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
     rest_ops.delete(resource_url, headers=headers, timeout=timeout)
-    print(f'Deleted {dictionary_filename}')
+    logger.info(f'Deleted {dictionary_filename}')
 
 
 @click.command(help='Migrate a dictionary.', name='migrate')
@@ -165,7 +166,7 @@ def migrate_dictionary(ctx: click.Context,
                          target_cluster_password,
                          target_cluster_uri_scheme,
                          target_project_name)
-    print(f'Migrated dictionary {dictionary_name}')
+    logger.info(f'Migrated dictionary {dictionary_name}')
 
 
 dictionary.add_command(create_dict, name='create')

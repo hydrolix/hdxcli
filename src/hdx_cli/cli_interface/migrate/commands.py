@@ -14,11 +14,15 @@ from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.validation import is_valid_hostname, is_valid_username
 from ...library_api.common.generic_resource import access_resource_detailed
 from ...library_api.common.exceptions import LogicException, HttpException
+from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import report_error_and_exit
 from ..common.undecorated_click_commands import (basic_show,
                                                  basic_create_with_body_from_string)
 
-from .rollback import MigrateStatus, MigrationRollbackManager, DoNothingMigrationRollbackManager, MigrationEntry, ResourceKind
+from .rollback import (MigrateStatus, MigrationRollbackManager,
+                       DoNothingMigrationRollbackManager, MigrationEntry, ResourceKind)
+
+logger = get_logger()
 
 
 def _setup_target_cluster_config(profile_config_file,
@@ -261,7 +265,7 @@ def create_transforms_for_table(project_name,
                                                transform['name'],
                                                json.dumps(transform_show))
         except HttpException as exc:
-            print(exc)
+            logger.error(f'{exc}')
             if exc.error_code == 400:
                 yield transform, MigrateStatus.SKIPPED
             else:
@@ -312,15 +316,15 @@ def migrate(ctx: click.Context,
                                                     target_cluster_password,
                                                     target_cluster_uri_scheme)
 
-    print(f"Cluster to migrate to is '{target_cluster_hostname}'")
-    print(f"User for cluster to migrate data is '{target_cluster_username}'")
-    print('Starting database migration. This operation can take a while...')
+    logger.info(f"Cluster to migrate to is '{target_cluster_hostname}'")
+    logger.info(f"User for cluster to migrate data is '{target_cluster_username}'")
+    logger.info('Starting database migration. This operation can take a while...')
 
     if project_whitelist:
-        print(f'The projects white list is {project_whitelist}')
+        logger.info(f'The projects white list is {project_whitelist}')
     if project_blacklist:
-        print(f'The projects black list is {project_blacklist}')
-    print()
+        logger.info(f'The projects black list is {project_blacklist}')
+    logger.info('')
     if project_blacklist:
         project_blacklist = list(project_blacklist)
         project_blacklist.append('hdx')
@@ -345,56 +349,56 @@ def migrate(ctx: click.Context,
                                                 target_user_profile,
                                                 project_whitelist,
                                                 project_blacklist):
-            print(f'Project {project["name"]}: ', end='')
+            logger.info(f'Project {project["name"]}: [!n]')
             if status == MigrateStatus.CREATED:
-                print('created')
+                logger.info('created')
                 m_entry = MigrationEntry(project['name'], 
                                          ResourceKind.PROJECT)
                 migration_rollback_manager.push_entry(m_entry)
             elif status == MigrateStatus.SKIPPED:
-                print('skipped creation (was found)')
+                logger.info('skipped creation (was found)')
 
             for func, func_status in create_functions_for_project(project['name'],
                                                                   ctx.parent.obj['usercontext'],
                                                                   target_user_profile):
-                print(f'\tFunction {func["name"]}: ', end='')
+                logger.info(f'\tFunction {func["name"]}: [!n]')
                 if func_status == MigrateStatus.CREATED:
-                    print('created')
+                    logger.info('created')
                     m_entry = MigrationEntry(func['name'], 
                                              ResourceKind.FUNCTION,
                                              [project['name']])
                     migration_rollback_manager.push_entry(m_entry)
                 elif func_status == MigrateStatus.SKIPPED:
-                    print('skipped creation (was found)')
+                    logger.info('skipped creation (was found)')
             for dictionary, dict_status in create_dictionaries_for_project(project['name'],
                                                              ctx.parent.obj['usercontext'],
                                                              target_user_profile):
-                print(f'\tDictionary {dictionary["name"]}: ', end='')
+                logger.info(f'\tDictionary {dictionary["name"]}: [!n]')
                 if dict_status == MigrateStatus.CREATED:
-                    print('created')
+                    logger.info('created')
                     m_entry = MigrationEntry(dictionary['name'],
                                              ResourceKind.DICTIONARY,
                                              [project['name']])
                     migration_rollback_manager.push_entry(m_entry)
                 elif dict_status == MigrateStatus.SKIPPED:
-                    print('skipped creation (was found)')
+                    logger.info('skipped creation (was found)')
 
             for table, tbl_status in create_tables_for_project(project['name'],
                                                             ctx.parent.obj['usercontext'],
                                                             target_user_profile):
-                print(f'\tTable {table["name"]}: ', end='')
+                logger.info(f'\tTable {table["name"]}: [!n]')
                 if tbl_status == MigrateStatus.CREATED:
-                    print('created')
+                    logger.info('created')
                     m_entry = MigrationEntry(table['name'], 
                                              ResourceKind.TABLE,
                                              [project['name']])
                     migration_rollback_manager.push_entry(m_entry)
                 elif tbl_status == MigrateStatus.SKIPPED:
-                    print('skipped creation (was found)')
+                    logger.info('skipped creation (was found)')
                 elif tbl_status == MigrateStatus.POSTPONED:
                     # The creation of the summary tables is postponed
                     # until the end of the migration process.
-                    print('postponed creation (summary table)')
+                    logger.info('postponed creation (summary table)')
                     postponed_tables.append((table, project['name']))
                     # If the table migrated is a summary, transforms and sources will be created automatically.
                     # Therefore, there is no need to migrate them.
@@ -404,31 +408,32 @@ def migrate(ctx: click.Context,
                                                                             table['name'],
                                                                             ctx.parent.obj['usercontext'],
                                                                             target_user_profile):
-                    print(f'\t\tTransform {transform["name"]}: ', end='')
+                    logger.info(f'\t\tTransform {transform["name"]}: [!n]')
                     if transform_status == MigrateStatus.CREATED:
-                        print('created')
+                        logger.info('created')
                         m_entry = MigrationEntry(transform['name'], 
                                                  ResourceKind.TRANSFORM,
                                                  [project['name'], table['name']])
                         migration_rollback_manager.push_entry(m_entry)
                     elif transform_status == MigrateStatus.SKIPPED:
-                        print('skipped creation (was found)')
-                print()
+                        logger.info('skipped creation (was found)')
+                logger.info('')
 
         # Postponed tables
         # Here interation a list of postponed tables to be created.
-        print('Postponed tables creation...')
-        for table, project_name in postponed_tables:
-            tbl_status = create_postponed_tables(project_name,
-                                                 ctx.parent.obj['usercontext'],
-                                                 target_user_profile,
-                                                 table)
-            print(f'\tProject {project_name}. Table {table["name"]}: ', end='')
-            if tbl_status == MigrateStatus.CREATED:
-                print('created')
-                m_entry = MigrationEntry(table['name'],
-                                         ResourceKind.TABLE,
-                                         [project_name])
-                migration_rollback_manager.push_entry(m_entry)
-            elif tbl_status == MigrateStatus.SKIPPED:
-                print('skipped creation (was found)')
+        if postponed_tables:
+            logger.info('Postponed tables creation...')
+            for table, project_name in postponed_tables:
+                tbl_status = create_postponed_tables(project_name,
+                                                     ctx.parent.obj['usercontext'],
+                                                     target_user_profile,
+                                                     table)
+                logger.info(f'\tProject {project_name}. Table {table["name"]}: [!n]')
+                if tbl_status == MigrateStatus.CREATED:
+                    logger.info('created')
+                    m_entry = MigrationEntry(table['name'],
+                                             ResourceKind.TABLE,
+                                             [project_name])
+                    migration_rollback_manager.push_entry(m_entry)
+                elif tbl_status == MigrateStatus.SKIPPED:
+                    logger.info('skipped creation (was found)')

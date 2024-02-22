@@ -8,12 +8,14 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import LogicException
-
+from ...library_api.common.logging import get_logger
 from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
                                       show as command_show)
 
 from ..common.misc_operations import settings as command_settings
+
+logger = get_logger()
 
 
 @click.group(help="Function-related operations")
@@ -97,7 +99,7 @@ def create(ctx: click.Context,
         body['name'] = f'{function_name}'
         body['sql'] = inline_sql
     rest_ops.create(url, body=body, headers=headers, timeout=timeout)
-    print(f'Created function {function_name}')
+    logger.info(f'Created function {function_name}')
 
 
 @click.command(help='Migrate a function.')
@@ -131,7 +133,7 @@ def migrate(ctx: click.Context,
                        target_cluster_password,
                        target_cluster_uri_scheme,
                        target_project_name)
-    print(f'Migrated function {function_name}')
+    logger.info(f'Migrated function {function_name}')
 
 
 function.add_command(create)

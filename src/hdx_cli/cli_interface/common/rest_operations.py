@@ -2,7 +2,8 @@ from functools import partial
 from typing import Tuple
 import click
 
-from hdx_cli.library_api.common.exceptions import LogicException
+from ...library_api.common.exceptions import LogicException
+from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from .undecorated_click_commands import (basic_create,
@@ -11,6 +12,8 @@ from .undecorated_click_commands import (basic_create,
                                          basic_show,
                                          basic_activity,
                                          basic_stats)
+
+logger = get_logger()
 
 
 @click.command(help='Create resource.')
@@ -39,7 +42,7 @@ def create(ctx: click.Context,
     resource_path = ctx.parent.obj.get('resource_path')
     basic_create(user_profile, resource_path,
                  resource_name, body_from_file, body_from_file_type)
-    print(f'Created {resource_name}.')
+    logger.info(f'Created {resource_name}')
 
 
 _confirmation_prompt = partial(dynamic_confirmation_prompt,
@@ -61,9 +64,9 @@ def delete(ctx: click.Context, resource_name: str,
     resource_path = ctx.parent.obj.get('resource_path')
     profile = ctx.parent.obj.get('usercontext')
     if basic_delete(profile, resource_path, resource_name):
-        print(f'Deleted {resource_name}')
+        logger.info(f'Deleted {resource_name}')
     else:
-        print(f'Could not delete {resource_name}. Not found.')
+        logger.info(f'Could not delete {resource_name}. Not found')
 
 
 @click.command(help='List resources.', name='list')
@@ -96,7 +99,7 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 
 @click.command(help='Show resource. If not resource_name is provided, it will show the default '
                     'if there is one.')
-@click.option("-i", "--indent", is_flag=True, default=False,
+@click.option('-i', '--indent', is_flag=True, default=False,
               help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -106,14 +109,13 @@ def show(ctx: click.Context, indent: bool):
     _, resource_kind = _heuristically_get_resource_kind(resource_path)
     if not (resource_name := getattr(profile, resource_kind + 'name')):
         raise LogicException(f'No default {resource_kind} found in profile')
-    print(basic_show(profile, resource_path,
-                     resource_name,
-                     indent))
+    logger.info(basic_show(profile, resource_path,
+                           resource_name, indent))
 
 
 @click.command(help='Display the activity of a resource. If not resource_name is provided, '
                     'it will show the default if there is one.')
-@click.option("-i", "--indent", is_flag=True, default=False,
+@click.option('-i', '--indent', is_flag=True, default=False,
               help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -123,12 +125,12 @@ def activity(ctx: click.Context, indent: bool):
     _, resource_kind = _heuristically_get_resource_kind(resource_path)
     if not (resource_name := getattr(profile, resource_kind + 'name')):
         raise LogicException(f'No default {resource_kind} found in profile')
-    print(basic_activity(profile, resource_path, resource_name, indent))
+    logger.info(basic_activity(profile, resource_path, resource_name, indent))
 
 
 @click.command(help='Display statistics for a resource. If not resource_name is provided, '
                     'it will show the default if there is one.')
-@click.option("-i", "--indent", is_flag=True, default=False,
+@click.option('-i', '--indent', is_flag=True, default=False,
               help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -138,4 +140,4 @@ def stats(ctx: click.Context, indent: bool):
     _, resource_kind = _heuristically_get_resource_kind(resource_path)
     if not (resource_name := getattr(profile, resource_kind + 'name')):
         raise LogicException(f'No default {resource_kind} found in profile')
-    print(basic_stats(profile, resource_path, resource_name, indent))
+    logger.info(basic_stats(profile, resource_path, resource_name, indent))

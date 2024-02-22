@@ -8,6 +8,7 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.exceptions import HdxCliException, LogicException
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
 from ...library_api.userdata.token import AuthInfo
 
 from ..common.rest_operations import (delete as command_delete,
@@ -19,6 +20,8 @@ from ..common.rest_operations import (delete as command_delete,
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import (basic_create,
                                                  basic_create_with_body_from_string)
+
+logger = get_logger()
 
 
 @click.group(help="Table-related operations")
@@ -120,7 +123,7 @@ def create(ctx: click.Context,
     else:
         basic_create(user_profile, resource_path,
                      table_name, None, None)
-    print(f'Created table {table_name}')
+    logger.info(f'Created table {table_name}')
 
 
 def _basic_summary_create(user_profile,
@@ -190,9 +193,9 @@ def command_truncate(ctx: click.Context,
     user_profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     if not _basic_truncate(user_profile, resource_path, table_name):
-        print(f'Error truncating table {table_name}')
+        logger.info(f'Could not truncate table {table_name}')
         return
-    print(f'Truncated table {table_name}')
+    logger.info(f'Truncated table {table_name}')
 
 
 @click.command(help='Migrate a table.')
@@ -226,7 +229,7 @@ def migrate(ctx: click.Context,
                     target_cluster_password,
                     target_cluster_uri_scheme,
                     target_project_name)
-    print(f'Migrated table {table_name}')
+    logger.info(f'Migrated table {table_name}')
 
 
 table.add_command(create)

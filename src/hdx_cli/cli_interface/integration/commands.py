@@ -3,11 +3,13 @@ import click
 
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import report_error_and_exit
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
 
-
 from ..common.undecorated_click_commands import basic_transform
+
+logger = get_logger()
 
 _REPO_USER = 'hydrolix/transforms'
 
@@ -63,7 +65,7 @@ def list_(ctx: click.Context):
         name = obj['name']
         description = obj['description']
         vendor = obj['vendor']
-        print(f'{name: <20} {description: <70} from {vendor: <40}')
+        logger.info(f'{name: <20} {description: <70} from {vendor: <40}')
 
 
 transform.add_command(list_, name='list')
@@ -102,7 +104,7 @@ def apply(ctx: click.Context,
                                        resource_path,
                                        transform_name,
                                        transform_contents)
-    print(f'Created transform {transform_name} from {integration_transform_name}.')
+    logger.info(f'Created transform {transform_name} from {integration_transform_name}')
 
 
 @click.command(help="Integration transforms.")
@@ -113,7 +115,7 @@ def show(ctx: click.Context, transform_name):
     #results = _github_list(ctx)
     #base_resource_url = 'https://raw.githubusercontent.com/hydrolix/transforms/dev'
     # 'Fastly/fastly_transform.json'
-    print(_basic_show(ctx, transform_name))
+    logger.info(_basic_show(ctx, transform_name))
 
 
 transform.add_command(apply, 'apply')

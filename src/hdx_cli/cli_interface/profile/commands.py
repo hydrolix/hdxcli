@@ -4,6 +4,9 @@ import toml
 from ...library_api.utility.decorators import report_error_and_exit
 from ...library_api.common.config_constants import PROFILE_CONFIG_FILE
 from ...library_api.common.profile import save_profile, get_profile_data_from_standard_input
+from ...library_api.common.logging import get_logger
+
+logger = get_logger()
 
 
 @click.group(help="Profile-related operations")
@@ -19,15 +22,15 @@ def profile(ctx: click.Context):
 def profile_show(ctx: click.Context,
                  profile_name):
     profilename = ctx.parent.obj['usercontext'].profilename if not profile_name else profile_name
-    print(f'Showing [{profilename}]')
-    print('-' * 100)
+    logger.info(f'Showing [{profilename}]')
+    logger.info('-' * 100)
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
         cfg_dict = toml.load(config_file)
         for prof_name, prof_val in cfg_dict.items():
             if prof_name == profilename:
-                print(f"Profile: {prof_name}")
+                logger.info(f"Profile: {prof_name}")
                 for cfg_key, cfg_val in prof_val.items():
-                    print(f"{cfg_key}: {cfg_val}")
+                    logger.info(f"{cfg_key}: {cfg_val}")
 
 
 @click.command(help='List profiles')
@@ -37,7 +40,7 @@ def profile_list(ctx: click.Context):
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
         cfg_dict = toml.load(config_file)
         for cfg_name in cfg_dict:
-            print(cfg_name)
+            logger.info(cfg_name)
 
 
 @click.command(help='Edit profile')
@@ -49,8 +52,8 @@ def profile_edit(ctx: click.Context,
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
         cfg_dict = toml.load(config_file)
     profile_to_edit = cfg_dict[profile_name]
-    print(f'Editing [{profile_name}]')
-    print(f'-' * 100)
+    logger.info(f'Editing [{profile_name}]')
+    logger.info(f'-' * 100)
     username, hostname, scheme = (profile_to_edit['username'],
                                   profile_to_edit['hostname'],
                                   profile_to_edit['scheme'])
@@ -75,7 +78,7 @@ def profile_add(ctx: click.Context,
     with open(PROFILE_CONFIG_FILE, 'r', encoding='utf-8') as config_file:
         cfg_dict = toml.load(config_file)
     if cfg_dict.get(profile_name):
-        print(f"Error: profile '{profile_name}' already exists")
+        logger.info(f"Profile '{profile_name}' already exists.")
         return
 
     edit_profile_data = get_profile_data_from_standard_input()

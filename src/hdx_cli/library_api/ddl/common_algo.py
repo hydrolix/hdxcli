@@ -10,6 +10,9 @@ from .common_intermediate_representation import (NoDdlMappingFoundError,
                                                  DdlCreateTableInfo,
                                                  DdlTypeToHdxTypeMappingFunc)
 from .interfaces import ComposedTypeParser, SourceToTableInfoProcessor, PostProcessingHook
+from ..common.logging import get_logger
+
+logger = get_logger()
 
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
@@ -72,8 +75,8 @@ def _select_csv_indexes(ddl: DdlCreateTableInfo):
     while not done:
         try:
             for i, a_field in enumerate(fields_available):
-                print(f'{i + 1}. {a_field}')
-            print()
+                logger.info(f'{i + 1}. {a_field}')
+            logger.info('')
             valid_choices = {str(x) for x in range(1, len(fields_available))}
             field_index = int(choose_interactively(
                 'Please choose the field to assign an index for (Type Ctrl-C to finish): ',
@@ -88,15 +91,16 @@ def _select_csv_indexes(ddl: DdlCreateTableInfo):
             indexes_used.add(ingest_index)
         except KeyboardInterrupt:
             done = True
-            print()
+            logger.info('')
         except IndexError:
             pass
         except ValueError:
             pass
         except IngestIndexError as ingest_err:
-            print(f'Error: {ingest_err}')
-            input('Press Enter to continue')
-            print()
+            logger.error(f'Error: {ingest_err}')
+            logger.info('Press Enter to continue')
+            input('')
+            logger.info('')
     return field_indexes
 
 
@@ -112,7 +116,7 @@ def _choose_primary_key(cti: DdlCreateTableInfo):
         if p_key:
             not_done = False
         else:
-            print()
+            logger.info('')
     return p_key
 
 

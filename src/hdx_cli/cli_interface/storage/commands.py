@@ -6,10 +6,13 @@ from ..common.migration import migrate_a_storage
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
 from ..common.undecorated_click_commands import basic_delete, basic_settings
 from ..common.rest_operations import (list_ as command_list,
                                       show as command_show)
+
+logger = get_logger()
 
 
 @click.group(help="Storage-related operations")
@@ -39,7 +42,7 @@ def create(ctx: click.Context,
     with open(storage_filename, "r", encoding="utf-8") as file:
         basic_create_with_body_from_string(user_profile, resource_path,
                                            storage_name, file.read())
-    print(f'Created storage {storage_name}')
+    logger.info(f'Created storage {storage_name}')
 
 
 _confirmation_prompt = partial(dynamic_confirmation_prompt,
@@ -62,9 +65,9 @@ def delete(ctx: click.Context, resource_name: str,
     user_profile = ctx.parent.obj.get('usercontext')
     params = {"force_operation": True}
     if basic_delete(user_profile, resource_path, resource_name, params=params):
-        print(f'Deleted {resource_name}')
+        logger.info(f'Deleted {resource_name}')
     else:
-        print(f'Could not delete {resource_name}. Not found.')
+        logger.info(f'Could not delete {resource_name}. Not found')
 
 
 @click.command(help="Get, set or list settings on a resource. When invoked with "
@@ -118,7 +121,7 @@ def migrate(ctx: click.Context,
                       target_cluster_username,
                       target_cluster_password,
                       target_cluster_uri_scheme)
-    print(f'Migrated storage {storage_name}')
+    logger.info(f'Migrated storage {storage_name}')
 
 
 storage.add_command(command_list)

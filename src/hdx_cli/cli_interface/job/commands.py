@@ -3,10 +3,10 @@ import json
 
 import click
 
-
 from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
 from ..common.rest_operations import (delete as command_delete,
                                       list_ as command_list,
                                       show as command_show)
@@ -14,6 +14,8 @@ from ...library_api.utility.decorators import (report_error_and_exit,
                                                confirmation_prompt)
 from ..common.misc_operations import settings as command_settings
 from ..common.cached_operations import find_transforms
+
+logger = get_logger()
 
 
 @click.group(help="Job-related operations")
@@ -45,7 +47,7 @@ def purgejobs(ctx: click.Context):
     headers = {'Authorization': f'{auth.token_type} {auth.token}',
                'Accept': 'application/json'}
     rest_ops.create(purgejobs_url, headers=headers, timeout=timeout)
-    print('All jobs purged')
+    logger.info('All jobs purged')
 
 
 @click.group(help="Job-related operations")
@@ -140,7 +142,7 @@ def ingest(ctx: click.Context,
                                      'no --transform passed') from exc
         body['settings']['source']['transform'] = transformname
         rest_ops.create(url, body=body, headers=headers, timeout=timeout)
-    print(f'Started job {jobname}')
+    logger.info(f'Started job {jobname}')
 
 
 @click.command(help='Cancels a job.')
@@ -167,11 +169,11 @@ def cancel(ctx: click.Context,
             job_id = a_resource['uuid']
             break
     if not job_id:
-        print(f'Could not cancel {ctx.parent.command.name} {job_name}. Not found.')
+        logger.info(f'Could not cancel {ctx.parent.command.name} {job_name}. Not found')
     else:
         cancel_job_url = f'{list_url}{job_id}/cancel'
         rest_ops.create(cancel_job_url, headers=headers, timeout=timeout)
-        print(f'Cancelled {job_name}')
+        logger.info(f'Cancelled {job_name}')
 
 
 @click.command(help='Retries a job.')
@@ -196,11 +198,11 @@ def retry(ctx,
             job_id = a_resource['uuid']
             break
     if not job_id:
-        print(f'Could not retry {ctx.parent.command.name} {job_name}. Not found.')
+        logger.info(f'Could not retry {ctx.parent.command.name} {job_name}. Not found')
     else:
         retry_job_url = f'{list_url}{job_id}/retry'
         rest_ops.create(retry_job_url, headers=headers, timeout=timeout)
-        print(f'Retrying {job_name}')
+        logger.info(f'Retrying {job_name}')
 
 
 command_ingest = ingest

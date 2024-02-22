@@ -7,6 +7,9 @@ import requests as req
 
 from ..userdata.token import AuthInfo
 from .exceptions import LoginException, HdxCliException, LogicException
+from .logging import get_logger
+
+logger = get_logger()
 
 
 def _do_login(username, hostname,
@@ -22,7 +25,7 @@ def _do_login(username, hostname,
                           headers={'Accept': 'application/json'},
                           timeout=15)
     except req.ConnectionError as exc:
-        print(exc)
+        logger.error(f'{exc}')
         raise LogicException(f"Connection error: could not stablish connection with host {hostname} (using {scheme}).") from exc
     except req.ConnectTimeout as exc:
         raise HdxCliException("Timeout exception.")
@@ -57,7 +60,7 @@ def _retry(num_retries, func,
         try:
             return func(*args, **kwargs)
         except HdxCliException as exc:
-            print(f'{exc}')
+            logger.error(f'{exc}')
             if tried == num_retries - 1:
                 raise
     assert False, "Unreachable code"
