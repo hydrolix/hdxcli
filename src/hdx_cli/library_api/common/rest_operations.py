@@ -69,9 +69,11 @@ def update_with_put(url, *,
 def list(url, *,
          headers,
          fmt='json',
-         timeout):
+         timeout,
+         params=None):
     result = requests.get(url,
                           headers=headers,
+                          params=params,
                           timeout=timeout)
     if result.status_code != 200:
         raise HttpException(result.status_code, result.content)
