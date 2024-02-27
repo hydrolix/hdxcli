@@ -183,6 +183,8 @@ def _get_dotted_key_from_dict(dotted_key, the_dict):
     val = the_dict[key_path[0]]
     if len(key_path) > 1:
         for key_piece in key_path[1:]:
+            if val is None:
+                return KeyAbsent()
             val = val[key_piece]
     return val
 
@@ -327,16 +329,13 @@ def _settings_update(resource: Dict[str, Any],
                      value: Any):
     "Update resource and return it with updated_data"
     key_parts = key.split('.')
-    if len(key_parts) == 1:
-        resource[key_parts[0]] = json.loads(value)
-        return resource
     the_value = None
     try:
         the_value = json.loads(value)
     except json.JSONDecodeError:
         the_value = value
-    resource_key = resource[key_parts[0]]
-    for k in key_parts[1:-1]:
+    resource_key = resource
+    for k in key_parts[0:-1]:
         resource_key = resource_key[k]
 
     resource_key[key_parts[-1]] = the_value
