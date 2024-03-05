@@ -435,25 +435,17 @@ def basic_delete(profile,
     return True
 
 
-def basic_list(profile, resource_path):
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    list_url = f'{scheme}://{hostname}{resource_path}'
-    auth_info: AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
-    resources = rest_ops.list(list_url,
-                              headers=headers,
-                              timeout=timeout)
+def basic_list(profile, resource_path, filter_field: Optional[str] = 'name'):
+    resources = get_resource_list(profile, resource_path)
+
     for resource in resources:
         if isinstance(resource, str):
             logger.info(resource)
         else:
             if (settings := resource.get('settings')) and settings.get('is_default'):
-                logger.info(f"{resource['name']} (default)")
+                logger.info(f"{resource[filter_field]} (default)")
             else:
-                logger.info(f"{resource['name']}")
+                logger.info(f"{resource[filter_field]}")
 
 
 def _get_resource_information(profile,
@@ -502,3 +494,18 @@ def basic_activity(profile, resource_path, resource_name, indent):
                                      resource_name,
                                      'activity',
                                      indent)
+
+
+def get_resource_list(profile, resource_path, **kwargs):
+    hostname = profile.hostname
+    scheme = profile.scheme
+    timeout = profile.timeout
+    list_url = f'{scheme}://{hostname}{resource_path}'
+    auth_info: AuthInfo = profile.auth
+    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
+               'Accept': 'application/json'}
+    resources = rest_ops.list(list_url,
+                              headers=headers,
+                              timeout=timeout,
+                              params=kwargs)
+    return resources
