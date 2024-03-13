@@ -86,3 +86,7 @@ class InvalidDataException(HdxCliException):
 
 class InvalidEmailException(InvalidDataException):
     pass
+
+
+class QueryOptionNotFound(HdxCliException):
+    pass

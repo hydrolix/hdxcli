@@ -1,0 +1,4 @@
+{
+    "hdx_query_max_concurrent_partitions": 10,
+    "hdx_query_max_columns_to_read": 20
+}
