@@ -381,13 +381,13 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 ######################################################## Storage #######################################################
 [[test]]
 name = "Storages can be created"
-commands_under_test = ["python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
+commands_under_test = ["python3 -m hdx_cli.main storage create -f {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
 teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_storage"]
 expected_output = 'Created storage test_storage'
 
 [[test]]
 name = "Storages can be deleted"
-setup = ["python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
+setup = ["python3 -m hdx_cli.main storage create -f {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
 commands_under_test = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_storage"]
 expected_output = 'Deleted test_storage'
 
