@@ -36,7 +36,7 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_ci_kinesis_source",
                 "python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_ci_siem_source",
                 "python3 -m hdx_cli.main function --project test_ci_project create -s '(x,k,b)->k*x+b' test_ci_function",
-                "python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storages/storage_ci_settings.json test_ci_storage",
+                "python3 -m hdx_cli.main storage create -f {HDXCLI_TESTS_DIR}/tests_data/storages/storage_ci_settings.json test_ci_storage",
                 "python3 -m hdx_cli.main unset"
                 ]
 
@@ -175,14 +175,14 @@ expected_output = 'Created table test_summary_table_stream'
 [[test]]
 name = "Summary (kafka) tables can be created"
 setup = ["python3 -m hdx_cli.main unset"]
-commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project create -t summary -f {HDXCLI_TESTS_DIR}/tests_data/summary/kafka/sql.txt -i kafka -o test_ci_kafka_source test_summary_table_kafka"]
+commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project create -t summary -f {HDXCLI_TESTS_DIR}/tests_data/summary/kafka/sql.txt test_summary_table_kafka"]
 teardown = ["python3 -m hdx_cli.main table --project test_ci_project delete --disable-confirmation-prompt test_summary_table_kafka"]
 expected_output = 'Created table test_summary_table_kafka'
 
 [[test]]
 name = "Summary (kinesis) tables can be created"
 setup = ["python3 -m hdx_cli.main unset"]
-commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project create -t summary -f {HDXCLI_TESTS_DIR}/tests_data/summary/kinesis/sql.txt -i kinesis -o test_ci_kinesis_source test_summary_table_kinesis"]
+commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project create -t summary -f {HDXCLI_TESTS_DIR}/tests_data/summary/kinesis/sql.txt test_summary_table_kinesis"]
 teardown = ["python3 -m hdx_cli.main table --project test_ci_project delete --disable-confirmation-prompt test_summary_table_kinesis"]
 expected_output = 'Created table test_summary_table_kinesis'
 
@@ -267,7 +267,7 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 name = "Kafka source name can be modified"
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings name new_kafka_name"]
 teardown = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source new_kafka_name settings name test_ci_kafka_source"]
-expected_output = 'Updated test_ci_kafka_source name'
+expected_output = 'Updated new_kafka_name name'
 
 [[test]]
 name = "Kafka source bootstrap_servers can be shown"
@@ -381,13 +381,13 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 ######################################################## Storage #######################################################
 [[test]]
 name = "Storages can be created"
-commands_under_test = ["python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
+commands_under_test = ["python3 -m hdx_cli.main storage create -f {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
 teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_storage"]
 expected_output = 'Created storage test_storage'
 
 [[test]]
 name = "Storages can be deleted"
-setup = ["python3 -m hdx_cli.main storage create {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
+setup = ["python3 -m hdx_cli.main storage create -f {HDXCLI_TESTS_DIR}/tests_data/storages/storage_settings.json test_storage"]
 commands_under_test = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_storage"]
 expected_output = 'Deleted test_storage'
 

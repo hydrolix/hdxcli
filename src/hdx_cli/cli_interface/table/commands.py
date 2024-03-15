@@ -1,12 +1,11 @@
-"""Commands relative to project handling  operations"""
-import json
+"""Commands relative to tables handling operations"""
 import click
 import requests
 
 from ..common.migration import migrate_a_table
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
-from ...library_api.common.exceptions import HdxCliException, LogicException
+from ...library_api.common.exceptions import LogicException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
 from ...library_api.userdata.token import AuthInfo
@@ -18,8 +17,8 @@ from ..common.rest_operations import (delete as command_delete,
                                       stats as command_stats)
 
 from ..common.misc_operations import settings as command_settings
-from ..common.undecorated_click_commands import (basic_create,
-                                                 basic_create_with_body_from_string)
+from ..common.undecorated_click_commands import basic_create_from_dict_body
+from ...library_api.utility.file_handling import load_json_settings_file, load_plain_file
 
 logger = get_logger()
 
@@ -35,15 +34,15 @@ def table(ctx: click.Context,
           project_name,
           table_name):
     user_profile = ctx.parent.obj.get('usercontext')
-    hostname = user_profile.hostname
     ProfileUserContext.update_context(user_profile,
                                       projectname=project_name,
                                       tablename=table_name)
-
     project = user_profile.projectname
     if not project:
         raise LogicException(f"No project parameter provided and "
                              f"no project is set in profile '{user_profile.profilename}'")
+
+    hostname = user_profile.hostname
     org_id = user_profile.org_id
     scheme = user_profile.scheme
     timeout = user_profile.timeout
@@ -64,96 +63,51 @@ def table(ctx: click.Context,
 
 @click.command(help='Create table.')
 @click.argument('table_name')
-@click.option('--type', '-t', 'table_type',
-              type=click.Choice(('summary', 'turbine')),
-              help='Create a raw (regular) table or an aggregation (summary) table',
-              metavar='TYPE',
-              required=False,
-              default='turbine')
-@click.option('--sql-query', '-s',
-              type=str,
-              help='SQL query to use (for summary tables only)',
-              metavar='SQL_QUERY',
-              required=False,
-              default=None)
-@click.option('--sql-query-file', '-f',
-              type=str,
-              help='File path to SQL query to use (for summary tables only)',
-              metavar='SQL_QUERY_FILE',
-              required=False,
-              default=None)
-@click.option('--ingestion-type', '-i',
-              type=click.Choice(('stream', 'kafka', 'kinesis')),
-              help='Ingest type (for summary tables only). '
-                   'Default: stream (stream, kafka, kinesis)',
-              metavar='INGESTION_TYPE',
-              required=False,
-              default='stream')
-@click.option('--source-name', '-o',
-              type=str,
-              help='Source name if ingest type is kafka or kinesis '
-                   '(for summary tables only)',
-              metavar='SOURCE_NAME',
-              required=False,
-              default=None)
+@click.option('--type', '-t', 'table_type', type=click.Choice(('turbine', 'summary')),
+              required=False, default='turbine',
+              help='Create a regular table or an aggregation table (summary). Default: turbine')
+@click.option('--sql-query', '-s', type=str, required=False, default=None,
+              help='SQL query to use (for summary tables only)')
+@click.option('--sql-query-file', '-f', type=click.Path(), required=False, default=None,
+              callback=load_plain_file,
+              help='File path to SQL query to use (for summary tables only)')
+@click.option('--settings-file', '-S', type=click.Path(), required=False, default=None,
+              callback=load_json_settings_file,
+              help='Path to a file containing settings for the table')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            table_name: str,
            table_type: str,
-           sql_query,
-           sql_query_file,
-           ingestion_type,
-           source_name):
+           sql_query: str,
+           sql_query_file: str,
+           settings_file: dict):
     if table_type == 'summary' and not (
             (sql_query and not sql_query_file) or (sql_query_file and not sql_query)):
-        raise HdxCliException('When creating a summary table, either SQL query or SQL query file must be provided')
-
-    if table_type == 'summary' and ingestion_type != 'stream' and not source_name:
-        raise HdxCliException('If the ingestion type is kafka or kinesis, you must specify the source name '
-                              'passing --source-name or -o')
+        raise click.MissingParameter(
+            'When creating a summary table, either SQL query or SQL query file must be provided.')
 
     user_profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
+
+    body = {}
+    if settings_file:
+        body.update(settings_file)
+
+    body.update({'name': table_name})
+
     if table_type == 'summary':
-        _basic_summary_create(user_profile, resource_path,
-                              table_name, table_type, sql_query,
-                              sql_query_file, ingestion_type,
-                              source_name)
-    else:
-        basic_create(user_profile, resource_path,
-                     table_name, None, None)
+        summary_sql_query = sql_query_file if sql_query_file else sql_query
+        body['type'] = 'summary'
+
+        settings = body.get('settings', {})
+        summary_settings = settings.get('summary', {})
+        summary_settings['sql'] = summary_sql_query
+        settings['summary'] = summary_settings
+        body['settings'] = settings
+
+    basic_create_from_dict_body(user_profile, resource_path, body)
     logger.info(f'Created table {table_name}')
-
-
-def _basic_summary_create(user_profile,
-                          resource_path,
-                          table_name,
-                          table_type,
-                          sql_query,
-                          sql_query_file,
-                          ingestion_type,
-                          source_name):
-    if sql_query_file:
-        try:
-            with open(sql_query_file, 'r') as file:
-                sql_query = file.read()
-        except Exception as e:
-            raise HdxCliException(f"reading SQL query from file '{sql_query_file}'") from e
-
-    body = {
-        'settings': {
-            'summary': {
-                'enabled': True,
-                'sql': sql_query
-            }
-        },
-        'type': table_type
-    }
-    if ingestion_type != 'stream':
-        body['settings']['summary'][ingestion_type] = {'parent_source': source_name}
-
-    basic_create_with_body_from_string(user_profile, resource_path, table_name, json.dumps(body))
 
 
 def _basic_truncate(profile, resource_path, resource_name: str):

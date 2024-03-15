@@ -1,0 +1,20 @@
+{
+    "settings": {
+        "stream": {
+            "token_list": [],
+            "hot_data_max_age_minutes": 50,
+            "hot_data_max_active_partitions": 10,
+            "hot_data_max_rows_per_partition": 50000,
+            "hot_data_max_minutes_per_partition": 5,
+            "hot_data_max_open_seconds": 10,
+            "hot_data_max_idle_seconds": 5,
+            "cold_data_max_age_days": 1500,
+            "cold_data_max_active_partitions": 168,
+            "cold_data_max_rows_per_partition": 50000,
+            "cold_data_max_minutes_per_partition": 60,
+            "cold_data_max_open_seconds": 60,
+            "cold_data_max_idle_seconds": 30,
+            "message_queue_max_rows": 500
+        }
+    }
+}
