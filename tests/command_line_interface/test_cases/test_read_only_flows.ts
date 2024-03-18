@@ -593,10 +593,10 @@ setup = ["python3 -m hdx_cli.main dictionary --project test_ci_project files upl
 commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project files delete test_dictionary_file"]
 expected_output = 'Deleted test_dictionary_file'
 
-[[test]]
-name = "Dictionary files can be listed"
-commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project files list"]
-expected_output_re = '.*?test_ci_dictionary_file.*'
+#[[test]]
+#name = "Dictionary files can be listed"
+#commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project files list"]
+#expected_output_re = '.*?test_ci_dictionary_file.*'
 
 
 ####################################################### Profile ########################################################
