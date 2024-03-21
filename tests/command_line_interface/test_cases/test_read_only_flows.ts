@@ -598,6 +598,49 @@ expected_output = 'Deleted test_dictionary_file'
 #commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project files list"]
 #expected_output_re = '.*?test_ci_dictionary_file.*'
 
+######################################################## Role ##########################################################
+
+[[test]]
+name = "Create a role with permission"
+commands_under_test = ["python -m hdx_cli.main role create --name new_role --permission change_table"]
+expected_output_re = 'Created role new_role'
+
+[[test]]
+name = "create existing role"
+commands_under_test = ["python -m hdx_cli.main role create --name new_role --permission change_table"]
+expected_output_re = 'Error: This field must be unique.'
+
+[[test]]
+name = "List roles"
+commands_under_test = ["python3 -m hdx_cli.main role list"]
+expected_output_re = '.*?new_role.*'
+
+[[test]]
+name = "add user to a role"
+setup = ["python -m hdx_cli.main user invite send new_user@hydolix.io --role new_role"]
+commands_under_test = ["python -m hdx_cli.main role add-user --user new_user@hydolix.io new_role"]
+expected_output = 'Added user(s) to new_role role'
+
+[[test]]
+name = "Removed user from role"
+commands_under_test = ["python3 -m hdx_cli.main role remove-user --user new_user@hydolix.io new_role"]
+teardown = ["python -m hdx_cli.main user delete new_user@hydolix.io --disable-confirmation-prompt"]
+expected_output = 'Removed user(s) from new_role role'
+
+[[test]]
+name = "add nonexistent user to a role"
+commands_under_test = ["python -m hdx_cli.main role add-user --user nonexistent_user@hydrolix.io new_role"]
+expected_output = 'Error: Cannot find users.'
+
+[[test]]
+name = "Delete role"
+commands_under_test = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
+expected_output_re = 'Deleted new_role'
+
+[[test]]
+name = "list permission"
+commands_under_test = ["python -m hdx_cli.main role permission list"]
+expected_output_re = '.*?view_user.*'
 
 ####################################################### Profile ########################################################
 [[test]]
