@@ -37,11 +37,13 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_ci_siem_source",
                 "python3 -m hdx_cli.main function --project test_ci_project create -s '(x,k,b)->k*x+b' test_ci_function",
                 "python3 -m hdx_cli.main storage create -f {HDXCLI_TESTS_DIR}/tests_data/storages/storage_ci_settings.json test_ci_storage",
-                "python3 -m hdx_cli.main unset"
+                "python3 -m hdx_cli.main unset",
+                "python -m hdx_cli.main role create --name test_ci_role --permission change_table"
                 ]
 
 global_teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_ci_storage",
                    "python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
+                    "python -m hdx_cli.main role delete --disable-confirmation-prompt test_ci_role",
                    "python3 -m hdx_cli.main unset"]
 
 
@@ -603,15 +605,16 @@ expected_output_re = '.*?test_ci_dictionary_file.*'
 [[test]]
 name = "Create a role with permission"
 commands_under_test = ["python -m hdx_cli.main role create --name new_role --permission change_table"]
-expected_output_re = 'Created role new_role'
+teardown = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
+expected_output = 'Created role new_role'
 
 [[test]]
-name = "create existing role"
-commands_under_test = ["python -m hdx_cli.main role create --name new_role --permission change_table"]
-expected_output_re = 'Error: This field must be unique.'
+name = "Create existing role"
+commands_under_test = ["python -m hdx_cli.main role create --name test_ci_role --permission change_table"]
+expected_output = 'Error: This field must be unique.'
 
 [[test]]
-name = "List roles"
+name = "Roles can be listed"
 commands_under_test = ["python3 -m hdx_cli.main role list"]
 expected_output_re = '.*?new_role.*'
 
