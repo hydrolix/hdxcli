@@ -37,13 +37,15 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_ci_siem_source",
                 "python3 -m hdx_cli.main function --project test_ci_project create -s '(x,k,b)->k*x+b' test_ci_function",
                 "python3 -m hdx_cli.main storage create -f {HDXCLI_TESTS_DIR}/tests_data/storages/storage_ci_settings.json test_ci_storage",
-                "python3 -m hdx_cli.main unset",
-                "python -m hdx_cli.main role create --name test_ci_role --permission change_table"
+                "python -m hdx_cli.main role create --name test_ci_role --permission change_table",
+                "python -m hdx_cli.main user invite send test_ci_invite_user@hydolix.io --role test_ci_role",
+                "python3 -m hdx_cli.main unset"
                 ]
 
 global_teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_ci_storage",
                    "python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
-                    "python -m hdx_cli.main role delete --disable-confirmation-prompt test_ci_role",
+                   "python -m hdx_cli.main role delete --disable-confirmation-prompt test_ci_role",
+                   "python -m hdx_cli.main user delete --disable-confirmation-prompt test_ci_invite_user@hydolix.io",
                    "python3 -m hdx_cli.main unset"]
 
 
@@ -616,27 +618,30 @@ expected_output = 'Error: This field must be unique.'
 [[test]]
 name = "Roles can be listed"
 commands_under_test = ["python3 -m hdx_cli.main role list"]
-expected_output_re = '.*?new_role.*'
+expected_output_re = '.*?test_ci_role.*'
 
 [[test]]
 name = "add user to a role"
-setup = ["python -m hdx_cli.main user invite send new_user@hydolix.io --role new_role"]
-commands_under_test = ["python -m hdx_cli.main role add-user --user new_user@hydolix.io new_role"]
+setup = ["python -m hdx_cli.main role create --name new_role --permission change_table"]
+commands_under_test = ["python -m hdx_cli.main role add-user --user test_ci_invite_user@hydolix.io new_role"]
+teardown = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
 expected_output = 'Added user(s) to new_role role'
 
 [[test]]
 name = "Removed user from role"
-commands_under_test = ["python3 -m hdx_cli.main role remove-user --user new_user@hydolix.io new_role"]
-teardown = ["python -m hdx_cli.main user delete new_user@hydolix.io --disable-confirmation-prompt"]
+setup = ["python -m hdx_cli.main role create --name new_role --permission change_table"]
+commands_under_test = ["python3 -m hdx_cli.main role remove-user --user test_ci_invite_user@hydolix.io new_role"]
+teardown = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
 expected_output = 'Removed user(s) from new_role role'
 
 [[test]]
 name = "add nonexistent user to a role"
-commands_under_test = ["python -m hdx_cli.main role add-user --user nonexistent_user@hydrolix.io new_role"]
+commands_under_test = ["python -m hdx_cli.main role add-user --user nonexistent_user@hydrolix.io test_ci_role"]
 expected_output = 'Error: Cannot find users.'
 
 [[test]]
 name = "Delete role"
+setup = ["python -m hdx_cli.main role create --name new_role --permission change_table"]
 commands_under_test = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
 expected_output_re = 'Deleted new_role'
 
