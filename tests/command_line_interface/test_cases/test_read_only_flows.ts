@@ -47,6 +47,7 @@ global_teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmatio
                    "python3 -m hdx_cli.main unset"]
 
 
+
 ######################################################## Project ########################################################
 [[test]]
 name = "Projects can be created"
