@@ -660,7 +660,7 @@ expected_output_re = '.*?default.*'
 name = "Profiles can be shown"
 setup = ["python3 -m hdx_cli.main --profile default unset"]
 commands_under_test = ["python3 -m hdx_cli.main --profile default profile show"]
-expected_output_expr = '"Profile" in result and "username" in result and "hostname" in result and "projectname" not in result and "tablename" not in result'
+expected_output_expr = '"Profile" in result and "username" in result and "hostname" in result and "projectname" in result and "tablename" not in result'
 
 ## Failing
 #[[test]]
