@@ -673,6 +673,86 @@ expected_output_expr = '"Profile" in result and "username" in result and "hostna
 #profile add -> is there a way to use arguments for cluster, username and scheme?
 #profile edit -> is there a way to use arguments for cluster, username and scheme?
 
+######################################################## User #########################################################
+[[test]]
+name = "Users can be listed"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user list"]
+expected_output_re = '.*?user_invite_cli@hydrolix.io                  super_admin.*'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+
+[[test]]
+name = "Assing role to user"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user assign-role user_invite_cli@hydrolix.io -r read_only"]
+expected_output = 'Added role(s) to user_invite_cli@hydrolix.io'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+
+[[test]]
+name = "Assing role to non-exist user"
+commands_under_test = ["python3 -m hdx_cli.main user assign-role user_non-exist@hydrolix.io -r read_only"]
+expected_output = 'Error: Cannot find resource.'
+
+[[test]]
+name = "Assing non-exist role to user"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user assign-role user_invite_cli@hydrolix.io -r role_non-exist"]
+expected_output = 'Error: Object with name=role_non-exist does not exist.'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+
+[[test]]
+name = "Remove role to user"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user remove-role user_invite_cli@hydrolix.io -r super_admin"]
+expected_output = 'Removed role(s) from user_invite_cli@hydrolix.io'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+
+[[test]]
+name = "Delete resource"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+expected_output = 'Deleted user_invite_cli@hydrolix.io'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+
+[[test]]
+name = "User can be show"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user --user user_invite_cli@hydrolix.io show"]
+expected_output_re = '.*?"email": "user_invite_cli@hydrolix.io".*'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+
+[[test]]
+name = "Send invitation to a user"
+commands_under_test = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+expected_output_re = 'Sent invitation to user_invite_cli@hydrolix.io'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+
+[[test]]
+name = "Resend invitation to a user"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user invite resend user_invite_cli@hydrolix.io"]
+expected_output_re = 'Resent invitation to user_invite_cli@hydrolix.io'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+
+[[test]]
+name = "Invitation list"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user invite list"]
+expected_output_re = '.*?user_invite_cli@hydrolix.io                  pending.*'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+
+[[test]]
+name = "Delete the invite"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+expected_output_re = 'Deleted user_invite_cli@hydrolix.io'
+
+[[test]]
+name = "Invite can be show"
+setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main user invite --user user_invite_cli@hydrolix.io show"]
+expected_output_re = '.*?{"email": "user_invite_cli@hydrolix.io".*'
+teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 ##################################################### Set/Unset ######################################################
 [[test]]
