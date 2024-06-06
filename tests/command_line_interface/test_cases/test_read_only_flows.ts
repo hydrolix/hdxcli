@@ -270,12 +270,12 @@ expected_output_re = '.*?test_ci_kafka_source.*'
 [[test]]
 name = "Kafka source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result'
+expected_output_re = '.*?name                                                                                      string                        "test_ci_kafka_source".*'
 
 [[test]]
 name = "Kafka source name can be modified"
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings name new_kafka_name"]
-teardown = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source new_kafka_name settings name test_ci_kafka_source"]
+teardown = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings name new_kafka_name"]
 expected_output = 'Updated new_kafka_name name'
 
 [[test]]
@@ -288,7 +288,7 @@ name = "Kafka sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --source test_ci_kafka_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "\"subtype\": \"kafka\"" in result'
+expected_output_re = '.*?"name": "test_ci_kafka_source_update", "parent_source": null.*'
 
 
 ######################################################## Kinesis #######################################################
