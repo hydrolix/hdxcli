@@ -194,16 +194,21 @@ expected_output = 'Created table test_summary_table_kinesis'
 ###################################################### Transform #######################################################
 [[test]]
 name = "Transforms can be created"
-commands_under_test = ["python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/transform_settings.json test_transform"]
-teardown = ["python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table delete --disable-confirmation-prompt test_transform"]
+setup = ["python3 -m hdx_cli.main project create test_ci_project_test",
+        "python3 -m hdx_cli.main table --project test_ci_project_test create test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main transform --project test_ci_project_test --table test_ci_table create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/transform_settings.json test_transform"]
+teardown = ["python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project_test"]
 expected_output = 'Created transform test_transform'
 
 [[test]]
 name = "Transforms can be deleted"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-		     "python3 -m hdx_cli.main transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/transform_settings.json test_transform"]
+setup = ["python3 -m hdx_cli.main project create test_ci_project_test",
+         "python3 -m hdx_cli.main table --project test_ci_project_test create test_ci_table",
+         "python3 -m hdx_cli.main set test_ci_project_test test_ci_table",
+         "python3 -m hdx_cli.main transform create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/transform_settings.json test_transform"]
 commands_under_test = ["python3 -m hdx_cli.main transform delete --disable-confirmation-prompt test_transform"]
-teardown = ["python3 -m hdx_cli.main unset"]
+teardown = ["python3 -m hdx_cli.main unset",
+            "python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project_test"]
 expected_output = 'Deleted test_transform'
 
 [[test]]
@@ -228,7 +233,7 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 [[test]]
 name = "Transform settings.is_default can be shown"
 commands_under_test = ["python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table --transform test_ci_transform settings settings.is_default"]
-expected_output = 'settings.is_default: False'
+expected_output = 'settings.is_default: True'
 
 [[test]]
 name = "Transforms can be shown"
@@ -788,6 +793,32 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 name = "Invite to a user not exist can be show"
 commands_under_test = ["python3 -m hdx_cli.main user invite --user user_not_exist@hydrolix.io show"]
 expected_output_re = 'Error: Cannot find resource.'
+
+################################################### query-options ####################################################
+[[test]]
+name = "Set query options"
+commands_under_test = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
+teardown = ["python3 -m hdx_cli.main query-option unset --all"]
+expected_output_re = '.*?Set query options from file*'
+
+[[test]]
+name = "List query options"
+setup = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
+commands_under_test = ["python3 -m hdx_cli.main query-option list"]
+teardown = ["python3 -m hdx_cli.main query-option unset --all"]
+expected_output_re = '.*?hdx_query_max_columns_to_read                          integer        20*'
+
+[[test]]
+name = "Unset query options"
+setup = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
+commands_under_test = ["python3 -m hdx_cli.main query-option unset --all"]
+expected_output = 'Unset all query options'
+
+[[test]]
+name = "Set inexistent query options"
+commands_under_test = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/inexistent_settings.json"]
+expected_output_re = 'Error: The specified file does not exist.'
+
 ##################################################### Set/Unset ######################################################
 [[test]]
 name = "Set can be used"
