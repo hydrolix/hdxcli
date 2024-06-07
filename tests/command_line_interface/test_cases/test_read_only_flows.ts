@@ -823,23 +823,23 @@ expected_output_re = 'Error: The specified file does not exist.'
 name = "Set query options from name"
 commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions 10"]
 teardown = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
-expected_output = 'Set \'hdx_query_max_concurrent_partitions\' query option'
+expected_output = "Set 'hdx_query_max_concurrent_partitions' query option"
 
 [[test]]
 name = "Unset query options from name"
 setup = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions 10"]
 commands_under_test = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
-expected_output = 'Unset \'hdx_query_max_concurrent_partitions\' query option'
+expected_output = "Unset 'hdx_query_max_concurrent_partitions' query option"
 
 [[test]]
 name = "Set query options nonexistence name"
-commands_under_test = ["python3 -m hdx_cli.main query-option set nonexistence 10"]
-expected_output = 'Error: \'option_nonexistence\' is not a valid query option.'
+commands_under_test = ["python3 -m hdx_cli.main query-option set option_nonexistence 10"]
+expected_output = "Error: 'option_nonexistence' is not a valid query option."
 
 [[test]]
 name = "Unset query options not set from name"
 commands_under_test = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
-expected_output = 'Error: hdx_query_max_rows not found in the set query options.'
+expected_output = 'Error: hdx_query_max_concurrent_partitions not found in the set query options.'
 
 [[test]]
 name = "Set query from name without value"
