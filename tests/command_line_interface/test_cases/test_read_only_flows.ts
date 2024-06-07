@@ -796,7 +796,7 @@ expected_output_re = 'Error: Cannot find resource.'
 
 ################################################### query-options ####################################################
 [[test]]
-name = "Set query options"
+name = "Set query options from file"
 commands_under_test = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 teardown = ["python3 -m hdx_cli.main query-option unset --all"]
 expected_output_re = '.*?Set query options from file*'
@@ -815,10 +815,41 @@ commands_under_test = ["python3 -m hdx_cli.main query-option unset --all"]
 expected_output = 'Unset all query options'
 
 [[test]]
-name = "Set inexistent query options"
+name = "Set nonexistence query options file"
 commands_under_test = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/inexistent_settings.json"]
 expected_output_re = 'Error: The specified file does not exist.'
 
+[[test]]
+name = "Set query options from name"
+commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions 10"]
+teardown = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
+expected_output = 'Set \'hdx_query_max_concurrent_partitions\' query option'
+
+[[test]]
+name = "Unset query options from name"
+setup = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions 10"]
+commands_under_test = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
+expected_output = 'Unset \'hdx_query_max_concurrent_partitions\' query option'
+
+[[test]]
+name = "Set query options nonexistence name"
+commands_under_test = ["python3 -m hdx_cli.main query-option set nonexistence 10"]
+expected_output = 'Error: \'option_nonexistence\' is not a valid query option.'
+
+[[test]]
+name = "Unset query options not set from name"
+commands_under_test = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
+expected_output = 'Error: hdx_query_max_rows not found in the set query options.'
+
+[[test]]
+name = "Set query from name without value"
+commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions"]
+expected_output = 'Error: You must provide either query_option_name and query_option_value or --from-file (JSON).'
+
+[[test]]
+name = "Set query from name with not accepted value"
+commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_timerange_required 6"]
+expected_output = 'Error: Must be a valid boolean.'
 ##################################################### Set/Unset ######################################################
 [[test]]
 name = "Set can be used"
