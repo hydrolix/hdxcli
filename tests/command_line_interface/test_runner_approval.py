@@ -219,4 +219,4 @@ def pytest_generate_tests(metafunc):
     # This is basically a trick: add a final test as the teardown test
     # bc pytest_generate_tests seems to not support global teardown
     all_tests.append((['python3 -m hdx_cli.main'], (ExpectedOutput.REGEX, '.*'), 'teardown', None, global_teardown))
-    metafunc.parametrize("test_data", all_tests)
+    metafunc.parametrize("test_data", all_tests, ids=[tst[2] for tst in all_tests])
