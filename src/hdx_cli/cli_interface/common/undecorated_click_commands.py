@@ -3,7 +3,8 @@ from typing import Optional, List, Tuple, Dict, Any
 import json
 import click
 
-from ...library_api.common.exceptions import LogicException, TransformNotFoundException, HdxCliException
+from ...library_api.common.exceptions import (LogicException, TransformNotFoundException,
+                                              HdxCliException, ActionNotAvailableException)
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.logging import get_logger
 from ...library_api.userdata.token import AuthInfo
@@ -356,9 +357,15 @@ def basic_settings(profile,
     auth = profile.auth
     headers = {"Authorization": f"{auth.token_type} {auth.token}",
                "Accept": "application/json"}
+
     options = rest_ops.options(settings_url,
                                headers=headers,
-                               timeout=timeout)["actions"]["POST"]
+                               timeout=timeout)
+    try:
+        actions = options["actions"]["POST"]
+    except KeyError as exc:
+        raise ActionNotAvailableException("The 'settings' action is not available on this resource.") from exc
+
     resource_kind_plural, resource_kind = (
         _heuristically_get_resource_kind(resource_path))
     if not getattr(profile, resource_kind + "name"):
@@ -376,7 +383,7 @@ def basic_settings(profile,
         logger.info(f'{"-" * (90 + 30 + 40)}')
         logger.info(_format_settings_header([("name", 90), ("type", 30), ("value", 40)]))
         logger.info(f'{"-" * (90 + 30 + 40)}')
-        _for_each_setting(options, resource=resource)
+        _for_each_setting(actions, resource=resource)
     elif key and not value:
         try:
             logger.info(f"{key}: {_get_dotted_key_from_dict(key, resource)}")

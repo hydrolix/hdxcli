@@ -15,6 +15,10 @@ class CommandLineException(HdxCliException):
     pass
 
 
+class ActionNotAvailableException(CommandLineException):
+    pass
+
+
 class BadFileNameConventionException(HdxCliException):
     pass
 
@@ -40,6 +44,22 @@ class CacheFileNotFoundException(HdxCliException, FileNotFoundError):
 
 
 class ProfileNotFoundException(HdxCliException):
+    pass
+
+
+class ProfileExistsException(HdxCliException):
+    pass
+
+
+class InvalidHostnameException(HdxCliException):
+    pass
+
+
+class InvalidUsernameException(HdxCliException):
+    pass
+
+
+class InvalidSchemeException(HdxCliException):
     pass
 
 
