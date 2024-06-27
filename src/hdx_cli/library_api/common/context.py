@@ -34,6 +34,7 @@ class ProfileUserContext:
     tablename: Optional[str] = None
     transformname: Optional[str] = None
     batchname: Optional[str] = None
+    altername: Optional[str] = None
     functionname: Optional[str] = None
     dictionaryname : Optional[str] = None
     storagename: Optional[str] = None
