@@ -1,9 +1,9 @@
 from functools import partial
-from typing import Tuple
 import click
 
 from ...library_api.common.exceptions import LogicException
 from ...library_api.common.logging import get_logger
+from ...library_api.utility.functions import heuristically_get_resource_kind
 from ...library_api.utility.decorators import (report_error_and_exit,
                                                dynamic_confirmation_prompt)
 from .undecorated_click_commands import (basic_create,
@@ -78,25 +78,6 @@ def list_(ctx: click.Context):
     basic_list(profile, resource_path)
 
 
-def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
-    """Returns plural and singular names for resource kind given a resource path.
-       If it is a nested resource
-    For example:
-
-          - /config/.../tables/ -> ('tables', 'table')
-          - /config/.../projects/ -> ('projects', 'project')
-          - /config/.../jobs/batch/ -> ('batch', 'batch')
-    """
-    split_path = resource_path.split("/")
-    plural = split_path[-2]
-    if plural == 'dictionaries':
-        return 'dictionaries', 'dictionary'
-    if plural == 'kinesis':
-        return 'kinesis', 'kinesis'
-    singular = plural if not plural.endswith('s') else plural[0:-1]
-    return plural, singular
-
-
 @click.command(help='Show resource. If not resource_name is provided, it will show the default '
                     'if there is one.')
 @click.option('-i', '--indent', is_flag=True, default=False,
@@ -106,7 +87,7 @@ def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
 def show(ctx: click.Context, indent: bool):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
-    _, resource_kind = _heuristically_get_resource_kind(resource_path)
+    _, resource_kind = heuristically_get_resource_kind(resource_path)
     if not (resource_name := getattr(profile, resource_kind + 'name')):
         raise LogicException(f'No default {resource_kind} found in profile')
     logger.info(basic_show(profile, resource_path,
@@ -122,7 +103,7 @@ def show(ctx: click.Context, indent: bool):
 def activity(ctx: click.Context, indent: bool):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
-    _, resource_kind = _heuristically_get_resource_kind(resource_path)
+    _, resource_kind = heuristically_get_resource_kind(resource_path)
     if not (resource_name := getattr(profile, resource_kind + 'name')):
         raise LogicException(f'No default {resource_kind} found in profile')
     logger.info(basic_activity(profile, resource_path, resource_name, indent))
@@ -137,7 +118,7 @@ def activity(ctx: click.Context, indent: bool):
 def stats(ctx: click.Context, indent: bool):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
-    _, resource_kind = _heuristically_get_resource_kind(resource_path)
+    _, resource_kind = heuristically_get_resource_kind(resource_path)
     if not (resource_name := getattr(profile, resource_kind + 'name')):
         raise LogicException(f'No default {resource_kind} found in profile')
     logger.info(basic_stats(profile, resource_path, resource_name, indent))

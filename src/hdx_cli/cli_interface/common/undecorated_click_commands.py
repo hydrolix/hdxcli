@@ -8,6 +8,7 @@ from ...library_api.common.exceptions import (LogicException, TransformNotFoundE
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.logging import get_logger
 from ...library_api.userdata.token import AuthInfo
+from ...library_api.utility.functions import heuristically_get_resource_kind
 from .cached_operations import * #pylint:disable=wildcard-import,unused-wildcard-import
 
 logger = get_logger()
@@ -262,9 +263,6 @@ def _format_settings_header(headers_and_spacing: List[Tuple[str, int]]):
     format_strings = []
     for key, spacing in headers_and_spacing:
         format_strings.append(f"{key:<{spacing}}")
-    #format_strings.append("\n")
-    #format_strings.append(
-    #    "-" * sum((header[1] for header in headers_and_spacing)))
     return "".join(format_strings)
 
 
@@ -293,25 +291,6 @@ def _do_for_each_setting(settings_dict, prefix="", resource=None):
 def _for_each_setting(settings_dict, prefix="",
                       resource=None):
     _do_for_each_setting(settings_dict, prefix, resource)
-
-
-def _heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
-    """Returns plural and singular names for resource kind given a resource path.
-       If it is a nested resource
-    For example:
-
-          - /config/.../tables/ -> ('tables', 'table')
-          - /config/.../projects/ -> ('projects', 'project')
-          - /config/.../jobs/batch/ -> ('batch', 'batch')
-    """
-    split_path = resource_path.split("/")
-    plural = split_path[-2]
-    if plural == "dictionaries":
-        return "dictionaries", "dictionary"
-    if plural == 'kinesis':
-        return 'kinesis', 'kinesis'
-    singular = plural if not plural.endswith('s') else plural[0:-1]
-    return plural, singular
 
 
 def _cleanup_some_fields_when_updateworkaround(body_dict):
@@ -366,8 +345,7 @@ def basic_settings(profile,
     except KeyError as exc:
         raise ActionNotAvailableException("The 'settings' action is not available on this resource.") from exc
 
-    resource_kind_plural, resource_kind = (
-        _heuristically_get_resource_kind(resource_path))
+    resource_kind_plural, resource_kind = heuristically_get_resource_kind(resource_path)
     if not getattr(profile, resource_kind + "name"):
         raise LogicException(f'No default {resource_kind} found in profile')
     resources = None
