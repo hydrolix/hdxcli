@@ -84,14 +84,14 @@ name = "Projects can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?{"name": "test_project_test", "org": "c90fcaee-6ccb-4948-a30b-84f86d8fb583", "description": "Created with hdxcli tool".*'
+expected_output_re = '.*?{"name": "test_ci_project", "org": "c90fcaee-6ccb-4948-a30b-84f86d8fb583", "description": "Created with hdxcli tool".*'
 
 [[test]]
 name = "Project statistics can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?{"summary": {"name": "test_ci_project", "total_partitions": 0, "total_rows": 0, "total_data_size": 0, "total_storage_size": 0, "total_raw_data_size": 0}, "tables": []}.*'
+expected_output = '{"summary": {"name": "test_ci_project", "total_partitions": 0, "total_rows": 0, "total_data_size": 0, "total_storage_size": 0, "total_raw_data_size": 0}, "tables": []}'
 
 [[test]]
 name = "Project activities can be shown"
