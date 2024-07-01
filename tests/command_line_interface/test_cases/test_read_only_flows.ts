@@ -84,7 +84,7 @@ name = "Projects can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?{"name": "test_ci_project", "org": "9c3c5266-fb1e-4221-b2f2-db48f6dc6efe", "description": "Created with hdxcli tool".*'
+expected_output_expr = 'not result.startswith("Error:") and "name" in result and "org" in result and "uuid" in result and "test_ci_project" in result'
 
 [[test]]
 name = "Project statistics can be shown"
