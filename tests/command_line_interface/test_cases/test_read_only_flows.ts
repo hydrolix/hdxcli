@@ -224,11 +224,11 @@ teardown = ["python3 -m hdx_cli.main unset"]
 expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_transform" in result'
 
 #Error: (405, b\'{"detail":"Method \\\\"PATCH\\\\" not allowed."}\
-#[[test]]
-#name = "Transform type can be modified"
-#commands_under_test = ["python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table --transform test_ci_transform settings type csv"]
-#teardown = ["python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table --transform test_ci_transform settings type json"]
-#expected_output = 'Updated test_ci_transform type'
+[[test]]
+name = "Transform type can be modified"
+commands_under_test = ["python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table --transform test_ci_transform settings type csv"]
+teardown = ["python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table --transform test_ci_transform settings type json"]
+expected_output = 'Updated test_ci_transform type'
 
 [[test]]
 name = "Transform settings.is_default can be shown"
