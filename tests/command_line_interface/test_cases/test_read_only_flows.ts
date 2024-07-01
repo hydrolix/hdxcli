@@ -71,7 +71,7 @@ expected_output_re = '.*?test_ci_project.*'
 [[test]]
 name = "Project settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project settings"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_project" in result'
+expected_output_re = '.*?name                                                                                      string                        "test_ci_project".*'
 
 [[test]]
 name = "Project description can be modified"
@@ -84,14 +84,14 @@ name = "Projects can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "org" in result and "uuid" in result and "test_ci_project" in result'
+expected_output_re = '.*?{"name": "test_project_test", "org": "c90fcaee-6ccb-4948-a30b-84f86d8fb583", "description": "Created with hdxcli tool".*'
 
 [[test]]
 name = "Project statistics can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "total_partitions" in result and "total_storage_size" in result and "test_ci_project" in result'
+expected_output_re = '.*?{"summary": {"name": "test_ci_project", "total_partitions": 0, "total_rows": 0, "total_data_size": 0, "total_storage_size": 0, "total_raw_data_size": 0}, "tables": []}.*'
 
 [[test]]
 name = "Project activities can be shown"
