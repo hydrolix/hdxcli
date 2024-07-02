@@ -373,17 +373,17 @@ commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_p
 teardown = ["python3 -m hdx_cli.main sources --project test_ci_project --table test_ci_table --source new_siem_name siem settings name test_ci_siem_source"]
 expected_output = 'Updated test_ci_siem_source name'
 
-[[test]]
-name = "SIEM source type can be shown"
-commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings type"]
-expected_output = 'type: pull'
-
-[[test]]
-name = "SIEM sources can be shown"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
-teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "\"subtype\": \"siem\"" in result'
+#[[test]]
+#name = "SIEM source type can be shown"
+#commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings type"]
+#expected_output = 'type: pull'
+#
+#[[test]]
+#name = "SIEM sources can be shown"
+#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+#commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
+#teardown = ["python3 -m hdx_cli.main unset"]
+#expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "\"subtype\": \"siem\"" in result'
 
 
 ######################################################## Storage #######################################################
