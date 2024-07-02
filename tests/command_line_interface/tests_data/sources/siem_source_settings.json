@@ -1,7 +1,6 @@
 {
     "transform": "test_ci_transform",
     "table": "test_ci_project.test_ci_table",
-    "pool_name": "siem12-pool",
     "k8s_deployment": {
         "replicas": 1,
         "cpu": 1,
