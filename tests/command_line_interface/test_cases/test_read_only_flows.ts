@@ -370,7 +370,7 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 [[test]]
 name = "SIEM source name can be modified"
 commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings name new_siem_name"]
-teardown = ["python3 -m hdx_cli.main sources --project test_ci_project --table test_ci_table --source new_siem_name siem settings name test_ci_siem_source"]
+teardown = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source new_siem_name siem settings name test_ci_siem_source"]
 expected_output = 'Updated new_siem_name name'
 
 #[[test]]
