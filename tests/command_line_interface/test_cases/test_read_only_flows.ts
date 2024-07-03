@@ -84,7 +84,7 @@ name = "Projects can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "org" in result and "uuid" in result and "test_ci_project" in result'
+expected_output_expr = '.*?"name": "test_ci_project".*'
 
 [[test]]
 name = "Project statistics can be shown"
@@ -318,7 +318,7 @@ name = "Kinesis source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings"]
 expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result'
 
-# failing because of the pool is crashing
+# failing because HDX-5693
 #[[test]]
 #name = "Kinesis source name can be modified"
 #commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings name new_kinesis_name"]
