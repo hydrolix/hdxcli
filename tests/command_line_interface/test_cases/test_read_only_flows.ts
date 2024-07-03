@@ -378,12 +378,12 @@ name = "SIEM source type can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings type"]
 expected_output = 'type: pull'
 
-#[[test]]
-#name = "SIEM sources can be shown"
-#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-#commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
-#teardown = ["python3 -m hdx_cli.main unset"]
-#expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "\"subtype\": \"siem\"" in result'
+[[test]]
+name = "SIEM sources can be shown"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output_re = '.*?"type": "pull", "subtype": "siem", "transform": "test_ci_transform", "table": "test_ci_project_test.test_ci_table_test", "settings": {"access_details": {"host": "akab-1234567890123456-1234567890123.luna.akamaiapis.net", "entity_id": "87862", "client_secret_key": "K0FE3FEF884AD42CABB5D53E8C1755901", "client_token_key": "K800AD9D279BB4AD486D0047C6014715F", "access_token_key": "K4B4E88D4D15D4FA0BCAB07A1E91BE0A1"}, "checkpointer": {"name": "zk"}, "pool": {"name": "siem12-pool-22cad7a0", "description": null.*'
 
 
 ######################################################## Storage #######################################################
