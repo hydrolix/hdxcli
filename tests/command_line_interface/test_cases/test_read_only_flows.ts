@@ -669,7 +669,7 @@ expected_output_re = '.*?view_user.*'
 #expected_output_expr = '"Profile" in result and "username" in result and "hostname" in result and "projectname" not in result and "tablename" not in result'
 
 ## Failing
-[[test]]
+#[[test]]
 #name = "Profile can be shown with preset project/table"
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 #commands_under_test = ["python3 -m hdx_cli.main --profile default profile show"]
