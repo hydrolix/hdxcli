@@ -84,7 +84,7 @@ name = "Projects can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = '.*?"name": "test_ci_project".*'
+expected_output_re = '.*?"name": "test_ci_project".*'
 
 [[test]]
 name = "Project statistics can be shown"
