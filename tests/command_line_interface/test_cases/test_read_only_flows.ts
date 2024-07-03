@@ -153,7 +153,7 @@ expected_output = 'Updated test_ci_table settings.merge.enabled'
 [[test]]
 name = "Tables can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table show"]
-expected_output_re = '.*?"name": "test_ci_table", "description": null.*'
+expected_output_re = '.*?"name": "test_ci_table", "description": "Created-with-hdxcli-tool".*'
 
 [[test]]
 name = "Table statistics can be shown"
