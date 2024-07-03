@@ -573,7 +573,7 @@ name = "Dictionary settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary --dictionary test_ci_dictionary settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'test'
+expected_output_re = '.*?name                                                                                      string                        "test_ci_dictionary".*'
 
 [[test]]
 name = "Dictionaries can be shown"
