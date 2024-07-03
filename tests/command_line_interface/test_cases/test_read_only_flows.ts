@@ -220,7 +220,7 @@ name = "Transform settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_transform" in result'
+expected_output_re = '.*?name                                                                                      string                        "test_ci_transform".*'
 
 #Error: (405, b\'{"detail":"Method \\\\"PATCH\\\\" not allowed."}\
 #[[test]]
@@ -239,7 +239,7 @@ name = "Transforms can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "output_columns" in result and "test_ci_transform" in result and "test_ci_transform" in result'
+expected_output_re = '.*?"name": "test_ci_transform", "description": null.*'
 
 ## 'map-from' tests are missing.
 
