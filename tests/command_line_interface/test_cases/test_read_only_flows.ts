@@ -458,7 +458,7 @@ expected_output_re = '.*?name                                                   
 [[test]]
 name = "Batch jobs can be shown"
 commands_under_test = ["python3 -m hdx_cli.main job batch --job test_ci_batch_job show"]
-expected_output_re = '.*?"name": "test_batch_job", "description": null.*'
+expected_output_re = '.*?"name": "test_ci_batch_job", "description": null.*'
 
 [[test]]
 name = "Batch jobs can be deleted"
@@ -538,14 +538,14 @@ name = "Function settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main function --function test_ci_function settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_function" in result'
+expected_output_re = '.*?name                                                                                      string                        "test_ci_function".*'
 
 [[test]]
 name = "Functions can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main function --function test_ci_function show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "project" in result and "name" in result and "uuid" in result and "sql" in result'
+expected_output_re = '.*?"name": "test_ci_function", "project":.*'
 
 
 #################################################### Dictionary #######################################################
