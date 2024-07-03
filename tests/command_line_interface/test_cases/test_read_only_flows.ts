@@ -319,11 +319,11 @@ commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_c
 expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result'
 
 # failing because of the pool is crashing
-#[[test]]
-#name = "Kinesis source name can be modified"
-#commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings name new_kinesis_name"]
-#teardown = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source new_kinesis_name settings name test_ci_kinesis_source"]
-#expected_output = 'Updated test_ci_kinesis_source name'
+[[test]]
+name = "Kinesis source name can be modified"
+commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings name new_kinesis_name"]
+teardown = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source new_kinesis_name settings name test_ci_kinesis_source"]
+expected_output = 'Updated new_kinesis_name name'
 
 [[test]]
 name = "Kinesis source type can be shown"
@@ -365,7 +365,7 @@ expected_output_re = '.*?test_ci_siem_source.*'
 [[test]]
 name = "SIEM source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_siem_source" in result'
+expected_output_re = '.*?name                                                                                      string                        "test_ci_siem_source".*'
 
 [[test]]
 name = "SIEM source name can be modified"
