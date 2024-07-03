@@ -334,7 +334,7 @@ name = "Kinesis sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis --source test_ci_kinesis_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"subtype": "kinesis", "transform": "test_ci_transform", "table": "test_ci_project_test.test_ci_table_test".*'
+expected_output_re = '.*?"subtype": "kinesis", "transform": "test_ci_transform", "table": "test_ci_project.test_ci_table".*'
 
 
 ########################################################## SIEM #########################################################
