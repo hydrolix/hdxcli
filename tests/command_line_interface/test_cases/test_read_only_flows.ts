@@ -269,7 +269,7 @@ expected_output_re = '.*?test_ci_kafka_source.*'
 [[test]]
 name = "Kafka source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings"]
-expected_output_re = '.*?name                                                                                      string                        "test_kinesis_source".*'
+expected_output_re = '.*?name                                                                                      string                        "test_ci_kafka_source".*'
 
 [[test]]
 name = "Kafka source name can be modified"
