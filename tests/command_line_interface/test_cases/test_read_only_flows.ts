@@ -132,7 +132,7 @@ name = "Table settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_table" in result'
+expected_output_re = '.*?name                                                                                      string                        "test_ci_table".*'
 
 [[test]]
 name = "Table description can be modified"
@@ -153,20 +153,19 @@ expected_output = 'Updated test_ci_table settings.merge.enabled'
 [[test]]
 name = "Tables can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table show"]
-expected_output_expr = 'not result.startswith("Error:") and "project" in result and "name" in result and "uuid" in result and "settings" in result and "test_ci_table" in result'
+expected_output_re = '.*?"name": "test_ci_table", "description": null.*'
 
 [[test]]
 name = "Table statistics can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "total_partitions" in result and "total_storage_size" in result and "test_ci_table" in result'
+expected_output_expr = '{"name": "test_ci_project.test_ci_table", "total_partitions": 0, "total_rows": 0, "total_data_size": 0, "total_storage_size": 0, "total_raw_data_size": 0}'
 
 [[test]]
 name = "Table activities can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table activity"]
-expected_output_expr = 'not result.startswith("Error:") and "created" in result and "test_ci_table" in result'
-
+expected_output_re = '.*?{"name": "test_ci_table", "description": null}}, "text": "Published config"}}}}.*'
 
 #################################################### Summary Table #####################################################
 [[test]]
