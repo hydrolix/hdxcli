@@ -421,7 +421,7 @@ expected_output = 'Updated test_ci_storage settings.cloud'
 [[test]]
 name = "Storages can be shown"
 commands_under_test = ["python3 -m hdx_cli.main storage --storage test_ci_storage show"]
-expected_output_re = '.*?"settings": {"is_default": false, "bucket_name": "qe-multi-bucket-2", "bucket_path": "/cli/", "region": "us-central1", "endpoint": "https://test_ci_storage", "cloud": "gco", "credential_id": null.*'
+expected_output_re = '.*?"settings": {"is_default": false, "bucket_name": "qe-multi-bucket-2", "bucket_path": "/cli/", "region": "us-central1", "cloud": "gcp", "credential_id": null.*'
 
 
 ####################################################### Batch Job ######################################################
