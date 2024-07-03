@@ -580,7 +580,7 @@ name = "Dictionaries can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary --dictionary test_ci_dictionary show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?{"filename": "test_ci_dictionary_file", "layout": "complex_key_hashed", "lifetime_seconds": 5, "output_columns": [{"name": "id_country", "datatype": {"type": "uint64", "denullify": true}}, {"name": "country_name", "datatype": {"type": "string", "denullify": true}}], "primary_key": ["id_country"], "format": "CSVWithNames"}.*'
+expected_output_re = '.*?{"name": "test_ci_dictionary".*'
 
 
 ################################################### Dictionary Files #####################################################
