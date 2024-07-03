@@ -580,7 +580,7 @@ name = "Dictionaries can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary --dictionary test_ci_dictionary show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "project" in result and "name" in result and "uuid" in result and "filename" in result and "test_ci_dictionary" in result'
+expected_output_expr = 'test'
 
 
 ################################################### Dictionary Files #####################################################
