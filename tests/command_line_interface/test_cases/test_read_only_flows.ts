@@ -71,7 +71,7 @@ expected_output_re = '.*?test_ci_project.*'
 [[test]]
 name = "Project settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project settings"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_project" in result'
+expected_output_re = '.*?"test_ci_project".*'
 
 [[test]]
 name = "Project description can be modified"
@@ -84,19 +84,19 @@ name = "Projects can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "org" in result and "uuid" in result and "test_ci_project" in result'
+expected_output_re = '.*?"name": "test_ci_project".*'
 
 [[test]]
 name = "Project statistics can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "total_partitions" in result and "total_storage_size" in result and "test_ci_project" in result'
+expected_output = '{"summary": {"name": "test_ci_project", "total_partitions": 0, "total_rows": 0, "total_data_size": 0, "total_storage_size": 0, "total_raw_data_size": 0}, "tables": [{"name": "test_ci_project.test_ci_table", "total_partitions": 0, "total_rows": 0, "total_data_size": 0, "total_storage_size": 0, "total_raw_data_size": 0}, {"name": "test_ci_project.test_ci_table_ingest", "total_partitions": 0, "total_rows": 0, "total_data_size": 0, "total_storage_size": 0, "total_raw_data_size": 0}]}'
 
-#[[test]]
-#name = "Project activities can be shown"
-#commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project activity"]
-#expected_output_expr = 'not result.startswith("Error:") and "created" in result and "test_ci_project" in result'
+[[test]]
+name = "Project activities can be shown"
+commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project activity"]
+expected_output_re = '.*?{"name": "test_ci_project", "description": "Created with hdxcli tool"}}, "text": "Published config"}}}}.*'
 
 
 ######################################################### Table #########################################################
@@ -132,7 +132,7 @@ name = "Table settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_table" in result'
+expected_output_re = '.*?"test_ci_table".*'
 
 [[test]]
 name = "Table description can be modified"
@@ -153,20 +153,19 @@ expected_output = 'Updated test_ci_table settings.merge.enabled'
 [[test]]
 name = "Tables can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table show"]
-expected_output_expr = 'not result.startswith("Error:") and "project" in result and "name" in result and "uuid" in result and "settings" in result and "test_ci_table" in result'
+expected_output_re = '.*?"name": "test_ci_table", "description": "\'Created-with-hdxcli-tool\'".*'
 
 [[test]]
 name = "Table statistics can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "total_partitions" in result and "total_storage_size" in result and "test_ci_table" in result'
+expected_output_expr = '{"name": "test_ci_project.test_ci_table", "total_partitions": 0, "total_rows": 0, "total_data_size": 0, "total_storage_size": 0, "total_raw_data_size": 0}'
 
 [[test]]
 name = "Table activities can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table activity"]
-expected_output_expr = 'not result.startswith("Error:") and "created" in result and "test_ci_table" in result'
-
+expected_output_re = '.*?{"name": "test_ci_table", "description": null}}, "text": "Published config"}}}}.*'
 
 #################################################### Summary Table #####################################################
 [[test]]
@@ -221,7 +220,7 @@ name = "Transform settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_transform" in result'
+expected_output_re = '.*?"test_ci_transform".*'
 
 #Error: (405, b\'{"detail":"Method \\\\"PATCH\\\\" not allowed."}\
 #[[test]]
@@ -240,7 +239,7 @@ name = "Transforms can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "output_columns" in result and "test_ci_transform" in result and "test_ci_transform" in result'
+expected_output_re = '.*?"name": "test_ci_transform", "description": null.*'
 
 ## 'map-from' tests are missing.
 
@@ -270,14 +269,13 @@ expected_output_re = '.*?test_ci_kafka_source.*'
 [[test]]
 name = "Kafka source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result'
+expected_output_re = '.*?"test_ci_kafka_source".*'
 
-## failing
-#[[test]]
-#name = "Kafka source name can be modified"
-#commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings name new_kafka_name"]
-#teardown = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source new_kafka_name settings name test_ci_kafka_source"]
-#expected_output = 'Updated new_kafka_name name'
+[[test]]
+name = "Kafka source name can be modified"
+commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings name new_kafka_name"]
+teardown = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source new_kafka_name settings name test_ci_kafka_source"]
+expected_output = 'Updated new_kafka_name name'
 
 [[test]]
 name = "Kafka source bootstrap_servers can be shown"
@@ -289,8 +287,7 @@ name = "Kafka sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --source test_ci_kafka_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "\"subtype\": \"kafka\"" in result'
-
+expected_output_re = '.*?"subtype": "kafka", "transform": "test_ci_transform", "table": "test_ci_project.test_ci_table".*'
 
 ######################################################## Kinesis #######################################################
 [[test]]
@@ -317,14 +314,14 @@ expected_output_re = '.*?test_ci_kinesis_source.*'
 [[test]]
 name = "Kinesis source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result'
+expected_output_re = '.*?"test_ci_kinesis_source".*'
 
-# failing because of the pool is crashing
+# failing because HDX-5693
 #[[test]]
 #name = "Kinesis source name can be modified"
 #commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings name new_kinesis_name"]
 #teardown = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source new_kinesis_name settings name test_ci_kinesis_source"]
-#expected_output = 'Updated test_ci_kinesis_source name'
+#expected_output = 'Updated new_kinesis_name name'
 
 [[test]]
 name = "Kinesis source type can be shown"
@@ -336,7 +333,7 @@ name = "Kinesis sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis --source test_ci_kinesis_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "\"subtype\": \"kinesis\"" in result'
+expected_output_re = '.*?"subtype": "kinesis", "transform": "test_ci_transform", "table": "test_ci_project.test_ci_table".*'
 
 
 ########################################################## SIEM #########################################################
@@ -366,26 +363,25 @@ expected_output_re = '.*?test_ci_siem_source.*'
 [[test]]
 name = "SIEM source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_siem_source" in result'
+expected_output_re = '.*?"test_ci_siem_source".*'
 
-# failing because of the pool is crashing
-#[[test]]
-#name = "SIEM source name can be modified"
-#commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings name new_siem_name"]
-#teardown = ["python3 -m hdx_cli.main sources --project test_ci_project --table test_ci_table --source new_siem_name siem settings name test_ci_siem_source"]
-#expected_output = 'Updated test_ci_siem_source name'
-#
-#[[test]]
-#name = "SIEM source type can be shown"
-#commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings type"]
-#expected_output = 'type: pull'
-#
-#[[test]]
-#name = "SIEM sources can be shown"
-#setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-#commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
-#teardown = ["python3 -m hdx_cli.main unset"]
-#expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "\"subtype\": \"siem\"" in result'
+[[test]]
+name = "SIEM source name can be modified"
+commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings name new_siem_name"]
+teardown = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source new_siem_name settings name test_ci_siem_source"]
+expected_output = 'Updated new_siem_name name'
+
+[[test]]
+name = "SIEM source type can be shown"
+commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings type"]
+expected_output = 'type: pull'
+
+[[test]]
+name = "SIEM sources can be shown"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output_re = '.*?"name": "test_ci_siem_source".*'
 
 
 ######################################################## Storage #######################################################
@@ -409,7 +405,7 @@ expected_output_re = '.*?test_ci_storage.*'
 [[test]]
 name = "Storage settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main storage --storage test_ci_storage settings"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_storage" in result'
+expected_output_re = '.*?"test_ci_storage".*'
 
 [[test]]
 name = "Storage cloud can be shown"
@@ -458,12 +454,11 @@ expected_output = 'Retrying test_ci_batch_job'
 [[test]]
 name = "Batch job settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main job batch --job test_ci_batch_job settings"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_batch_job" in result'
-
+expected_output_re = '.*?"test_ci_batch_job".*'
 [[test]]
 name = "Batch jobs can be shown"
 commands_under_test = ["python3 -m hdx_cli.main job batch --job test_ci_batch_job show"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "uuid" in result and "settings" in result and "status" in result and "test_ci_batch_job" in result'
+expected_output_re = '.*?"name": "test_ci_batch_job", "description": null.*'
 
 [[test]]
 name = "Batch jobs can be deleted"
@@ -543,14 +538,14 @@ name = "Function settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main function --function test_ci_function settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_function" in result'
+expected_output_re = '.*?"test_ci_function".*'
 
 [[test]]
 name = "Functions can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main function --function test_ci_function show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "project" in result and "name" in result and "uuid" in result and "sql" in result'
+expected_output_re = '.*?"name": "test_ci_function", "project":.*'
 
 
 #################################################### Dictionary #######################################################
@@ -578,14 +573,14 @@ name = "Dictionary settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary --dictionary test_ci_dictionary settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "name" in result and "type" in result and "value" in result and "test_ci_dictionary" in result'
+expected_output_re = '.*?"test_ci_dictionary".*'
 
 [[test]]
 name = "Dictionaries can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary --dictionary test_ci_dictionary show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = 'not result.startswith("Error:") and "project" in result and "name" in result and "uuid" in result and "filename" in result and "test_ci_dictionary" in result'
+expected_output_re = '.*?{"name": "test_ci_dictionary".*'
 
 
 ################################################### Dictionary Files #####################################################
@@ -676,7 +671,7 @@ expected_output_re = '.*?view_user.*'
 #setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 #commands_under_test = ["python3 -m hdx_cli.main --profile default profile show"]
 #teardown = ["python3 -m hdx_cli.main unset"]
-#expected_output_expr = '"Profile" in result and "username" in result and "hostname" in result and "projectname" in result and "tablename" in result'
+#expected_output_re = '.*?projectname: test_ci_project.*'
 
 #profile add -> is there a way to use arguments for cluster, username and scheme?
 #profile edit -> is there a way to use arguments for cluster, username and scheme?
