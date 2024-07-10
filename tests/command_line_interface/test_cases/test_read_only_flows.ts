@@ -71,7 +71,7 @@ expected_output_re = '.*?test_ci_project.*'
 [[test]]
 name = "Project settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project settings"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_project".*'
+expected_output_re = '.*?"test_ci_project".*'
 
 [[test]]
 name = "Project description can be modified"
@@ -132,7 +132,7 @@ name = "Table settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_table".*'
+expected_output_re = '.*?"test_ci_table".*'
 
 [[test]]
 name = "Table description can be modified"
@@ -220,7 +220,7 @@ name = "Transform settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_transform".*'
+expected_output_re = '.*?"test_ci_transform".*'
 
 #Error: (405, b\'{"detail":"Method \\\\"PATCH\\\\" not allowed."}\
 #[[test]]
@@ -269,7 +269,7 @@ expected_output_re = '.*?test_ci_kafka_source.*'
 [[test]]
 name = "Kafka source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_kafka_source".*'
+expected_output_re = '.*?"test_ci_kafka_source".*'
 
 [[test]]
 name = "Kafka source name can be modified"
@@ -314,7 +314,7 @@ expected_output_re = '.*?test_ci_kinesis_source.*'
 [[test]]
 name = "Kinesis source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_kinesis_source".*'
+expected_output_re = '.*?"test_ci_kinesis_source".*'
 
 # failing because HDX-5693
 #[[test]]
@@ -363,7 +363,7 @@ expected_output_re = '.*?test_ci_siem_source.*'
 [[test]]
 name = "SIEM source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_siem_source".*'
+expected_output_re = '.*?"test_ci_siem_source".*'
 
 [[test]]
 name = "SIEM source name can be modified"
@@ -405,7 +405,7 @@ expected_output_re = '.*?test_ci_storage.*'
 [[test]]
 name = "Storage settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main storage --storage test_ci_storage settings"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_storage".*'
+expected_output_re = '.*?"test_ci_storage".*'
 
 [[test]]
 name = "Storage cloud can be shown"
@@ -454,7 +454,7 @@ expected_output = 'Retrying test_ci_batch_job'
 [[test]]
 name = "Batch job settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main job batch --job test_ci_batch_job settings"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_batch_job".*'
+expected_output_re = '.*?"test_ci_batch_job".*'
 [[test]]
 name = "Batch jobs can be shown"
 commands_under_test = ["python3 -m hdx_cli.main job batch --job test_ci_batch_job show"]
@@ -538,7 +538,7 @@ name = "Function settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main function --function test_ci_function settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_function".*'
+expected_output_re = '.*?"test_ci_function".*'
 
 [[test]]
 name = "Functions can be shown"
@@ -573,7 +573,7 @@ name = "Dictionary settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary --dictionary test_ci_dictionary settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?name                                                                                      string                        "test_ci_dictionary".*'
+expected_output_re = '.*?"test_ci_dictionary".*'
 
 [[test]]
 name = "Dictionaries can be shown"
