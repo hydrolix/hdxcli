@@ -15,7 +15,8 @@ from hdx_cli.cli_interface.storage import commands as storage_
 from hdx_cli.cli_interface.profile import commands as profile_
 from hdx_cli.cli_interface.pool import commands as pool_
 from hdx_cli.cli_interface.sources import commands as sources_
-from hdx_cli.cli_interface.migrate import commands as migrate_
+# from hdx_cli.cli_interface.migrate import commands as migrate_
+from hdx_cli.cli_interface.migrate import commands_v2 as migrate_
 from hdx_cli.cli_interface.integration import commands as integration_
 from hdx_cli.cli_interface.user import commands as user_
 from hdx_cli.cli_interface.role import commands as role_
@@ -31,7 +32,7 @@ from hdx_cli.library_api.common.profile import save_profile, get_profile_data_fr
 from hdx_cli.library_api.common.auth_utils import load_user_context
 from hdx_cli.library_api.common.logging import set_debug_logger, set_info_logger, get_logger
 
-VERSION = "1.0-rc51"
+VERSION = "1.0-rc53"
 
 
 from hdx_cli.library_api.common.auth import (

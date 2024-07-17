@@ -1,8 +1,17 @@
 import sys
 import logging
 
+logging.getLogger('boto3').setLevel(logging.CRITICAL)
+logging.getLogger('botocore').setLevel(logging.CRITICAL)
+logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+logging.getLogger('azure.storage.blob').setLevel(logging.CRITICAL)
+logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.CRITICAL)
+logging.getLogger('google').setLevel(logging.CRITICAL)
+
 # key to have logging outputs without '\n' new line.
 SPECIAL_CODE = '[!n]'
+# key to use for input cases
+INPUT_SPECIAL_CODE = '[!i]'
 
 
 class InfoStreamHandler(logging.StreamHandler):
@@ -13,8 +22,8 @@ class InfoStreamHandler(logging.StreamHandler):
         return record.msg
 
     def emit(self, record):
-        if SPECIAL_CODE in record.msg:
-            record.msg = record.msg.replace(SPECIAL_CODE, '')
+        if SPECIAL_CODE in record.msg or INPUT_SPECIAL_CODE in record.msg:
+            record.msg = record.msg.replace(SPECIAL_CODE, '').replace(INPUT_SPECIAL_CODE, '')
             self.terminator = ''
         else:
             self.terminator = '\n'
@@ -25,19 +34,35 @@ class InfoStreamHandler(logging.StreamHandler):
 class DebugStreamHandler(logging.StreamHandler):
     def __init__(self, stream=None):
         super().__init__(stream or sys.stdout)
+        self.last_message_no_newline = False
 
     def format(self, record):
         formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
         return formatter.format(record)
 
     def emit(self, record):
-        if SPECIAL_CODE in record.msg:
-            record.msg = record.msg.replace(SPECIAL_CODE, '')
-            self.terminator = ''
-        else:
-            self.terminator = '\n'
+        try:
+            msg = self.format(record)
+            stream = self.stream
+            if SPECIAL_CODE in record.msg:
+                if self.last_message_no_newline:
+                    msg = record.getMessage().replace(SPECIAL_CODE, "")
+                else:
+                    self.last_message_no_newline = True
+                    msg = msg.replace(SPECIAL_CODE, "")
+            elif INPUT_SPECIAL_CODE in record.msg:
+                msg = msg.replace(INPUT_SPECIAL_CODE, "")
+            else:
+                if self.last_message_no_newline:
+                    self.last_message_no_newline = False
+                    msg = f'{record.getMessage()}\n'
+                else:
+                    msg = f'{msg}\n'
 
-        return super().emit(record)
+            stream.write(f"{msg}")
+            self.flush()
+        except Exception:
+            self.handleError(record)
 
 
 def set_debug_logger():
