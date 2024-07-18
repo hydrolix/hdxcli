@@ -27,16 +27,16 @@ def validate_tablename_format(ctx, param, value):
 
 
 @click.command(name='migrate')
+@click.argument('source_table', metavar='SOURCE_TABLE', required=True, default=None,
+                callback=validate_tablename_format)
+@click.argument('target_table', metavar='TARGET_TABLE', required=True, default=None,
+                callback=validate_tablename_format)
 @click.option('--target-profile', '-tp', 'target_profile_name', required=False, default=None)
 @click.option('--target-hostname', '-h', required=False, default=None)
 @click.option('--target-username', '-u', required=False, default=None)
 @click.option('--target-password', '-p', required=False, default=None)
 @click.option('--target-uri-scheme', '-s', required=False, default=None,
               type=click.Choice(['http', 'https'], case_sensitive=False))
-@click.option('--source-table', callback=validate_tablename_format, required=True, default=None,
-              help='The source table in the format "project.table" to migrate from.')
-@click.option('--target-table', callback=validate_tablename_format, required=True, default=None,
-              help='The target table in the format "project.table" to migrate to.')
 @click.option('--allow-merge', type=bool, is_flag=True, is_eager=True, default=False,
               help='Allow migration with merge process activated in the source table. '
                    'Default is False.')
@@ -57,11 +57,10 @@ def validate_tablename_format(ctx, param, value):
               help='Number of worker threads to use for migrating partitions. Default is 10.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def migrate(ctx: click.Context, target_profile_name: str, target_hostname: str,
-            target_username: str, target_password: str, target_uri_scheme: str,
-            source_table: str, target_table: str, allow_merge: bool, only: str,
-            min_timestamp: datetime, max_timestamp: datetime, recovery: bool,
-            reuse_partitions: bool, workers: int):
+def migrate(ctx: click.Context, source_table: str, target_table: str, target_profile_name: str,
+            target_hostname: str, target_username: str, target_password: str,
+            target_uri_scheme: str, allow_merge: bool, only: str, min_timestamp: datetime,
+            max_timestamp: datetime, recovery: bool, reuse_partitions: bool, workers: int):
     source_profile = ctx.parent.obj['usercontext']
 
     if (target_profile_name is None and
