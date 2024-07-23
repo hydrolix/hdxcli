@@ -57,8 +57,8 @@ def _first_time_use_config(profile_config_file):
         return
     save_profile(profile_wizard_info.username,
                  profile_wizard_info.hostname,
-                 profile_config_file,
                  'default',
+                 profile_config_file=profile_config_file,
                  scheme=profile_wizard_info.scheme)
     logger.info('')
     logger.info(f'Your configuration with profile [default] has been created at {profile_config_file}')
