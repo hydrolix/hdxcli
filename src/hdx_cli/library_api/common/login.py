@@ -24,11 +24,12 @@ def _do_login(username, hostname,
         result = req.post(url, json=login_data,
                           headers={'Accept': 'application/json'},
                           timeout=15)
+    except req.ConnectTimeout as exc:
+        raise HdxCliException("Timeout exception.") from exc
     except req.ConnectionError as exc:
         logger.error(f'{exc}')
-        raise LogicException(f"Connection error: could not stablish connection with host {hostname} (using {scheme}).") from exc
-    except req.ConnectTimeout as exc:
-        raise HdxCliException("Timeout exception.")
+        raise LogicException(
+            f"Connection error: could not stablish connection with host {hostname} (using {scheme}).") from exc
     else:
         if result.status_code != 200:
             raise LoginException(

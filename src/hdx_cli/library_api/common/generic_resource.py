@@ -50,10 +50,12 @@ def access_resource_detailed(ctx: ProfileUserContext,
                                       timeout=timeout)
         if resource_name is None:
             return (resource_list, resource_url)
-        try:
-            a_resource = [r for r in resource_list if r['name'] == resource_name][0]
-        except:
-            raise
+
+        a_resource = [r for r in resource_list if r['name'] == resource_name]
+        if not a_resource:
+            return None, resource_url
+
+        a_resource = a_resource[0]
         resource_url = f'{resource_url}{a_resource["uuid"]}/'
     if not resource_kind_and_name:
         pass
