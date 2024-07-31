@@ -9,9 +9,10 @@ def setup_provider(storage_settings: dict, credentials=None) -> BaseProvider:
 
     cloud = storage_settings.get('cloud').strip()
     region = storage_settings.get('region').strip()
-    if cloud == 'aws':
+    endpoint = storage_settings.get('endpoint')
+    # For now this is necessary because cloud information is not always used as expected
+    if cloud == 'aws' and endpoint is not None and 'linode' in endpoint:
         cloud = 'linode'
-        region = 'us-iad-1'
     bucket_name = storage_settings.get('bucket_name').strip()
     bucket_path = storage_settings.get('bucket_path').strip()
     provider_class_name = cloud.capitalize() + 'Provider'
