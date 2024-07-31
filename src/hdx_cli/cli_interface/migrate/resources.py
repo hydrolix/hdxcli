@@ -12,10 +12,10 @@ logger = get_logger()
 
 def creating_resources(target_profile, target_data, source_data, reuse_partitions: bool = False) -> None:
     logger.info(f'{" Resources ":=^50}')
-    logger.info(f'Creating resources in {target_profile.hostname}')
+    logger.info(f"{f'Creating resources in {target_profile.hostname[:27]}':<50}")
 
     # PROJECT
-    logger.info(f"{f'  Project: {target_profile.projectname}':<42} -> [!n]")
+    logger.info(f"{f'  Project: {target_profile.projectname[:31]}':<42} -> [!n]")
     _, target_projects_url = access_resource_detailed(target_profile, [('projects', None)])
     target_projects_path = urlparse(f'{target_projects_url}').path
 
@@ -38,7 +38,7 @@ def creating_resources(target_profile, target_data, source_data, reuse_partition
                                                                        [('projects', target_profile.projectname)])
 
     # TABLE
-    logger.info(f"{f'  Table: {target_profile.tablename}':<42} -> [!n]")
+    logger.info(f"{f'  Table: {target_profile.tablename[:33]}':<42} -> [!n]")
     target_tables_path = urlparse(f'{target_project_url}tables/').path
     table_body = copy.deepcopy(source_data.table)
     if not reuse_partitions:
@@ -55,8 +55,7 @@ def creating_resources(target_profile, target_data, source_data, reuse_partition
                                                                     ('tables', target_profile.tablename)])
 
     # TRANSFORMS
-    transform_names = ','.join(list(map(lambda t: t['name'], source_data.transforms)))
-    logger.info(f"{f'  Transforms: {transform_names}':<42} -> [!n]")
+    logger.info(f"{f'  Transforms':<42} -> [!n]")
     target_transforms_path = urlparse(f'{target_table_url}transforms/').path
     for transform in source_data.transforms:
         del transform['uuid']
@@ -70,36 +69,32 @@ def creating_resources(target_profile, target_data, source_data, reuse_partition
 
 
 def get_resources(profile, data, only_storages=False) -> None:
-    logger.info(f"{f'Getting resources from {profile.hostname}':<50}")
+    logger.info(f"{f'Getting resources from {profile.hostname[:27]}':<50}")
 
     if not only_storages:
-        logger.info(f'{f"  Project: {profile.projectname}":<42} -> [!n]')
+        logger.info(f'{f"  Project: {profile.projectname[:31]}":<42} -> [!n]')
         data.project, _ = access_resource_detailed(profile, [('projects', profile.projectname)])
         if not data.project:
             raise ResourceNotFoundException(f"The project '{profile.projectname}' was not found.")
         logger.info('Done')
 
-        logger.info(f"{f'  Table: {profile.tablename}':<42} -> [!n]")
+        logger.info(f"{f'  Table: {profile.tablename[:33]}':<42} -> [!n]")
         data.table, _ = access_resource_detailed(profile, [('projects', profile.projectname),
                                                            ('tables', profile.tablename)])
         if not data.table:
             raise ResourceNotFoundException(f"The table '{profile.tablename}' was not found.")
         logger.info('Done')
 
-        logger.info(f"{'  Transforms: '}[!n]")
+        logger.info(f"{'  Transforms':<42} -> [!n]")
         data.transforms, _ = access_resource_detailed(profile, [('projects', profile.projectname),
                                                                 ('tables', profile.tablename),
                                                                 ('transforms', None)])
         if not data.transforms:
             raise ResourceNotFoundException(
                 f"Transforms in the table '{profile.tablename}' were not found.")
-        transform_names = ','.join(list(map(lambda t: t['name'], data.transforms)))
-        logger.info(f'{transform_names:<28} -> [!n]')
         logger.info('Done')
 
     # Then, storages
-    logger.info(f"{'  Storages: ':}[!n]")
+    logger.info(f"{'  Storages':<42} -> [!n]")
     data.storages, _ = access_resource_detailed(profile, [('storages', None)])
-    storage_names = ','.join(list(map(lambda t: t['name'], data.storages)))
-    logger.info(f'{storage_names:<30} -> [!n]')
     logger.info('Done')

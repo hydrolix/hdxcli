@@ -28,7 +28,7 @@ def validate_tablename_format(ctx, param, value):
 
 @click.command(help='Migrate a table and its data to a target cluster. This command allows you '
                     'to migrate Hydrolix tables, including their data, between clusters or '
-                    'even within the same cluster. '
+                    'even within the same cluster.'
                     'The migration process creates the project, table, and transforms at '
                     'the target location. It then copies the partitions from the source bucket '
                     'to the target bucket.')

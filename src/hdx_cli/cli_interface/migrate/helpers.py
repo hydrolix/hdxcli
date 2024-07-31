@@ -43,7 +43,8 @@ def get_catalog(profile: ProfileUserContext, data: MigrationData) -> Catalog:
 
 def set_catalog(profile: ProfileUserContext, data: MigrationData,
                 catalog: Catalog, reuse_partitions: bool) -> None:
-    logger.info(f"{f'Uploading catalog for {profile.projectname}.{profile.tablename}':<42} -> [!n]")
+    project_table_name = f'{profile.projectname}.{profile.tablename}'
+    logger.info(f"{f'Uploading catalog for {project_table_name[:20]}':<42} -> [!n]")
     if not reuse_partitions:
         target_default_storage_id, _ = get_storage_default(data.storages)
         catalog.update(data.get_project_id(), data.get_table_id(), target_default_storage_id)
