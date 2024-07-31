@@ -1,16 +1,8 @@
-from typing import List, Tuple
-
 import json
 import click
 
-from ...library_api.common.exceptions import HdxCliException, LogicException
-from ...library_api.common import rest_operations as rest_ops
 from ...library_api.utility.decorators import report_error_and_exit
 from ..common.undecorated_click_commands import basic_settings
-
-
-
-
 
 
 @click.command(help="Get, set or list settings on a resource. When invoked with "
@@ -31,5 +23,11 @@ def settings(ctx: click.Context,
     if value:
         the_value = value
         if (stripped := value.strip()).startswith('[') and stripped.endswith(']'):
-            the_value = json.loads(stripped)
+            try:
+                the_value = json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                raise click.BadParameter(
+                    'The provided list value is in an incorrect format. '
+                    "Please ensure the list is properly quoted, e.g., '[\"str\", int]'."
+                ) from exc
     basic_settings(profile, resource_path, key, the_value)
