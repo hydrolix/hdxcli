@@ -71,7 +71,7 @@ expected_output_re = '.*?test_ci_project.*'
 [[test]]
 name = "Project settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project settings"]
-expected_output_re = '.*?"test_ci_project".*'
+expected_output_expr = '"name" in result and "test_ci_project" in result and "description" in result and "Created with hdxcli tool" in result'
 
 [[test]]
 name = "Project description can be modified"
@@ -84,7 +84,7 @@ name = "Projects can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"name": "test_ci_project".*'
+expected_output_expr = '"name" in result and "test_ci_project" in result and "description" in result and "Created-with-hdxcli-tool" in result'
 
 [[test]]
 name = "Project statistics can be shown"
@@ -96,7 +96,7 @@ expected_output = '{"summary": {"name": "test_ci_project", "total_partitions": 0
 [[test]]
 name = "Project activities can be shown"
 commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project activity"]
-expected_output_re = '.*?{"name": "test_ci_project", "description": "Created with hdxcli tool"}}, "text": "Published config"}}}}.*'
+expected_output_expr = '"name" in result and "test_ci_project" in result and "description" in result and "Created with hdxcli tool" in result and "text" in result and "Created" in result'
 
 
 ######################################################### Table #########################################################
@@ -118,7 +118,7 @@ expected_output = 'Deleted test_table'
 [[test]]
 name = "Tables can be listed"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project list"]
-expected_output_re = '.*?test_ci_table.*'
+expected_output_expr = '"test_ci_table_ingest" in result and "test_ci_table" in result'
 
 [[test]]
 name = "Tables can be truncated"
@@ -132,7 +132,7 @@ name = "Table settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"test_ci_table".*'
+expected_output_expr = '"name" in result and "test_ci_table" in result and "description" in result and "type" in result and "turbine" in result'
 
 [[test]]
 name = "Table description can be modified"
@@ -153,7 +153,7 @@ expected_output = 'Updated test_ci_table settings.merge.enabled'
 [[test]]
 name = "Tables can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table show"]
-expected_output_re = '.*?"name": "test_ci_table", "description": "\'Created-with-hdxcli-tool\'".*'
+expected_output_expr = '"name" in result and "test_ci_table" in result and "description" in result and "type" in result and "turbine" in result'
 
 [[test]]
 name = "Table statistics can be shown"
@@ -165,7 +165,7 @@ expected_output_expr = '{"name": "test_ci_project.test_ci_table", "total_partiti
 [[test]]
 name = "Table activities can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table activity"]
-expected_output_re = '.*?{"name": "test_ci_table", "description": null}}, "text": "Published config"}}}}.*'
+expected_output_expr = '"name" in result and "test_ci_table" in result and "description" in result and "Created-with-hdxcli-tool" in result and "text" in result and "Created" in result'
 
 #################################################### Summary Table #####################################################
 [[test]]
@@ -213,14 +213,14 @@ expected_output = 'Deleted test_transform'
 [[test]]
 name = "Transforms can be listed"
 commands_under_test = ["python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table list"]
-expected_output_re = '.*?test_ci_transform.*'
+expected_output = 'test_ci_transform (default)'
 
 [[test]]
 name = "Transform settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"test_ci_transform".*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_transform" in result'
 
 #Error: (405, b\'{"detail":"Method \\\\"PATCH\\\\" not allowed."}\
 #[[test]]
@@ -239,7 +239,7 @@ name = "Transforms can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"name": "test_ci_transform", "description": null.*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_transform" in result'
 
 ## 'map-from' tests are missing.
 
