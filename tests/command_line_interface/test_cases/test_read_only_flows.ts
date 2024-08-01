@@ -309,12 +309,12 @@ name = "Kinesis sources can be listed"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis list"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?test_ci_kinesis_source.*'
+expected_output = 'test_ci_kinesis_source'
 
 [[test]]
 name = "Kinesis source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings"]
-expected_output_re = '.*?"test_ci_kinesis_source".*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_kinesis_source" in result'
 
 # failing because HDX-5693
 #[[test]]
@@ -333,7 +333,7 @@ name = "Kinesis sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis --source test_ci_kinesis_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"subtype": "kinesis", "transform": "test_ci_transform", "table": "test_ci_project.test_ci_table".*'
+expected_output_expr = '"name" in result and "test_ci_kinesis_source" in result and "kinesis-peer" in result'
 
 
 ########################################################## SIEM #########################################################
@@ -358,12 +358,12 @@ name = "SIEM sources can be listed"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources siem list"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?test_ci_siem_source.*'
+expected_output = 'test_ci_siem_source'
 
 [[test]]
 name = "SIEM source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings"]
-expected_output_re = '.*?"test_ci_siem_source".*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_siem_source" in result'
 
 [[test]]
 name = "SIEM source name can be modified"
@@ -381,7 +381,7 @@ name = "SIEM sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"name": "test_ci_siem_source".*'
+expected_output_expr = '"name" in result and "test_ci_siem_source" in result and "siem-peer" in result'
 
 
 ######################################################## Storage #######################################################
