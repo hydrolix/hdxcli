@@ -400,12 +400,12 @@ expected_output = 'Deleted test_storage'
 [[test]]
 name = "Storages can be listed"
 commands_under_test = ["python3 -m hdx_cli.main storage list"]
-expected_output_re = '.*?test_ci_storage.*'
+expected_output_expr = '"test_ci_storage" in result and "hdx_primary" in result'
 
 [[test]]
 name = "Storage settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main storage --storage test_ci_storage settings"]
-expected_output_re = '.*?"test_ci_storage".*'
+expected_output_expr = '"name" in result and "test_ci_storage" in result and "settings" in result'
 
 [[test]]
 name = "Storage cloud can be shown"
@@ -430,7 +430,7 @@ name = "Batch jobs can be listed"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main job batch list"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?test_ci_batch_job.*'
+expected_output_expr = '"test_ci_batch_job" in result and "load-sample-project" in result'
 
 [[test]]
 name = "Batch jobs can be started"
@@ -454,11 +454,12 @@ expected_output = 'Retrying test_ci_batch_job'
 [[test]]
 name = "Batch job settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main job batch --job test_ci_batch_job settings"]
-expected_output_re = '.*?"test_ci_batch_job".*'
+expected_output_expr = '"name" in result and "test_ci_batch_job" in result and "uuid" in result and "type" in result and "batch_import" in result'
+
 [[test]]
 name = "Batch jobs can be shown"
 commands_under_test = ["python3 -m hdx_cli.main job batch --job test_ci_batch_job show"]
-expected_output_re = '.*?"name": "test_ci_batch_job", "description": null.*'
+expected_output_expr = '"name" in result and "test_ci_batch_job" in result and "table" in result and "test_ci_project.test_ci_table" in result and "uuid" in result'
 
 [[test]]
 name = "Batch jobs can be deleted"
@@ -511,7 +512,7 @@ expected_output = 'Created stream ingest'
 [[test]]
 name = "Functions can be listed"
 commands_under_test = ["python3 -m hdx_cli.main function --project test_ci_project list"]
-expected_output_re = '.*?test_ci_function.*'
+expected_output = 'test_ci_function'
 
 [[test]]
 name = "Functions can be created using in-line sql"
@@ -538,14 +539,14 @@ name = "Function settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main function --function test_ci_function settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"test_ci_function".*'
+expected_output_expr = '"name" in result and "test_ci_function" in result and "sql" in result and "(x,k,b)->k*x+b" in result and "uuid" in result'
 
 [[test]]
 name = "Functions can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main function --function test_ci_function show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"name": "test_ci_function", "project":.*'
+expected_output_expr = '"name" in result and "test_ci_function" in result and "sql" in result and "(x,k,b)->k*x+b" in result and "uuid" in result'
 
 
 #################################################### Dictionary #######################################################
