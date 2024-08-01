@@ -264,12 +264,12 @@ name = "Kafka sources can be listed"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kafka list"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?test_ci_kafka_source.*'
+expected_output = 'test_ci_kafka_source'
 
 [[test]]
 name = "Kafka source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings"]
-expected_output_re = '.*?"test_ci_kafka_source".*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_kafka_source" in result'
 
 [[test]]
 name = "Kafka source name can be modified"
@@ -287,7 +287,7 @@ name = "Kafka sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --source test_ci_kafka_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"subtype": "kafka", "transform": "test_ci_transform", "table": "test_ci_project.test_ci_table".*'
+expected_output_expr = '"name" in result and "test_ci_kafka_source" in result and "kafka-peer" in result'
 
 ######################################################## Kinesis #######################################################
 [[test]]
