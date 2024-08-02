@@ -805,7 +805,7 @@ name = "List query options"
 setup = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 commands_under_test = ["python3 -m hdx_cli.main query-option list"]
 teardown = ["python3 -m hdx_cli.main query-option unset --all"]
-expected_output_expr = '"hdx_query_max_columns_to_read" in result and "value" in result and "20" in result and hdx_query_max_concurrent_partitions" in result'
+expected_output_expr = '"hdx_query_max_columns_to_read" in result and "value" in result and "20" in result and "hdx_query_max_concurrent_partitions" in result'
 
 [[test]]
 name = "Unset query options"
