@@ -66,7 +66,7 @@ expected_output = 'Deleted test_project'
 [[test]]
 name = "Projects can be listed"
 commands_under_test = ["python3 -m hdx_cli.main project list"]
-expected_output_re = '.*?test_ci_project.*'
+expected_output_expr = '"name" in result and "test_ci_project" in result and "description" in result and "Created with hdxcli tool" in result'
 
 [[test]]
 name = "Project settings can be shown"
@@ -620,7 +620,7 @@ expected_output = 'Error: This field must be unique.'
 [[test]]
 name = "Roles can be listed"
 commands_under_test = ["python3 -m hdx_cli.main role list"]
-expected_output_re = '.*?test_ci_role.*'
+expected_output_expr = '"super_admin" in result and "user_admin" in result and "operator" in result and "read_only" in result and "test_ci_role" in result'
 
 [[test]]
 name = "add user to a role"
@@ -650,7 +650,7 @@ expected_output_re = 'Deleted new_role'
 [[test]]
 name = "list permission"
 commands_under_test = ["python -m hdx_cli.main role permission list"]
-expected_output_re = '.*?view_user.*'
+expected_output_expr = '"Scope type" in result and "user" in result and "pool" in result and "role" in result and "invite" in result'
 
 ####################################################### Profile ########################################################
 ##failure in the pipeline due to the error: Error No such file or directory: '/home/runner/.hdx_cli/config.toml'
@@ -682,7 +682,7 @@ expected_output_re = '.*?view_user.*'
 name = "Users can be listed"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user list"]
-expected_output_re = '.*?user_invite_cli@hydrolix.io                  super_admin.*'
+expected_output_expr = '"user_invite_cli@hydrolix.io" in result and "super_admin" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -735,7 +735,7 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 name = "User can be show"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user --user user_invite_cli@hydrolix.io show"]
-expected_output_re = '.*?"email": "user_invite_cli@hydrolix.io".*'
+expected_output_expr = '"email" in result and "user_invite_cli@hydrolix.io" in result and "super_admin" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -767,7 +767,7 @@ expected_output_re = 'Error: Cannot find resource.'
 name = "Invitation list"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user invite list"]
-expected_output_re = '.*?user_invite_cli@hydrolix.io                  pending.*'
+expected_output_expr = '"user_invite_cli@hydrolix.io" in result and "pending" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -785,7 +785,7 @@ expected_output_re = 'Could not delete user_invite_cli@hydrolix.io'
 name = "Invite can be show"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user invite --user user_invite_cli@hydrolix.io show"]
-expected_output_re = '.*?{"email": "user_invite_cli@hydrolix.io".*'
+expected_output_expr = '"user_invite_cli@hydrolix.io" in result and "roles" in result and "super_admin" in result and "pending" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -798,14 +798,14 @@ expected_output_re = 'Error: Cannot find resource.'
 name = "Set query options from file"
 commands_under_test = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 teardown = ["python3 -m hdx_cli.main query-option unset --all"]
-expected_output_re = '.*?Set query options from file*'
+expected_output_expr = 'result.startswith("Set query options from file")'
 
 [[test]]
 name = "List query options"
 setup = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 commands_under_test = ["python3 -m hdx_cli.main query-option list"]
 teardown = ["python3 -m hdx_cli.main query-option unset --all"]
-expected_output_re = '.*?hdx_query_max_columns_to_read                          integer        20*'
+expected_output_expr = '"hdx_query_max_columns_to_read" in result and "value" in result and "20" in result and hdx_query_max_concurrent_partitions" in result and "value" in result and "10" in result'
 
 [[test]]
 name = "Unset query options"
@@ -854,9 +854,9 @@ expected_output = 'Error: Must be a valid boolean.'
 name = "Set can be used"
 commands_under_test = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*? set project/table*'
+expected_output = "Profile 'default' set project/table"
 
 [[test]]
 name = "Unset can be used"
 commands_under_test = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*? unset project/table*'
+expected_output = "Profile 'default' unset project/table"
