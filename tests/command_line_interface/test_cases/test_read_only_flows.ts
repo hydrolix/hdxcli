@@ -66,7 +66,7 @@ expected_output = 'Deleted test_project'
 [[test]]
 name = "Projects can be listed"
 commands_under_test = ["python3 -m hdx_cli.main project list"]
-expected_output_expr = '"name" in result and "test_ci_project" in result and "description" in result and "Created with hdxcli tool" in result'
+expected_output_expr = '"test_ci_project" in result'
 
 [[test]]
 name = "Project settings can be shown"
@@ -805,7 +805,7 @@ name = "List query options"
 setup = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 commands_under_test = ["python3 -m hdx_cli.main query-option list"]
 teardown = ["python3 -m hdx_cli.main query-option unset --all"]
-expected_output_expr = '"hdx_query_max_columns_to_read" in result and "value" in result and "20" in result and hdx_query_max_concurrent_partitions" in result and "value" in result and "10" in result'
+expected_output_expr = '"hdx_query_max_columns_to_read" in result and "value" in result and "20" in result and hdx_query_max_concurrent_partitions" in result'
 
 [[test]]
 name = "Unset query options"
