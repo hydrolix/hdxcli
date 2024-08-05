@@ -66,12 +66,12 @@ expected_output = 'Deleted test_project'
 [[test]]
 name = "Projects can be listed"
 commands_under_test = ["python3 -m hdx_cli.main project list"]
-expected_output_re = '.*?test_ci_project.*'
+expected_output_expr = '"test_ci_project" in result'
 
 [[test]]
 name = "Project settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project settings"]
-expected_output_re = '.*?"test_ci_project".*'
+expected_output_expr = '"name" in result and "test_ci_project" in result and "description" in result and "Created with hdxcli tool" in result'
 
 [[test]]
 name = "Project description can be modified"
@@ -84,7 +84,7 @@ name = "Projects can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"name": "test_ci_project".*'
+expected_output_expr = '"name" in result and "test_ci_project" in result and "description" in result and "Created-with-hdxcli-tool" in result'
 
 [[test]]
 name = "Project statistics can be shown"
@@ -96,7 +96,7 @@ expected_output = '{"summary": {"name": "test_ci_project", "total_partitions": 0
 [[test]]
 name = "Project activities can be shown"
 commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project activity"]
-expected_output_re = '.*?{"name": "test_ci_project", "description": "Created with hdxcli tool"}}, "text": "Published config"}}}}.*'
+expected_output_expr = '"name" in result and "test_ci_project" in result and "description" in result and "Created with hdxcli tool" in result and "text" in result and "Created" in result'
 
 
 ######################################################### Table #########################################################
@@ -118,7 +118,7 @@ expected_output = 'Deleted test_table'
 [[test]]
 name = "Tables can be listed"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project list"]
-expected_output_re = '.*?test_ci_table.*'
+expected_output_expr = '"test_ci_table_ingest" in result and "test_ci_table" in result'
 
 [[test]]
 name = "Tables can be truncated"
@@ -132,7 +132,7 @@ name = "Table settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"test_ci_table".*'
+expected_output_expr = '"name" in result and "test_ci_table" in result and "description" in result and "type" in result and "turbine" in result'
 
 [[test]]
 name = "Table description can be modified"
@@ -153,7 +153,7 @@ expected_output = 'Updated test_ci_table settings.merge.enabled'
 [[test]]
 name = "Tables can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table show"]
-expected_output_re = '.*?"name": "test_ci_table", "description": "\'Created-with-hdxcli-tool\'".*'
+expected_output_expr = '"name" in result and "test_ci_table" in result and "description" in result and "type" in result and "turbine" in result'
 
 [[test]]
 name = "Table statistics can be shown"
@@ -165,7 +165,7 @@ expected_output_expr = '{"name": "test_ci_project.test_ci_table", "total_partiti
 [[test]]
 name = "Table activities can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table activity"]
-expected_output_re = '.*?{"name": "test_ci_table", "description": null}}, "text": "Published config"}}}}.*'
+expected_output_expr = '"name" in result and "test_ci_table" in result and "description" in result and "Created-with-hdxcli-tool" in result and "text" in result and "Created" in result'
 
 #################################################### Summary Table #####################################################
 [[test]]
@@ -213,14 +213,14 @@ expected_output = 'Deleted test_transform'
 [[test]]
 name = "Transforms can be listed"
 commands_under_test = ["python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table list"]
-expected_output_re = '.*?test_ci_transform.*'
+expected_output = 'test_ci_transform (default)'
 
 [[test]]
 name = "Transform settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"test_ci_transform".*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_transform" in result'
 
 #Error: (405, b\'{"detail":"Method \\\\"PATCH\\\\" not allowed."}\
 #[[test]]
@@ -239,7 +239,7 @@ name = "Transforms can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"name": "test_ci_transform", "description": null.*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_transform" in result'
 
 ## 'map-from' tests are missing.
 
@@ -264,12 +264,12 @@ name = "Kafka sources can be listed"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kafka list"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?test_ci_kafka_source.*'
+expected_output = 'test_ci_kafka_source'
 
 [[test]]
 name = "Kafka source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings"]
-expected_output_re = '.*?"test_ci_kafka_source".*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_kafka_source" in result'
 
 [[test]]
 name = "Kafka source name can be modified"
@@ -287,7 +287,7 @@ name = "Kafka sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kafka --source test_ci_kafka_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"subtype": "kafka", "transform": "test_ci_transform", "table": "test_ci_project.test_ci_table".*'
+expected_output_expr = '"name" in result and "test_ci_kafka_source" in result and "kafka-peer" in result'
 
 ######################################################## Kinesis #######################################################
 [[test]]
@@ -309,12 +309,12 @@ name = "Kinesis sources can be listed"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis list"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?test_ci_kinesis_source.*'
+expected_output = 'test_ci_kinesis_source'
 
 [[test]]
 name = "Kinesis source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings"]
-expected_output_re = '.*?"test_ci_kinesis_source".*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_kinesis_source" in result'
 
 # failing because HDX-5693
 #[[test]]
@@ -333,7 +333,7 @@ name = "Kinesis sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources kinesis --source test_ci_kinesis_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"subtype": "kinesis", "transform": "test_ci_transform", "table": "test_ci_project.test_ci_table".*'
+expected_output_expr = '"name" in result and "test_ci_kinesis_source" in result and "kinesis-peer" in result'
 
 
 ########################################################## SIEM #########################################################
@@ -358,12 +358,12 @@ name = "SIEM sources can be listed"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources siem list"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?test_ci_siem_source.*'
+expected_output = 'test_ci_siem_source'
 
 [[test]]
 name = "SIEM source settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings"]
-expected_output_re = '.*?"test_ci_siem_source".*'
+expected_output_expr = '"name" in result and "string" in result and "test_ci_siem_source" in result'
 
 [[test]]
 name = "SIEM source name can be modified"
@@ -381,7 +381,7 @@ name = "SIEM sources can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"name": "test_ci_siem_source".*'
+expected_output_expr = '"name" in result and "test_ci_siem_source" in result and "siem-peer" in result'
 
 
 ######################################################## Storage #######################################################
@@ -400,12 +400,12 @@ expected_output = 'Deleted test_storage'
 [[test]]
 name = "Storages can be listed"
 commands_under_test = ["python3 -m hdx_cli.main storage list"]
-expected_output_re = '.*?test_ci_storage.*'
+expected_output_expr = '"test_ci_storage" in result and "hdx_primary" in result'
 
 [[test]]
 name = "Storage settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main storage --storage test_ci_storage settings"]
-expected_output_re = '.*?"test_ci_storage".*'
+expected_output_expr = '"name" in result and "test_ci_storage" in result and "settings" in result'
 
 [[test]]
 name = "Storage cloud can be shown"
@@ -430,7 +430,7 @@ name = "Batch jobs can be listed"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main job batch list"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?test_ci_batch_job.*'
+expected_output_expr = '"test_ci_batch_job" in result and "load-sample-project" in result'
 
 [[test]]
 name = "Batch jobs can be started"
@@ -454,11 +454,12 @@ expected_output = 'Retrying test_ci_batch_job'
 [[test]]
 name = "Batch job settings can be shown"
 commands_under_test = ["python3 -m hdx_cli.main job batch --job test_ci_batch_job settings"]
-expected_output_re = '.*?"test_ci_batch_job".*'
+expected_output_expr = '"name" in result and "test_ci_batch_job" in result and "uuid" in result and "type" in result and "batch_import" in result'
+
 [[test]]
 name = "Batch jobs can be shown"
 commands_under_test = ["python3 -m hdx_cli.main job batch --job test_ci_batch_job show"]
-expected_output_re = '.*?"name": "test_ci_batch_job", "description": null.*'
+expected_output_expr = '"name" in result and "test_ci_batch_job" in result and "table" in result and "test_ci_project.test_ci_table" in result and "uuid" in result'
 
 [[test]]
 name = "Batch jobs can be deleted"
@@ -511,7 +512,7 @@ expected_output = 'Created stream ingest'
 [[test]]
 name = "Functions can be listed"
 commands_under_test = ["python3 -m hdx_cli.main function --project test_ci_project list"]
-expected_output_re = '.*?test_ci_function.*'
+expected_output = 'test_ci_function'
 
 [[test]]
 name = "Functions can be created using in-line sql"
@@ -538,14 +539,14 @@ name = "Function settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main function --function test_ci_function settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"test_ci_function".*'
+expected_output_expr = '"name" in result and "test_ci_function" in result and "sql" in result and "(x,k,b)->k*x+b" in result and "uuid" in result'
 
 [[test]]
 name = "Functions can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main function --function test_ci_function show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"name": "test_ci_function", "project":.*'
+expected_output_expr = '"name" in result and "test_ci_function" in result and "sql" in result and "(x,k,b)->k*x+b" in result and "uuid" in result'
 
 
 #################################################### Dictionary #######################################################
@@ -566,21 +567,21 @@ expected_output = 'Deleted test_dictionary'
 [[test]]
 name = "Dictionaries can be listed"
 commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project list"]
-expected_output_re = '.*?test_ci_dictionary.*'
+expected_output = 'test_ci_dictionary'
 
 [[test]]
 name = "Dictionary settings can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary --dictionary test_ci_dictionary settings"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?"test_ci_dictionary".*'
+expected_output_expr = '"name" in result and "test_ci_dictionary" in result and "filename" in result and "test_ci_dictionary_file" in result'
 
 [[test]]
 name = "Dictionaries can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary --dictionary test_ci_dictionary show"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?{"name": "test_ci_dictionary".*'
+expected_output_expr = '"name" in result and "test_ci_dictionary" in result and "filename" in result and "test_ci_dictionary_file" in result and "complex_key_hashed" in result'
 
 
 ################################################### Dictionary Files #####################################################
@@ -601,7 +602,7 @@ expected_output = 'Deleted test_dictionary_file'
 [[test]]
 name = "Dictionary files can be listed"
 commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project files list"]
-expected_output_re = '.*?test_ci_dictionary_file.*'
+expected_output = 'test_ci_dictionary_file'
 
 ######################################################## Role ##########################################################
 
@@ -619,7 +620,7 @@ expected_output = 'Error: This field must be unique.'
 [[test]]
 name = "Roles can be listed"
 commands_under_test = ["python3 -m hdx_cli.main role list"]
-expected_output_re = '.*?test_ci_role.*'
+expected_output_expr = '"super_admin" in result and "user_admin" in result and "operator" in result and "read_only" in result and "test_ci_role" in result'
 
 [[test]]
 name = "add user to a role"
@@ -649,7 +650,7 @@ expected_output_re = 'Deleted new_role'
 [[test]]
 name = "list permission"
 commands_under_test = ["python -m hdx_cli.main role permission list"]
-expected_output_re = '.*?view_user.*'
+expected_output_expr = '"Scope type" in result and "user" in result and "pool" in result and "role" in result and "invite" in result'
 
 ####################################################### Profile ########################################################
 ##failure in the pipeline due to the error: Error No such file or directory: '/home/runner/.hdx_cli/config.toml'
@@ -681,7 +682,7 @@ expected_output_re = '.*?view_user.*'
 name = "Users can be listed"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user list"]
-expected_output_re = '.*?user_invite_cli@hydrolix.io                  super_admin.*'
+expected_output_expr = '"user_invite_cli@hydrolix.io" in result and "super_admin" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -734,7 +735,7 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 name = "User can be show"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user --user user_invite_cli@hydrolix.io show"]
-expected_output_re = '.*?"email": "user_invite_cli@hydrolix.io".*'
+expected_output_expr = '"email" in result and "user_invite_cli@hydrolix.io" in result and "super_admin" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -766,7 +767,7 @@ expected_output_re = 'Error: Cannot find resource.'
 name = "Invitation list"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user invite list"]
-expected_output_re = '.*?user_invite_cli@hydrolix.io                  pending.*'
+expected_output_expr = '"user_invite_cli@hydrolix.io" in result and "pending" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -784,7 +785,7 @@ expected_output_re = 'Could not delete user_invite_cli@hydrolix.io'
 name = "Invite can be show"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user invite --user user_invite_cli@hydrolix.io show"]
-expected_output_re = '.*?{"email": "user_invite_cli@hydrolix.io".*'
+expected_output_expr = '"user_invite_cli@hydrolix.io" in result and "roles" in result and "super_admin" in result and "pending" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -797,14 +798,14 @@ expected_output_re = 'Error: Cannot find resource.'
 name = "Set query options from file"
 commands_under_test = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 teardown = ["python3 -m hdx_cli.main query-option unset --all"]
-expected_output_re = '.*?Set query options from file*'
+expected_output_expr = 'result.startswith("Set query options from file")'
 
 [[test]]
 name = "List query options"
 setup = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 commands_under_test = ["python3 -m hdx_cli.main query-option list"]
 teardown = ["python3 -m hdx_cli.main query-option unset --all"]
-expected_output_re = '.*?hdx_query_max_columns_to_read                          integer        20*'
+expected_output_expr = '"hdx_query_max_columns_to_read" in result and "value" in result and "20" in result and "hdx_query_max_concurrent_partitions" in result'
 
 [[test]]
 name = "Unset query options"
@@ -853,9 +854,9 @@ expected_output = 'Error: Must be a valid boolean.'
 name = "Set can be used"
 commands_under_test = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*? set project/table*'
+expected_output = "Profile 'default' set project/table"
 
 [[test]]
 name = "Unset can be used"
 commands_under_test = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*? unset project/table*'
+expected_output = "Profile 'default' unset project/table"
