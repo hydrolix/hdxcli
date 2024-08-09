@@ -1,5 +1,4 @@
 import dataclasses as dc
-from datetime import datetime
 
 import click
 from trogon import tui
@@ -24,102 +23,17 @@ from hdx_cli.cli_interface.query_option import commands as query_option_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext, DEFAULT_TIMEOUT
-from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException, \
-    ConfigurationNotFoundException, ConfigurationExistsException
-from hdx_cli.library_api.common.config_constants import HDX_CONFIG_DIR, PROFILE_CONFIG_FILE
-from hdx_cli.library_api.common.first_use import try_first_time_use, is_first_time_use, first_time_use_config
-from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
+from hdx_cli.library_api.common.exceptions import ConfigurationNotFoundException, ConfigurationExistsException
+from hdx_cli.library_api.common.config_constants import PROFILE_CONFIG_FILE
+from hdx_cli.library_api.common.first_use import is_first_time_use, first_time_use_config
 
-from hdx_cli.library_api.common.auth_utils import load_user_context
 from hdx_cli.library_api.common.logging import set_debug_logger, set_info_logger, get_logger
+from hdx_cli.library_api.common.auth import load_profile
+from hdx_cli.cli_interface.set import commands as set_commands
 
 VERSION = "1.0-rc55"
 
-
-from hdx_cli.library_api.common.auth import (
-    load_profile,
-    save_profile_cache,
-    try_load_profile_from_cache_data)
-
-from hdx_cli.cli_interface.set import commands as set_commands
-from hdx_cli.library_api.common.login import login
-
-
 logger = get_logger()
-
-
-# def _first_time_use_config(profile_config_file):
-#     logger.info('No configuration was found to access your hydrolix cluster.')
-#     logger.info('A new configuration will be created now.')
-#     logger.info('')
-#     profile_wizard_info = get_profile_data_from_standard_input()
-#     if not profile_wizard_info:
-#         logger.info('Configuration creation aborted')
-#         return
-#     save_profile(profile_wizard_info.username,
-#                  profile_wizard_info.hostname,
-#                  'default',
-#                  profile_config_file=profile_config_file,
-#                  scheme=profile_wizard_info.scheme)
-#     logger.info('')
-#     logger.info(f'Your configuration with profile [default] has been created at {profile_config_file}')
-#     logger.info('-' * 100)
-
-
-def _chain_calls_ignore_exc(*funcs, **kwargs):
-    """Chain calls and return on_error_return on failure. Exceptions are considered failure if
-    they derived from provided kwarg 'exctype', otherwise they will escape.
-    on_error_default kwarg is what is returned in case of failure.
-
-    Function parameters to funcs[0] are provided in kwargs, and subsequent results
-    are are provided as input of the first function.
-
-    """
-    # Setup function
-    exctype = kwargs.get('exctype', Exception)
-    on_error_return = kwargs.get('on_error_return', None)
-    try:
-        del kwargs['exctype']
-    except: # pylint:disable=bare-except
-        pass
-    try:
-        del kwargs['on_error_return']
-    except: # pylint:disable=bare-except
-        pass
-
-    # Run function
-    try:
-        result = funcs[0](**kwargs)
-        if len(funcs) > 1:
-            for func in funcs[1:]:
-                result = func(result)
-        return result
-    except exctype:
-        return on_error_return
-
-
-def load_set_config_parameters(user_context: ProfileUserContext,
-                               load_context: ProfileLoadContext):
-    """Given a profile to load and an old profile, it returns the user_context
-    with the config parameters projectname and tablename loaded."""
-    config_params = {'projectname':
-                     (prof := load_profile(load_context)).projectname,
-                     'tablename':
-                     prof.tablename,
-                     'scheme': prof.scheme}
-    user_ctx_dict = dc.asdict(user_context) | config_params
-    # Keep old auth since asdict will transform AuthInfo into a dictionary.
-    old_auth = user_context.auth
-    new_user_ctx = ProfileUserContext(**user_ctx_dict)
-    # And reassign when done
-    new_user_ctx.auth = old_auth
-    return new_user_ctx
-
-
-def fail_if_token_expired(user_context: ProfileUserContext):
-    if user_context.auth.expires_at <= datetime.now():
-        raise TokenExpiredException()
-    return user_context
 
 
 def configure_logger(debug=False):
@@ -150,12 +64,7 @@ def configure_logger(debug=False):
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 # pylint: enable=line-too-long
-def hdx_cli(ctx, profile,
-            password,
-            profile_config_file,
-            uri_scheme,
-            timeout,
-            debug):
+def hdx_cli(ctx, profile, password, profile_config_file, uri_scheme, timeout, debug):
     """
         Command-line entry point for hdx cli interface
     """
@@ -181,29 +90,6 @@ def hdx_cli(ctx, profile,
         'timeout': timeout
     }
     ctx.obj['useroptions'] = user_options
-
-    # user_context = load_user_context(load_context,
-    #                                  password=password,
-    #                                  profile_config_file=profile_config_file,
-    #                                  uri_scheme=uri_scheme,
-    #                                  timeout=timeout)
-    # # Unconditional default override
-    # ctx.obj = {'usercontext': user_context}
-
-    # profile = 'default' if not profile else profile
-    # profile_config_file = profile_config_file if profile_config_file else PROFILE_CONFIG_FILE
-    #
-    # try_first_time_use(_first_time_use_config, profile_config_file)
-    #
-    # load_context = ProfileLoadContext(profile, profile_config_file)
-    #
-    # user_context = load_user_context(load_context,
-    #                                  password=password,
-    #                                  profile_config_file=profile_config_file,
-    #                                  uri_scheme=uri_scheme,
-    #                                  timeout=timeout)
-    # # Unconditional default override
-    # ctx.obj = {'usercontext': user_context}
 
 
 @click.command(help='Initialize hdxcli configuration')

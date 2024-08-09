@@ -245,28 +245,3 @@ def _create_dictionary_file_for_project(project_name,
                     file_stream=io.BytesIO(contents),
                     remote_filename=dict_file,
                     timeout=timeout)
-
-
-# def remove_keys(resource, *args):
-#     for key in args:
-#         if isinstance(key, tuple):
-#             current_level = resource
-#             for nested_key in key[:-1]:
-#                 if (isinstance(current_level, list) and isinstance(nested_key, int)
-#                         and 0 <= nested_key < len(current_level)):
-#                     current_level = current_level[nested_key]
-#                 elif nested_key in current_level:
-#                     current_level = current_level[nested_key]
-#                 else:
-#                     # If any of the nested keys doesn't exist, simply return without doing anything.
-#                     return
-#
-#             last_key = key[-1]
-#             if (isinstance(current_level, list) and isinstance(last_key, int)
-#                     and 0 <= last_key < len(current_level)):
-#                 del current_level[last_key]
-#             elif last_key in current_level:
-#                 del current_level[last_key]
-#         else:
-#             if key in resource:
-#                 del resource[key]

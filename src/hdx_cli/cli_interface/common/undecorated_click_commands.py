@@ -357,7 +357,6 @@ def basic_settings(profile,
         raise ResourceNotFoundException('Cannot find resource.') from idx_err
 
     if not key:
-        # project_str = f'Project: {profile.projectname}'
         logger.info(f'{"-" * (90 + 30 + 40)}')
         logger.info(_format_settings_header([("name", 90), ("type", 30), ("value", 40)]))
         logger.info(f'{"-" * (90 + 30 + 40)}')
