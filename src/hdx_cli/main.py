@@ -22,16 +22,15 @@ from hdx_cli.cli_interface.role import commands as role_
 from hdx_cli.cli_interface.query_option import commands as query_option_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
-from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext, DEFAULT_TIMEOUT
+from hdx_cli.library_api.common.context import ProfileLoadContext, DEFAULT_TIMEOUT
 from hdx_cli.library_api.common.exceptions import ConfigurationNotFoundException, ConfigurationExistsException
 from hdx_cli.library_api.common.config_constants import PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.first_use import is_first_time_use, first_time_use_config
 
 from hdx_cli.library_api.common.logging import set_debug_logger, set_info_logger, get_logger
-from hdx_cli.library_api.common.auth import load_profile
 from hdx_cli.cli_interface.set import commands as set_commands
 
-VERSION = "1.0-rc55"
+VERSION = "1.0-rc57"
 
 logger = get_logger()
 
