@@ -31,6 +31,14 @@ class NotSupportedException(HdxCliException):
     pass
 
 
+class ConfigurationNotFoundException(HdxCliException):
+    pass
+
+
+class ConfigurationExistsException(HdxCliException):
+    pass
+
+
 class TokenExpiredException(HdxCliException):
     pass
 

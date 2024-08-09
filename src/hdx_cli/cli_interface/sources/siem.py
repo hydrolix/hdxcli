@@ -1,11 +1,12 @@
 import click
 
-from ...library_api.utility.decorators import report_error_and_exit
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 from ...library_api.common.context import ProfileUserContext
-from ..common.rest_operations import (delete as command_delete,
-                                      list_ as command_list,
-                                      show as command_show)
-
+from ..common.rest_operations import (
+    delete as command_delete,
+    list_ as command_list,
+    show as command_show
+)
 from ..common.misc_operations import settings as command_settings
 from .common_commands import create as command_create
 from .common_commands import any_source_impl
@@ -20,15 +21,15 @@ from .common_commands import any_source_impl
               metavar='SOURCENAME', default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def siem(ctx: click.Context,
-         project_name,
-         table_name,
-         source_name):
+@ensure_logged_in
+def siem(ctx: click.Context, project_name: str, table_name: str, source_name: str):
     user_profile = ctx.parent.obj['usercontext']
-    ProfileUserContext.update_context(user_profile,
-                                      projectname=project_name,
-                                      tablename=table_name,
-                                      siemname=source_name)
+    ProfileUserContext.update_context(
+        user_profile,
+        projectname=project_name,
+        tablename=table_name,
+        siemname=source_name
+    )
     any_source_impl(ctx, 'siem')
 
 

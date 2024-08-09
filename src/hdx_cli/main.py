@@ -24,9 +24,10 @@ from hdx_cli.cli_interface.query_option import commands as query_option_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext, DEFAULT_TIMEOUT
-from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException
+from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException, \
+    ConfigurationNotFoundException, ConfigurationExistsException
 from hdx_cli.library_api.common.config_constants import HDX_CONFIG_DIR, PROFILE_CONFIG_FILE
-from hdx_cli.library_api.common.first_use import try_first_time_use
+from hdx_cli.library_api.common.first_use import try_first_time_use, is_first_time_use, first_time_use_config
 from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
 
 from hdx_cli.library_api.common.auth_utils import load_user_context
@@ -47,22 +48,22 @@ from hdx_cli.library_api.common.login import login
 logger = get_logger()
 
 
-def _first_time_use_config(profile_config_file):
-    logger.info('No configuration was found to access your hydrolix cluster.')
-    logger.info('A new configuration will be created now.')
-    logger.info('')
-    profile_wizard_info = get_profile_data_from_standard_input()
-    if not profile_wizard_info:
-        logger.info('Configuration creation aborted')
-        return
-    save_profile(profile_wizard_info.username,
-                 profile_wizard_info.hostname,
-                 'default',
-                 profile_config_file=profile_config_file,
-                 scheme=profile_wizard_info.scheme)
-    logger.info('')
-    logger.info(f'Your configuration with profile [default] has been created at {profile_config_file}')
-    logger.info('-' * 100)
+# def _first_time_use_config(profile_config_file):
+#     logger.info('No configuration was found to access your hydrolix cluster.')
+#     logger.info('A new configuration will be created now.')
+#     logger.info('')
+#     profile_wizard_info = get_profile_data_from_standard_input()
+#     if not profile_wizard_info:
+#         logger.info('Configuration creation aborted')
+#         return
+#     save_profile(profile_wizard_info.username,
+#                  profile_wizard_info.hostname,
+#                  'default',
+#                  profile_config_file=profile_config_file,
+#                  scheme=profile_wizard_info.scheme)
+#     logger.info('')
+#     logger.info(f'Your configuration with profile [default] has been created at {profile_config_file}')
+#     logger.info('-' * 100)
 
 
 def _chain_calls_ignore_exc(*funcs, **kwargs):
@@ -159,24 +160,61 @@ def hdx_cli(ctx, profile,
         Command-line entry point for hdx cli interface
     """
     configure_logger(debug)
-
-    if ctx.invoked_subcommand == 'version':
+    if ctx.invoked_subcommand == 'version' or ctx.invoked_subcommand == 'init':
         return
 
-    profile = 'default' if not profile else profile
     profile_config_file = profile_config_file if profile_config_file else PROFILE_CONFIG_FILE
+    if is_first_time_use(profile_config_file):
+        raise ConfigurationNotFoundException(
+            "Configuration not found for accessing your Hydrolix cluster. "
+            "Please run the 'hdxcli init' to create a new configuration."
+        )
 
-    try_first_time_use(_first_time_use_config, profile_config_file)
-
+    profile = 'default' if not profile else profile
     load_context = ProfileLoadContext(profile, profile_config_file)
+    ctx.obj = {'profilecontext': load_context}
 
-    user_context = load_user_context(load_context,
-                                     password=password,
-                                     profile_config_file=profile_config_file,
-                                     uri_scheme=uri_scheme,
-                                     timeout=timeout)
-    # Unconditional default override
-    ctx.obj = {'usercontext': user_context}
+    user_options = {
+        'password': password,
+        'profile_config_file': profile_config_file,
+        'uri_scheme': uri_scheme,
+        'timeout': timeout
+    }
+    ctx.obj['useroptions'] = user_options
+
+    # user_context = load_user_context(load_context,
+    #                                  password=password,
+    #                                  profile_config_file=profile_config_file,
+    #                                  uri_scheme=uri_scheme,
+    #                                  timeout=timeout)
+    # # Unconditional default override
+    # ctx.obj = {'usercontext': user_context}
+
+    # profile = 'default' if not profile else profile
+    # profile_config_file = profile_config_file if profile_config_file else PROFILE_CONFIG_FILE
+    #
+    # try_first_time_use(_first_time_use_config, profile_config_file)
+    #
+    # load_context = ProfileLoadContext(profile, profile_config_file)
+    #
+    # user_context = load_user_context(load_context,
+    #                                  password=password,
+    #                                  profile_config_file=profile_config_file,
+    #                                  uri_scheme=uri_scheme,
+    #                                  timeout=timeout)
+    # # Unconditional default override
+    # ctx.obj = {'usercontext': user_context}
+
+
+@click.command(help='Initialize hdxcli configuration')
+@report_error_and_exit(exctype=Exception)
+def init():
+    if not is_first_time_use():
+        raise ConfigurationExistsException(
+            "Configuration already exists for accessing your Hydrolix cluster. "
+            "Please run the 'profile edit' command to edit the configuration."
+        )
+    first_time_use_config()
 
 
 @click.command(help='Print hdxcli version')
@@ -184,15 +222,15 @@ def version():
     logger.info(VERSION)
 
 
+hdx_cli.add_command(init)
 hdx_cli.add_command(project_.project)
 hdx_cli.add_command(table_.table)
 hdx_cli.add_command(transform_.transform)
-hdx_cli.add_command(set_commands.set)
-hdx_cli.add_command(set_commands.unset)
+hdx_cli.add_command(set_commands.set_default_resources)
+hdx_cli.add_command(set_commands.unset_default_resources)
 hdx_cli.add_command(job_.job)
 hdx_cli.add_command(stream_.stream)
 hdx_cli.add_command(function_.function)
-hdx_cli.add_command(job_.purgejobs)
 hdx_cli.add_command(dictionary_.dictionary)
 hdx_cli.add_command(storage_.storage)
 hdx_cli.add_command(pool_.pool)

@@ -6,7 +6,7 @@ from ...library_api.common.auth import AuthInfo
 from ...library_api.common.exceptions import QueryOptionNotFound, HdxCliException
 from ...library_api.common.logging import get_logger
 from ...library_api.common import rest_operations as rest_ops
-from ...library_api.utility.decorators import report_error_and_exit
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 
 logger = get_logger()
 
@@ -14,6 +14,7 @@ logger = get_logger()
 @click.group(help='Query options operations at org-level', name='query-option')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
+@ensure_logged_in
 def query_option(ctx: click.Context):
     profile = ctx.parent.obj['usercontext']
     org_id = profile.org_id
@@ -28,10 +29,7 @@ def query_option(ctx: click.Context):
               help='Set query options from a JSON file.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def set_(ctx: click.Context,
-         query_option_name: str,
-         query_option_value: Union[str, int],
-         from_file):
+def set_(ctx: click.Context, query_option_name: str, query_option_value: Union[str, int], from_file):
     user_profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']
 
@@ -107,11 +105,7 @@ def _set(profile, resource_path, query_option_name=None, query_option_value=None
 
         result['settings']['default_query_options'].update(query_options_from_file)
 
-    rest_ops.update_with_put(url,
-                             headers=headers,
-                             body=result,
-                             timeout=timeout,
-                             params=None)
+    rest_ops.update_with_put(url, headers=headers, body=result, timeout=timeout, params=None)
     return f"Set '{query_option_name}' query option" if query_option_name else f'Set query options from file {from_file}'
 
 
@@ -138,11 +132,7 @@ def _unset(profile, resource_path, query_option_name=None):
     except KeyError as key_err:
         raise QueryOptionNotFound(f'{query_option_name} not found in the set query options.') from key_err
 
-    rest_ops.update_with_put(url,
-                             headers=headers,
-                             body=result,
-                             timeout=timeout,
-                             params=None)
+    rest_ops.update_with_put(url, headers=headers, body=result, timeout=timeout, params=None)
     return f"Unset '{query_option_name}' query option" if query_option_name else 'Unset all query options'
 
 

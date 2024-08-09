@@ -4,7 +4,7 @@ import click
 
 from ..common.migration import migrate_a_storage
 from ...library_api.utility.decorators import (report_error_and_exit,
-                                               dynamic_confirmation_prompt)
+                                               dynamic_confirmation_prompt, ensure_logged_in)
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
 from ..common.undecorated_click_commands import basic_create_with_body_from_string, basic_create_from_dict_body
@@ -19,14 +19,14 @@ logger = get_logger()
 @click.option('--storage', 'storage_name', metavar='STORAGENAME', default=None,
               help='Perform operation on the passed storage.')
 @click.pass_context
-def storage(ctx: click.Context,
-            storage_name):
+@report_error_and_exit(exctype=Exception)
+@ensure_logged_in
+def storage(ctx: click.Context, storage_name: str):
     user_profile = ctx.parent.obj['usercontext']
     org_id = user_profile.org_id
     ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/storages/',
                'usercontext': user_profile}
-    ProfileUserContext.update_context(user_profile,
-                                      storagename=storage_name)
+    ProfileUserContext.update_context(user_profile, storagename=storage_name)
 
 
 @click.command(help='Create storage. You can either specify a settings file using'

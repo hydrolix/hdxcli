@@ -2,44 +2,46 @@ import json
 import uuid
 import click
 
-from ...library_api.common.exceptions import (LogicException,
-                                              InvalidRoleException,
-                                              ResourceNotFoundException)
-from ...library_api.common.role_validator import (Role, Policy,
-                                                  get_role_data_from_standard_input,
-                                                  modify_role_data_from_standard_input,
-                                                  update_role_request)
+from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
+from ...library_api.common.role_validator import (
+    Role,
+    Policy,
+    get_role_data_from_standard_input,
+    modify_role_data_from_standard_input,
+    update_role_request
+)
 from ...library_api.userdata.token import AuthInfo
 from ...library_api.common import rest_operations as rest_ops
-from ...library_api.utility.decorators import report_error_and_exit
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
 from ..common.undecorated_click_commands import basic_create_with_body_from_string, basic_show
-from ..common.rest_operations import (delete as command_delete,
-                                      list_ as command_list,
-                                      show as command_show)
+from ..common.rest_operations import (
+    delete as command_delete,
+    list_ as command_list,
+    show as command_show
+)
 
 logger = get_logger()
-
-
-@click.group(help='Role-related operations')
-@click.option('--role', 'role_name', metavar='ROLE_NAME', default=None,
-              help='Perform operation on the passed role.')
-@click.pass_context
-def role(ctx: click.Context,
-         role_name):
-    user_profile = ctx.parent.obj['usercontext']
-    ctx.obj = {'resource_path': '/config/v1/roles/',
-               'usercontext': user_profile}
-    ProfileUserContext.update_context(user_profile,
-                                      rolename=role_name)
-
 
 AVAILABLE_SCOPE_TYPE = ('user', 'pool', 'role', 'invite', 'org', 'project',
                         'alterjob', 'batchjob', 'catalog', 'hdxstorage',
                         'dictionary', 'dictionaryfile', 'function', 'table',
                         'kafkasource', 'siemsource', 'kinesissource',
                         'summarysource', 'transform', 'view')
+
+
+@click.group(help='Role-related operations')
+@click.option('--role', 'role_name', metavar='ROLE_NAME', default=None,
+              help='Perform operation on the passed role.')
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+@ensure_logged_in
+def role(ctx: click.Context, role_name: str):
+    user_profile = ctx.parent.obj['usercontext']
+    ProfileUserContext.update_context(user_profile, rolename=role_name)
+    ctx.obj = {'resource_path': '/config/v1/roles/',
+               'usercontext': user_profile}
 
 
 def validate_uuid(ctx, param, value):
@@ -73,11 +75,7 @@ def validate_uuid(ctx, param, value):
               help='Specify permissions for the new role (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create(ctx: click.Context,
-           role_name: str,
-           scope_type: str,
-           scope_id,
-           permissions):
+def create(ctx: click.Context, role_name: str, scope_type: str, scope_id: str, permissions):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
 
@@ -89,11 +87,12 @@ def create(ctx: click.Context,
     elif (role_name and permissions and
           ((scope_type and scope_id) or (not scope_type and not scope_id))):
         # Command-line way (making sure the necessary data is provided)
-        policy_obj = Policy(scope_type=scope_type,
-                            scope_id=scope_id,
-                            permissions=list(permissions))
-        role_obj = Role(name=role_name,
-                        policies=[policy_obj])
+        policy_obj = Policy(
+            scope_type=scope_type,
+            scope_id=scope_id,
+            permissions=list(permissions)
+        )
+        role_obj = Role(name=role_name, policies=[policy_obj])
 
     else:
         # Handle all unexpected cases
@@ -101,10 +100,15 @@ def create(ctx: click.Context,
                                  'enter interactive mode to create the role.')
 
     if role_obj:
-        basic_create_with_body_from_string(profile,
-                                           resource_path,
-                                           role_obj.name,
-                                           role_obj.model_dump_json(by_alias=True, exclude_none=True))
+        basic_create_with_body_from_string(
+            profile,
+            resource_path,
+            role_obj.name,
+            role_obj.model_dump_json(
+                by_alias=True,
+                exclude_none=True
+            )
+        )
         logger.info(f'Created role {role_obj.name}')
     else:
         logger.info('Role creation was cancelled')
@@ -114,8 +118,7 @@ def create(ctx: click.Context,
 @click.argument('role_name', metavar='ROLE_NAME')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def edit(ctx: click.Context,
-         role_name: str):
+def edit(ctx: click.Context, role_name: str):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     json_data = json.loads(basic_show(profile, resource_path, role_name))
@@ -124,9 +127,14 @@ def edit(ctx: click.Context,
 
     if role_to_update:
         resource_path = f'{resource_path}{role_to_update.id}/'
-        update_role_request(profile,
-                            resource_path,
-                            role_to_update.model_dump(by_alias=True, exclude_none=True))
+        update_role_request(
+            profile,
+            resource_path,
+            role_to_update.model_dump(
+                by_alias=True,
+                exclude_none=True
+            )
+        )
         logger.info(f'Updated role {role_name}')
     else:
         logger.info('Update was cancelled')
@@ -138,16 +146,10 @@ def edit(ctx: click.Context,
               help='Specify users to add to a role (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def add(ctx: click.Context,
-        role_name,
-        users):
+def add(ctx: click.Context, role_name: str, users):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
-    _manage_users_from_role(profile,
-                            resource_path,
-                            role_name,
-                            users,
-                            action='add')
+    _manage_users_from_role(profile, resource_path, role_name, users, action='add')
     logger.info(f'Added user(s) to {role_name} role')
 
 
@@ -157,16 +159,10 @@ def add(ctx: click.Context,
               help='Specify users to remove from a role (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def remove(ctx: click.Context,
-           role_name,
-           users):
+def remove(ctx: click.Context, role_name: str, users):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
-    _manage_users_from_role(profile,
-                            resource_path,
-                            role_name,
-                            users,
-                            action='remove')
+    _manage_users_from_role(profile, resource_path, role_name, users, action='remove')
     logger.info(f'Removed user(s) from {role_name} role')
 
 
@@ -185,14 +181,13 @@ def permission(ctx: click.Context):
               help='Filter the permissions by a specific scope type.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def list_(ctx: click.Context,
-          scope_type: str):
-    resource_path = ctx.parent.obj.get('resource_path')
-    profile = ctx.parent.obj.get('usercontext')
+def list_(ctx: click.Context, scope_type: str):
+    resource_path = ctx.parent.obj['resource_path']
+    profile = ctx.parent.obj['usercontext']
     _basic_list(profile, resource_path, scope_type)
 
 
-def _basic_list(profile, resource_path, scope_type=None):
+def _basic_list(profile: ProfileUserContext, resource_path: str, scope_type: str = None):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -200,9 +195,7 @@ def _basic_list(profile, resource_path, scope_type=None):
     auth_info: AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url,
-                              headers=headers,
-                              timeout=timeout)
+    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
     if scope_type:
         for resource in resources:
             if resource.get('scope_type') == scope_type:
@@ -223,9 +216,7 @@ def _get_users_uuid(profile, users):
     auth_info: AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
-    resources = rest_ops.list(list_url,
-                              headers=headers,
-                              timeout=timeout)
+    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
     users_uuid = []
     for user in resources:
         if user['email'] in users:
@@ -236,11 +227,8 @@ def _get_users_uuid(profile, users):
     return users_uuid
 
 
-def _manage_users_from_role(profile, resource_path,
-                            role_name, users, action: str):
-    role_json = json.loads(basic_show(profile,
-                                      resource_path,
-                                      role_name))
+def _manage_users_from_role(profile, resource_path, role_name, users, action: str):
+    role_json = json.loads(basic_show(profile, resource_path, role_name))
     role_id = role_json.get('id')
     if not role_id:
         raise LogicException(f'There was an error with the role {role_name}.')
@@ -262,9 +250,7 @@ def _manage_users_from_role(profile, resource_path,
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
 
-    rest_ops.create(add_users_url, headers=headers,
-                    timeout=timeout,
-                    body=body)
+    rest_ops.create(add_users_url, headers=headers, timeout=timeout, body=body)
 
 
 role.add_command(command_list)

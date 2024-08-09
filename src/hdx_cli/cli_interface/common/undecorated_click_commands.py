@@ -122,7 +122,7 @@ def basic_show(profile,
 
 
 def basic_transform(ctx: click.Context):
-    profile_info: ProfileUserContext = ctx.obj['usercontext']
+    profile_info: ProfileUserContext = ctx.parent.obj['usercontext']
     project_name, table_name = profile_info.projectname, profile_info.tablename
     if not project_name or not table_name:
         raise HdxCliException(f"No project/table parameters provided and "

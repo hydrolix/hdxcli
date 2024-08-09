@@ -1,10 +1,11 @@
 from pathlib import Path
 import click
 
-
 import toml
 
-from ...library_api.utility.decorators import report_error_and_exit
+from ...library_api.common.auth import load_profile
+from ...library_api.common.generic_resource import access_resource_detailed
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in, with_profiles_context
 from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
@@ -22,16 +23,21 @@ def _serialize_to_config_file(profile: ProfileUserContext,
         toml.dump(all_profiles, stream)
 
 
-@click.command(help='Set project and/or table to apply subsequent commands on it')
+@click.command(help='Set project and/or table to apply subsequent commands on it', name='set')
 @click.argument('projectname', metavar='PROJECT_NAME', required=False, default=None)
 @click.argument('tablename', metavar='TABLE_NAME', required=False, default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def set(ctx, projectname, tablename, scheme=None):
-    profile: ProfileUserContext = ctx.obj['usercontext']
+def set_default_resources(ctx: click.Context,
+                          projectname: str,
+                          tablename: str):
     # Currently the condition below cannot happen due to the fact that both projectname and table
     # are positional arguments. I leave it here because I could change def __iter__(self):
     # in the future
+
+    profile_context = ctx.parent.obj['profilecontext']
+    # 'load_profile()' checks if the profile exists, otherwise it raises an exception
+    profile: ProfileUserContext = load_profile(profile_context)
 
     if tablename and (not profile.projectname and not projectname):
         raise LogicException('In order to set the table name you must also have the project name '
@@ -42,16 +48,20 @@ def set(ctx, projectname, tablename, scheme=None):
     profile.projectname = projectname
     if tablename:
         profile.tablename = tablename
-    _serialize_to_config_file(profile, profile.profile_config_file)
-    logger.info(f"Profile '{profile.profilename}' set project/table")
+    _serialize_to_config_file(profile, profile_context.profile_config_file)
+    logger.info(f"Profile '{profile_context.profilename}' set project/table")
 
 
-@click.command(help='Remove any set project/table')
+@click.command(help='Remove any set project/table', name='unset')
 @click.pass_context
-def unset(ctx):
-    profile: ProfileUserContext = ctx.obj['usercontext']
-    profile.tablename = None
-    profile.projectname = None
+@report_error_and_exit(exctype=Exception)
+def unset_default_resources(ctx: click.Context):
+    profile_context = ctx.parent.obj['profilecontext']
+    # 'load_profile()' checks if the profile exists, otherwise it raises an exception
+    profile: ProfileUserContext = load_profile(profile_context)
 
-    _serialize_to_config_file(profile, profile.profile_config_file)
-    logger.info(f"Profile '{profile.profilename}' unset project/table")
+    profile.projectname = None
+    profile.tablename = None
+
+    _serialize_to_config_file(profile, profile_context.profile_config_file)
+    logger.info(f"Profile '{profile_context.profilename}' unset project/table")

@@ -94,6 +94,18 @@ def save_profile(username: str,
     with open(profile_config_file, 'w+', encoding='utf-8') as config_file:
         toml.dump(initial_profile, config_file)
 
+    _delete_authorization_file(profilename, profile_config_file)
+
+
+def _delete_authorization_file(profile_name: str, profile_config_file: Path):
+    """If the authorization file exists, delete it."""
+    authorization_file = Path(profile_config_file).parent / f"{profile_name}"
+    if authorization_file.exists():
+        try:
+            authorization_file.unlink()
+        except OSError as exc:
+            raise HdxCliException(f"Error deleting the authorization file for '{profile_name}' profile.") from exc
+
 
 def delete_profile(profile_name: str,
                    initial_profile: dict,
@@ -107,15 +119,9 @@ def delete_profile(profile_name: str,
     with open(profile_config_file, 'w+', encoding='utf-8') as config_file:
         toml.dump(initial_profile, config_file)
 
-    # Verify and delete the token file if it exists
-    authorization_file = profile_config_file.parent / f"{profile_name}"
-    if authorization_file.exists():
-        try:
-            authorization_file.unlink()
-        except OSError as exc:
-            raise HdxCliException(f"Error deleting the authorization file for '{profile_name}' profile.") from exc
+    _delete_authorization_file(profile_name, profile_config_file)
 
 
-def get_profiles(config_file: Path = PROFILE_CONFIG_FILE):
-    with open(config_file, 'r', encoding='utf-8') as config_file:
+def get_profiles(profile_config_file: Path = PROFILE_CONFIG_FILE):
+    with open(profile_config_file, 'r', encoding='utf-8') as config_file:
         return toml.load(config_file)

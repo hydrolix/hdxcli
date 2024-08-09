@@ -1,12 +1,17 @@
+import functools
 from pathlib import Path
 from functools import wraps
 import pickle
 import atexit
 import sys
 
+import click
+
 from .json_util import http_error_pretty_format
+from ..common.auth_utils import load_user_context
 from ..common.exceptions import HdxCliException, HttpException
 from ..common.logging import get_logger
+from ..common.profile import get_profiles
 
 logger = get_logger()
 
@@ -99,3 +104,27 @@ def find_in_disk_cache(cache_file, namespace):
             return value
         return find_in_disk_cache_deco
     return find_in_disk_cache_wrapper
+
+
+def ensure_logged_in(f):
+    @wraps(f)
+    def decorated_function(ctx: click.Context, *args, **kwargs):
+        profile_context = ctx.parent.obj['profilecontext']
+        user_options = ctx.parent.obj['useroptions']
+        user_context = load_user_context(profile_context,
+                                         password=user_options.get('password'),
+                                         profile_config_file=user_options.get('profile_config_file'),
+                                         uri_scheme=user_options.get('uri_scheme'),
+                                         timeout=user_options.get('timeout'))
+        ctx.parent.obj = {'usercontext': user_context}
+        return f(ctx, *args, **kwargs)
+    return decorated_function
+
+
+def with_profiles_context(f):
+    @functools.wraps(f)
+    def decorated_function(ctx, *args, **kwargs):
+        profile_context = ctx.parent.obj['profilecontext']
+        config_profiles = get_profiles(profile_config_file=profile_context.profile_config_file)
+        return f(ctx, profile_context, config_profiles, *args, **kwargs)
+    return decorated_function
