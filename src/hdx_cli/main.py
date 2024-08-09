@@ -1,5 +1,3 @@
-import dataclasses as dc
-
 import click
 from trogon import tui
 

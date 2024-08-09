@@ -1,5 +1,10 @@
 import os
+import sys
 from pathlib import Path
+
+from hdx_cli.library_api.common.logging import get_logger
+
+logger = get_logger()
 
 __all__ = ['HDX_CONFIG_DIR', 'PROFILE_CONFIG_FILE', 'PROFILE_CACHE_DIR']
 
@@ -12,4 +17,5 @@ PROFILE_CACHE_DIR = HDX_CONFIG_DIR
 
 
 if HDX_CONFIG_DIR_ENV and not HDX_CONFIG_DIR.exists():
-    raise FileNotFoundError(f"The specified directory in 'HDX_CONFIG_DIR': {HDX_CONFIG_DIR} does not exist.")
+    logger.error(f"The specified directory in 'HDX_CONFIG_DIR': {HDX_CONFIG_DIR} does not exist.")
+    sys.exit(1)
