@@ -116,7 +116,7 @@ def ensure_logged_in(f):
                                          profile_config_file=user_options.get('profile_config_file'),
                                          uri_scheme=user_options.get('uri_scheme'),
                                          timeout=user_options.get('timeout'))
-        ctx.parent.obj = {'usercontext': user_context}
+        ctx.parent.obj['usercontext'] = user_context
         return f(ctx, *args, **kwargs)
     return decorated_function
 
