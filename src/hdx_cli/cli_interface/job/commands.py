@@ -3,7 +3,7 @@ import click
 from .alter.commands import alter as alter_command
 from .batch.commands import batch as batch_command
 
-from ...library_api.utility.decorators import report_error_and_exit, confirmation_prompt
+from ...library_api.utility.decorators import report_error_and_exit, confirmation_prompt, ensure_logged_in
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.logging import get_logger
 
@@ -13,6 +13,8 @@ logger = get_logger()
 
 @click.group(help="Job-related operations")
 @click.pass_context
+@report_error_and_exit(exctype=Exception)
+@ensure_logged_in
 def job(ctx: click.Context):
     user_profile = ctx.parent.obj['usercontext']
     org_id = user_profile.org_id
@@ -21,11 +23,7 @@ def job(ctx: click.Context):
                'usercontext': user_profile}
 
 
-job.add_command(alter_command)
-job.add_command(batch_command)
-
-
-@click.command(help='Purge all batch jobs in your org')
+@click.command(help='Purge all batch jobs in your org.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @confirmation_prompt(prompt="Please type 'purge all jobs' to proceed: ",
@@ -45,3 +43,8 @@ def purgejobs(ctx: click.Context):
                'Accept': 'application/json'}
     rest_ops.create(purgejobs_url, headers=headers, timeout=timeout)
     logger.info('All jobs purged')
+
+
+job.add_command(alter_command)
+job.add_command(batch_command)
+job.add_command(purgejobs)

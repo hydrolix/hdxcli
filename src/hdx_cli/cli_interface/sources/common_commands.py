@@ -10,7 +10,7 @@ from ..common.undecorated_click_commands import basic_create_with_body_from_stri
 logger = get_logger()
 
 
-def any_source_impl(ctx: click.Context, source_name):
+def any_source_impl(ctx: click.Context, source_name: str):
     user_profile = ctx.parent.obj.get('usercontext')
     project_name, table_name = user_profile.projectname, user_profile.tablename
     if not project_name or not table_name:
@@ -25,9 +25,7 @@ def any_source_impl(ctx: click.Context, source_name):
     token = user_profile.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
-    projects_list = rest_ops.list(list_projects_url,
-                                  headers=headers,
-                                  timeout=timeout)
+    projects_list = rest_ops.list(list_projects_url, headers=headers, timeout=timeout)
 
     try:
         project_id = [p['uuid'] for p in projects_list if p['name'] == project_name][0]
@@ -52,12 +50,9 @@ def any_source_impl(ctx: click.Context, source_name):
 @click.argument('source_name')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create(ctx: click.Context,
-           source_filename: str,
-           source_name: str):
+def create(ctx: click.Context, source_filename: str, source_name: str):
     user_profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     with open(source_filename, "r", encoding="utf-8") as file:
-        basic_create_with_body_from_string(user_profile, resource_path,
-                                           source_name, file.read())
+        basic_create_with_body_from_string(user_profile, resource_path,source_name, file.read())
     logger.info(f'Created source {source_name}')

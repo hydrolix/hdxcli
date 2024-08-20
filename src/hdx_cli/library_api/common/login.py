@@ -49,7 +49,7 @@ def _do_login(username, hostname,
 def _do_interactive_login(username, hostname,
                           *,
                           use_ssl):
-    password = getpass()
+    password = getpass(f'Enter your password ({hostname}): ')
     return _do_login(username, hostname,
                      use_ssl=use_ssl,
                      password=password)

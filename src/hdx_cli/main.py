@@ -1,6 +1,3 @@
-import dataclasses as dc
-from datetime import datetime
-
 import click
 from trogon import tui
 
@@ -23,102 +20,17 @@ from hdx_cli.cli_interface.role import commands as role_
 from hdx_cli.cli_interface.query_option import commands as query_option_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
-from hdx_cli.library_api.common.context import ProfileUserContext, ProfileLoadContext, DEFAULT_TIMEOUT
-from hdx_cli.library_api.common.exceptions import HdxCliException, TokenExpiredException
-from hdx_cli.library_api.common.config_constants import HDX_CONFIG_DIR, PROFILE_CONFIG_FILE
-from hdx_cli.library_api.common.first_use import try_first_time_use
-from hdx_cli.library_api.common.profile import save_profile, get_profile_data_from_standard_input
+from hdx_cli.library_api.common.context import ProfileLoadContext, DEFAULT_TIMEOUT
+from hdx_cli.library_api.common.exceptions import ConfigurationNotFoundException, ConfigurationExistsException
+from hdx_cli.library_api.common.config_constants import PROFILE_CONFIG_FILE
+from hdx_cli.library_api.common.first_use import is_first_time_use, first_time_use_config
 
-from hdx_cli.library_api.common.auth_utils import load_user_context
 from hdx_cli.library_api.common.logging import set_debug_logger, set_info_logger, get_logger
-
-VERSION = "1.0-rc55"
-
-
-from hdx_cli.library_api.common.auth import (
-    load_profile,
-    save_profile_cache,
-    try_load_profile_from_cache_data)
-
 from hdx_cli.cli_interface.set import commands as set_commands
-from hdx_cli.library_api.common.login import login
 
+VERSION = "1.0-rc57"
 
 logger = get_logger()
-
-
-def _first_time_use_config(profile_config_file):
-    logger.info('No configuration was found to access your hydrolix cluster.')
-    logger.info('A new configuration will be created now.')
-    logger.info('')
-    profile_wizard_info = get_profile_data_from_standard_input()
-    if not profile_wizard_info:
-        logger.info('Configuration creation aborted')
-        return
-    save_profile(profile_wizard_info.username,
-                 profile_wizard_info.hostname,
-                 'default',
-                 profile_config_file=profile_config_file,
-                 scheme=profile_wizard_info.scheme)
-    logger.info('')
-    logger.info(f'Your configuration with profile [default] has been created at {profile_config_file}')
-    logger.info('-' * 100)
-
-
-def _chain_calls_ignore_exc(*funcs, **kwargs):
-    """Chain calls and return on_error_return on failure. Exceptions are considered failure if
-    they derived from provided kwarg 'exctype', otherwise they will escape.
-    on_error_default kwarg is what is returned in case of failure.
-
-    Function parameters to funcs[0] are provided in kwargs, and subsequent results
-    are are provided as input of the first function.
-
-    """
-    # Setup function
-    exctype = kwargs.get('exctype', Exception)
-    on_error_return = kwargs.get('on_error_return', None)
-    try:
-        del kwargs['exctype']
-    except: # pylint:disable=bare-except
-        pass
-    try:
-        del kwargs['on_error_return']
-    except: # pylint:disable=bare-except
-        pass
-
-    # Run function
-    try:
-        result = funcs[0](**kwargs)
-        if len(funcs) > 1:
-            for func in funcs[1:]:
-                result = func(result)
-        return result
-    except exctype:
-        return on_error_return
-
-
-def load_set_config_parameters(user_context: ProfileUserContext,
-                               load_context: ProfileLoadContext):
-    """Given a profile to load and an old profile, it returns the user_context
-    with the config parameters projectname and tablename loaded."""
-    config_params = {'projectname':
-                     (prof := load_profile(load_context)).projectname,
-                     'tablename':
-                     prof.tablename,
-                     'scheme': prof.scheme}
-    user_ctx_dict = dc.asdict(user_context) | config_params
-    # Keep old auth since asdict will transform AuthInfo into a dictionary.
-    old_auth = user_context.auth
-    new_user_ctx = ProfileUserContext(**user_ctx_dict)
-    # And reassign when done
-    new_user_ctx.auth = old_auth
-    return new_user_ctx
-
-
-def fail_if_token_expired(user_context: ProfileUserContext):
-    if user_context.auth.expires_at <= datetime.now():
-        raise TokenExpiredException()
-    return user_context
 
 
 def configure_logger(debug=False):
@@ -149,34 +61,43 @@ def configure_logger(debug=False):
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 # pylint: enable=line-too-long
-def hdx_cli(ctx, profile,
-            password,
-            profile_config_file,
-            uri_scheme,
-            timeout,
-            debug):
+def hdx_cli(ctx, profile, password, profile_config_file, uri_scheme, timeout, debug):
     """
         Command-line entry point for hdx cli interface
     """
     configure_logger(debug)
-
-    if ctx.invoked_subcommand == 'version':
+    if ctx.invoked_subcommand == 'version' or ctx.invoked_subcommand == 'init':
         return
 
-    profile = 'default' if not profile else profile
     profile_config_file = profile_config_file if profile_config_file else PROFILE_CONFIG_FILE
+    if is_first_time_use(profile_config_file):
+        raise ConfigurationNotFoundException(
+            "Configuration not found for accessing your Hydrolix cluster. "
+            "Please run the 'hdxcli init' to create a new configuration."
+        )
 
-    try_first_time_use(_first_time_use_config, profile_config_file)
-
+    profile = 'default' if not profile else profile
     load_context = ProfileLoadContext(profile, profile_config_file)
+    ctx.obj = {'profilecontext': load_context}
 
-    user_context = load_user_context(load_context,
-                                     password=password,
-                                     profile_config_file=profile_config_file,
-                                     uri_scheme=uri_scheme,
-                                     timeout=timeout)
-    # Unconditional default override
-    ctx.obj = {'usercontext': user_context}
+    user_options = {
+        'password': password,
+        'profile_config_file': profile_config_file,
+        'uri_scheme': uri_scheme,
+        'timeout': timeout
+    }
+    ctx.obj['useroptions'] = user_options
+
+
+@click.command(help='Initialize hdxcli configuration')
+@report_error_and_exit(exctype=Exception)
+def init():
+    if not is_first_time_use():
+        raise ConfigurationExistsException(
+            "Configuration already exists for accessing your Hydrolix cluster. "
+            "Please run the 'profile edit' command to edit the configuration."
+        )
+    first_time_use_config()
 
 
 @click.command(help='Print hdxcli version')
@@ -184,15 +105,15 @@ def version():
     logger.info(VERSION)
 
 
+hdx_cli.add_command(init)
 hdx_cli.add_command(project_.project)
 hdx_cli.add_command(table_.table)
 hdx_cli.add_command(transform_.transform)
-hdx_cli.add_command(set_commands.set)
-hdx_cli.add_command(set_commands.unset)
+hdx_cli.add_command(set_commands.set_default_resources)
+hdx_cli.add_command(set_commands.unset_default_resources)
 hdx_cli.add_command(job_.job)
 hdx_cli.add_command(stream_.stream)
 hdx_cli.add_command(function_.function)
-hdx_cli.add_command(job_.purgejobs)
 hdx_cli.add_command(dictionary_.dictionary)
 hdx_cli.add_command(storage_.storage)
 hdx_cli.add_command(pool_.pool)

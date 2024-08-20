@@ -1,12 +1,21 @@
 import click
+from functools import partial
 
-from ...library_api.common.exceptions import (ProfileExistsException, InvalidHostnameException,
-                                              InvalidUsernameException, InvalidSchemeException,
-                                              ProfileNotFoundException, HdxCliException)
+from ...library_api.common.exceptions import (
+    ProfileExistsException, InvalidHostnameException,
+    InvalidUsernameException, InvalidSchemeException,
+    ProfileNotFoundException, HdxCliException
+)
 from ...library_api.common.validation import is_valid_hostname, is_valid_username, is_valid_scheme
-from ...library_api.utility.decorators import report_error_and_exit
-from ...library_api.common.profile import (save_profile, get_profile_data_from_standard_input,
-                                           get_profiles, ProfileWizardInfo, delete_profile)
+from ...library_api.utility.decorators import (
+    report_error_and_exit,
+    with_profiles_context,
+    dynamic_confirmation_prompt
+)
+from ...library_api.common.profile import (
+    save_profile, get_profile_data_from_standard_input,
+    ProfileWizardInfo, delete_profile
+)
 from ...library_api.common.logging import get_logger
 
 logger = get_logger()
@@ -15,16 +24,16 @@ logger = get_logger()
 @click.group(help="Profile-related operations")
 @click.pass_context
 def profile(ctx: click.Context):
-    ctx.obj = {'usercontext': ctx.parent.obj['usercontext']}
+    ctx.obj = {'profilecontext': ctx.parent.obj['profilecontext']}
 
 
 @click.command(help='Show profile')
 @click.argument('profile_name', default=None, required=False)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def profile_show(ctx: click.Context, profile_name):
-    profile_name = ctx.parent.obj['usercontext'].profilename if not profile_name else profile_name
-    config_profiles = get_profiles()
+@with_profiles_context
+def profile_show(ctx: click.Context, profile_context, config_profiles, profile_name):
+    profile_name = profile_context.profilename if not profile_name else profile_name
     profile_to_show = config_profiles.get(profile_name)
     if not profile_to_show:
         raise ProfileNotFoundException(f"Profile name '{profile_name}' not found.")
@@ -38,8 +47,8 @@ def profile_show(ctx: click.Context, profile_name):
 @click.command(help='List profiles')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def profile_list(ctx: click.Context):
-    config_profiles = get_profiles()
+@with_profiles_context
+def profile_list(ctx: click.Context, profile_context, config_profiles):
     for cfg_name in config_profiles:
         logger.info(cfg_name)
 
@@ -48,46 +57,53 @@ def profile_list(ctx: click.Context):
 @click.argument('profile_name')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def profile_edit(ctx: click.Context, profile_name: str):
-    config_profiles = get_profiles()
+@with_profiles_context
+def profile_edit(ctx: click.Context, profile_context, config_profiles, profile_name: str):
     profile_to_edit = config_profiles.get(profile_name)
     if not profile_to_edit:
         raise ProfileNotFoundException(f"Profile name '{profile_name}' not found.")
 
     logger.info(f'Editing [{profile_name}]')
     logger.info('-' * 100)
-    username, hostname, scheme = (profile_to_edit['username'], profile_to_edit['hostname'], profile_to_edit['scheme'])
+    username, hostname, scheme = (
+        profile_to_edit['username'], profile_to_edit['hostname'], profile_to_edit['scheme']
+    )
 
-    edit_profile_data = get_profile_data_from_standard_input(hostname=hostname, username=username, http_scheme=scheme)
+    edit_profile_data = get_profile_data_from_standard_input(
+        hostname=hostname, username=username, http_scheme=scheme
+    )
     if not edit_profile_data:
         logger.info('')
         logger.info('Configuration aborted.')
         return
 
-    save_profile(username=edit_profile_data.username,
-                 hostname=edit_profile_data.hostname,
-                 profilename=profile_name,
-                 scheme=edit_profile_data.scheme,
-                 initial_profile=config_profiles)
+    save_profile(
+        username=edit_profile_data.username,
+        hostname=edit_profile_data.hostname,
+        profilename=profile_name,
+        scheme=edit_profile_data.scheme,
+        profile_config_file=profile_context.profile_config_file,
+        initial_profile=config_profiles
+    )
     logger.info(f"Edited profile '{profile_name}'")
 
 
 @report_error_and_exit(exctype=Exception)
-def validate_hostname(ctx, params, hostname):
+def validate_hostname(ctx, params, hostname: str) -> str:
     if hostname and not is_valid_hostname(hostname):
         raise InvalidHostnameException('Invalid host name format.')
     return hostname
 
 
 @report_error_and_exit(exctype=Exception)
-def validate_username(ctx, params, username):
+def validate_username(ctx, params, username: str) -> str:
     if username and not is_valid_username(username):
         raise InvalidUsernameException('Invalid user name format.')
     return username
 
 
 @report_error_and_exit(exctype=Exception)
-def validate_scheme(ctx, params, scheme):
+def validate_scheme(ctx, params, scheme: str) -> str:
     if scheme and not is_valid_scheme(scheme):
         raise InvalidSchemeException("Invalid scheme, expected values 'https' or 'http'.")
     return scheme
@@ -103,8 +119,9 @@ def validate_scheme(ctx, params, scheme):
               help='Protocol to use for the connection (http or https).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def profile_add(ctx: click.Context, profile_name: str, hostname: str, username: str, scheme: str):
-    config_profiles = get_profiles()
+@with_profiles_context
+def profile_add(ctx: click.Context, profile_context, config_profiles,
+                profile_name: str, hostname: str, username: str, scheme: str):
     if config_profiles.get(profile_name):
         raise ProfileExistsException(f"Profile '{profile_name}' already exists.")
 
@@ -120,27 +137,47 @@ def profile_add(ctx: click.Context, profile_name: str, hostname: str, username: 
         logger.info('Configuration aborted.')
         return
 
-    save_profile(username=edit_profile_data.username,
-                 hostname=edit_profile_data.hostname,
-                 profilename=profile_name,
-                 scheme=edit_profile_data.scheme,
-                 initial_profile=config_profiles)
+    save_profile(
+        username=edit_profile_data.username,
+        hostname=edit_profile_data.hostname,
+        profilename=profile_name,
+        scheme=edit_profile_data.scheme,
+        profile_config_file=profile_context.profile_config_file,
+        initial_profile=config_profiles
+    )
     logger.info(f"Created profile '{profile_name}'")
+
+
+_confirmation_prompt = partial(
+    dynamic_confirmation_prompt,
+    prompt="Please type 'delete this resource' to delete: ",
+    confirmation_message='delete this resource',
+    fail_message='Incorrect prompt input: resource was not deleted'
+)
 
 
 @click.command(help='Delete profile')
 @click.argument('profile_name', default=None, required=True)
+@click.option('--disable-confirmation-prompt', is_flag=True, show_default=True,
+              help='Suppress confirmation to delete resource.',  default=False)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def profile_delete(ctx: click.Context, profile_name):
+@with_profiles_context
+def profile_delete(ctx: click.Context, profile_context, config_profiles,
+                   profile_name: str, disable_confirmation_prompt: bool):
     if profile_name == 'default':
         raise HdxCliException('The default profile cannot be deleted.')
 
-    config_profiles = get_profiles()
+    profile_config_file = profile_context.profile_config_file
     if not config_profiles.get(profile_name):
         raise ProfileNotFoundException(f"Profile name '{profile_name}' not found.")
 
-    delete_profile(profile_name, initial_profile=config_profiles)
+    _confirmation_prompt(prompt_active=not disable_confirmation_prompt)
+    delete_profile(
+        profile_name,
+        initial_profile=config_profiles,
+        profile_config_file=profile_config_file
+    )
     logger.info(f"Deleted profile '{profile_name}'")
 
 

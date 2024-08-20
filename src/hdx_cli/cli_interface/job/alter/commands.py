@@ -24,15 +24,17 @@ logger = get_logger()
               help="Perform operation on the passed job name.")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def alter(ctx: click.Context, project_name, table_name, alter_name):
+def alter(ctx: click.Context, project_name: str, table_name: str, alter_name: str):
     user_profile = ctx.parent.obj['usercontext']
+    ProfileUserContext.update_context(
+        user_profile,
+        projectname=project_name,
+        tablename=table_name,
+        altername=alter_name
+    )
     alter_path = ctx.parent.obj['resource_path'] + 'alter/'
     ctx.obj = {'resource_path': alter_path,
                'usercontext': user_profile}
-    ProfileUserContext.update_context(user_profile,
-                                      projectname=project_name,
-                                      tablename=table_name,
-                                      altername=alter_name)
 
 
 @alter.group(help="Create a new alter job.")
@@ -90,7 +92,7 @@ def list_(ctx: click.Context, status: str, project_name: str, table_name: str):
 @click.option('-i', '--indent', is_flag=True, default=False, help='Indent the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def show(ctx: click.Context, job_name, indent: bool,):
+def show(ctx: click.Context, job_name: str, indent: bool,):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     job = _get_alter_job(profile, resource_path, job_name)
@@ -98,10 +100,12 @@ def show(ctx: click.Context, job_name, indent: bool,):
     logger.info(json.dumps(job, indent=indentation))
 
 
-_confirmation_prompt = partial(dynamic_confirmation_prompt,
-                               prompt="Please type 'delete this resource' to delete: ",
-                               confirmation_message='delete this resource',
-                               fail_message='Incorrect prompt input: resource was not deleted')
+_confirmation_prompt = partial(
+    dynamic_confirmation_prompt,
+    prompt="Please type 'delete this resource' to delete: ",
+    confirmation_message='delete this resource',
+    fail_message='Incorrect prompt input: resource was not deleted'
+)
 
 
 @alter.command(help='Delete an existing alter job.')
@@ -110,7 +114,7 @@ _confirmation_prompt = partial(dynamic_confirmation_prompt,
 @click.argument('resource_name')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt):
+def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: bool):
     _confirmation_prompt(prompt_active=not disable_confirmation_prompt)
     resource_path = ctx.parent.obj.get('resource_path')
     profile = ctx.parent.obj.get('usercontext')
@@ -165,7 +169,7 @@ def verify(ctx: click.Context, job_name: str, indent: bool):
         logger.info(f'{verify_result}')
 
 
-def delete_alter(profile, resource_path, job_name) -> bool:
+def delete_alter(profile: ProfileUserContext, resource_path: str, job_name: str) -> bool:
     job_id = _get_alter_job(profile, resource_path, job_name).get('uuid')
 
     hostname = profile.hostname
@@ -179,7 +183,7 @@ def delete_alter(profile, resource_path, job_name) -> bool:
     return True
 
 
-def perform_alter_job(profile, resource_path, job_name, action):
+def perform_alter_job(profile: ProfileUserContext, resource_path: str, job_name: str, action: str):
     job_id = _get_alter_job(profile, resource_path, job_name).get('uuid')
 
     hostname = profile.hostname
@@ -192,7 +196,11 @@ def perform_alter_job(profile, resource_path, job_name, action):
     rest_ops.create(url, headers=headers, timeout=timeout)
 
 
-def verify_alter(profile, resource_path, job_name, indentation=False) -> str:
+def verify_alter(profile: ProfileUserContext,
+                 resource_path: str,
+                 job_name: str,
+                 indentation: bool = False
+                 ) -> str:
     job_id = _get_alter_job(profile, resource_path, job_name).get('uuid')
 
     hostname = profile.hostname
@@ -208,7 +216,7 @@ def verify_alter(profile, resource_path, job_name, indentation=False) -> str:
         return json.dumps(results[0], indent=indentation)
 
 
-def _create_alter_job(profile, resource_path, alter_job):
+def _create_alter_job(profile: ProfileUserContext, resource_path: str, alter_job) -> None:
     scheme = profile.scheme
     hostname = profile.hostname
     url = f'{scheme}://{hostname}{resource_path}'
@@ -219,7 +227,7 @@ def _create_alter_job(profile, resource_path, alter_job):
     rest_ops.create(url, headers=headers, timeout=timeout, body=alter_job, body_type='csv')
 
 
-def _get_alter_job(profile, resource_path, job_name) -> dict:
+def _get_alter_job(profile: ProfileUserContext, resource_path: str, job_name: str) -> dict:
     if not job_name:
         _, resource_kind = heuristically_get_resource_kind(resource_path)
         if not (job_name := getattr(profile, resource_kind + 'name')):
@@ -233,7 +241,12 @@ def _get_alter_job(profile, resource_path, job_name) -> dict:
     raise ResourceNotFoundException('Cannot find resource.')
 
 
-def list_alter_jobs(profile, resource_path, status_to_filter, project_to_filter, table_to_filter):
+def list_alter_jobs(profile: ProfileUserContext,
+                    resource_path: str,
+                    status_to_filter: str,
+                    project_to_filter: str,
+                    table_to_filter: str
+                    ) -> None:
     default_alter_job_list = get_resource_list(profile, resource_path).get('results')
 
     if status_to_filter is not None:

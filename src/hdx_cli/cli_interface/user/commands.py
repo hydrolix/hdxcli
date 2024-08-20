@@ -1,17 +1,18 @@
-from typing import Dict, Tuple
+from typing import Dict
 from functools import partial
 import json
 import click
 
-from ...library_api.common.exceptions import LogicException, HttpException, ResourceNotFoundException
-from ...library_api.utility.decorators import (report_error_and_exit,
-                                               dynamic_confirmation_prompt)
+from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
+from ...library_api.utility.decorators import report_error_and_exit, dynamic_confirmation_prompt, ensure_logged_in
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
-from ..common.undecorated_click_commands import (basic_delete,
-                                                 basic_show,
-                                                 basic_create_from_dict_body,
-                                                 get_resource_list)
+from ..common.undecorated_click_commands import (
+    basic_delete,
+    basic_show,
+    basic_create_from_dict_body,
+    get_resource_list
+)
 
 logger = get_logger()
 
@@ -20,13 +21,12 @@ logger = get_logger()
 @click.option('--user', 'user_email', metavar='USER_EMAIL', default=None,
               help='Perform operation on the passed user.')
 @click.pass_context
-def user(ctx: click.Context,
-         user_email):
+@ensure_logged_in
+def user(ctx: click.Context, user_email: str):
     user_profile = ctx.parent.obj['usercontext']
+    ProfileUserContext.update_context(user_profile, useremail=user_email)
     ctx.obj = {'resource_path': '/config/v1/users/',
                'usercontext': user_profile}
-    ProfileUserContext.update_context(user_profile,
-                                      useremail=user_email)
 
 
 @click.command(help='List users.', name='list')
@@ -49,21 +49,28 @@ def list_users(ctx: click.Context):
               help='Number of spaces for indentation in the output.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def show(ctx: click.Context,
-         indent: bool):
+def show(ctx: click.Context, indent: bool):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
     if not (resource_name := getattr(profile, 'useremail')):
         raise LogicException('No default user found in profile.')
+    logger.info(
+        basic_show(
+            profile,
+            resource_path,
+            resource_name,
+            indent=indent,
+            filter_field='email'
+        )
+    )
 
-    logger.info(basic_show(profile, resource_path, resource_name,
-                           indent=indent, filter_field='email'))
 
-
-_confirmation_prompt = partial(dynamic_confirmation_prompt,
-                               prompt="Please type 'delete this resource' to delete: ",
-                               confirmation_message='delete this resource',
-                               fail_message='Incorrect prompt input: resource was not deleted')
+_confirmation_prompt = partial(
+    dynamic_confirmation_prompt,
+    prompt="Please type 'delete this resource' to delete: ",
+    confirmation_message='delete this resource',
+    fail_message='Incorrect prompt input: resource was not deleted'
+)
 
 
 @click.command(help='Delete resource.')
@@ -72,9 +79,7 @@ _confirmation_prompt = partial(dynamic_confirmation_prompt,
 @click.argument('email', metavar='USER_EMAIL')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def delete(ctx: click.Context,
-           email: str,
-           disable_confirmation_prompt: bool):
+def delete(ctx: click.Context, email: str, disable_confirmation_prompt: bool):
     _confirmation_prompt(prompt_active=not disable_confirmation_prompt)
     resource_path = ctx.parent.obj.get('resource_path')
     user_profile = ctx.parent.obj.get('usercontext')
@@ -90,14 +95,17 @@ def delete(ctx: click.Context,
               help='Specify roles to assign to a user (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def assign(ctx: click.Context,
-           email,
-           roles):
+def assign(ctx: click.Context, email: str, roles):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
-    user_uuid = json.loads(basic_show(profile, resource_path,
-                                      email,
-                                      filter_field='email')).get('uuid')
+    user_uuid = json.loads(
+        basic_show(
+            profile,
+            resource_path,
+            email,
+            filter_field='email'
+        )
+    ).get('uuid')
     if not user_uuid:
         raise LogicException(f'There was an error with the user {email}.')
 
@@ -115,14 +123,10 @@ def assign(ctx: click.Context,
               help='Specify roles to remove from a user (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def remove(ctx: click.Context,
-           email,
-           roles):
+def remove(ctx: click.Context, email: str, roles):
     profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
-    user_json = json.loads(basic_show(profile, resource_path,
-                                      email,
-                                      filter_field='email'))
+    user_json = json.loads(basic_show(profile, resource_path, email, filter_field='email'))
     user_uuid = user_json.get('uuid')
     user_roles = user_json.get('roles')
     if not user_uuid or not user_roles:
@@ -146,13 +150,11 @@ def remove(ctx: click.Context,
 @click.option('--user', 'user_email', metavar='USER_EMAIL', default=None,
               help='Perform operation on the passed user.')
 @click.pass_context
-def invite(ctx: click.Context,
-           user_email):
+def invite(ctx: click.Context, user_email: str):
     user_profile = ctx.parent.obj['usercontext']
+    ProfileUserContext.update_context(user_profile, useremail=user_email)
     ctx.obj = {'resource_path': '/config/v1/invites/',
                'usercontext': user_profile}
-    ProfileUserContext.update_context(user_profile,
-                                      useremail=user_email)
 
 
 @click.command(help='Send invitation to a new user.')
@@ -161,9 +163,7 @@ def invite(ctx: click.Context,
               help='Specify the role for the new user (can be used multiple times).')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def send(ctx: click.Context,
-         email,
-         roles):
+def send(ctx: click.Context, email: str, roles):
     resource_path = ctx.parent.obj.get('resource_path')
     profile = ctx.parent.obj.get('usercontext')
 
@@ -181,15 +181,18 @@ def send(ctx: click.Context,
 @click.argument('email', metavar='USER_EMAIL')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def resend(ctx: click.Context,
-           email):
+def resend(ctx: click.Context, email: str):
     resource_path = ctx.parent.obj.get("resource_path")
     profile = ctx.parent.obj.get('usercontext')
 
-    invite_id = json.loads(basic_show(profile,
-                           resource_path,
-                           email,
-                           filter_field='email')).get('id')
+    invite_id = json.loads(
+        basic_show(
+            profile,
+            resource_path,
+            email,
+            filter_field='email'
+        )
+    ).get('id')
     if not invite_id:
         logger.debug('An error occurred while obtaining the invite ID.')
         raise ResourceNotFoundException('Cannot find the invitation ID.')
@@ -205,14 +208,11 @@ def resend(ctx: click.Context,
               help='List only pending invitations.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def list_invites(ctx: click.Context,
-                 pending: bool):
+def list_invites(ctx: click.Context, pending: bool):
     resource_path = ctx.parent.obj.get('resource_path')
     profile = ctx.parent.obj.get('usercontext')
 
-    resources = get_resource_list(profile,
-                                  resource_path,
-                                  pending_only=pending)
+    resources = get_resource_list(profile, resource_path, pending_only=pending)
 
     _log_formatted_table_header({'email': 45, "status": 30})
     for resource in resources:

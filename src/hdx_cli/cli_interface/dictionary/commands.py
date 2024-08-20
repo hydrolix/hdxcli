@@ -4,7 +4,7 @@ import click
 
 from ..common.migration import migrate_a_dictionary
 from ...library_api.common.generic_resource import access_resource
-from ...library_api.utility.decorators import report_error_and_exit
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 from ...library_api.common.exceptions import (ResourceNotFoundException,
                                               MissingSettingsException,
                                               InvalidFormatFileException)
@@ -29,23 +29,28 @@ logger = get_logger()
               metavar='DICTIONARYNAME', default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
+@ensure_logged_in
 def dictionary(ctx: click.Context,
-               project_name,
-               dictionary_name):
+               project_name: str,
+               dictionary_name: str):
     user_profile = ctx.parent.obj['usercontext']
-    org_id = user_profile.org_id
-    ProfileUserContext.update_context(user_profile,
-                                      projectname=project_name,
-                                      dictionaryname=dictionary_name)
+    ProfileUserContext.update_context(
+        user_profile,
+        projectname=project_name,
+        dictionaryname=dictionary_name
+    )
 
-    project = user_profile.projectname
-    if not project:
+    project_name = user_profile.projectname
+    if not project_name:
         raise ResourceNotFoundException(
             f"No project parameter provided and "
             f"no project set in profile '{user_profile.profilename}'")
+    project_body = access_resource(user_profile, [('projects', project_name)])
+    if not project_body:
+        raise ResourceNotFoundException(f"Project '{project_name}' not found.")
 
-    project_id = access_resource(user_profile,
-                                 [('projects', project)])['uuid']
+    project_id = project_body.get('uuid')
+    org_id = user_profile.org_id
     resource_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/dictionaries/'
     ctx.obj = {'resource_path': resource_path,
                'usercontext': user_profile}

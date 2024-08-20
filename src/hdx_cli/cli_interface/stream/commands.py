@@ -2,7 +2,7 @@ import click
 
 from ...library_api.common.exceptions import ResourceNotFoundException
 from ...library_api.common import rest_operations as rest_ops
-from ...library_api.utility.decorators import report_error_and_exit
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 from ..common.cached_operations import find_transforms
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
@@ -28,26 +28,25 @@ def _get_content_type(obj_type):
                    "the default transform for the used table is used.",
               metavar='TRANSFORMNAME', default=None)
 @click.pass_context
-def stream(ctx: click.Context,
-           project_name,
-           table_name,
-           transform_name):
+@ensure_logged_in
+def stream(ctx: click.Context, project_name: str, table_name: str, transform_name: str):
     user_profile = ctx.parent.obj['usercontext']
+    ProfileUserContext.update_context(
+        user_profile,
+        projectname=project_name,
+        tablename=table_name,
+        transformname=transform_name
+    )
     stream_path = '/ingest/event'
     ctx.obj = {'resource_path': stream_path,
                'usercontext': user_profile}
-    ProfileUserContext.update_context(user_profile,
-                                      projectname=project_name,
-                                      tablename=table_name,
-                                      transformname=transform_name)
 
 
 @click.command(help='Ingest data via stream.')
 @click.argument('stream_data_file')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def ingest(ctx: click.Context,
-           stream_data_file: str):
+def ingest(ctx: click.Context, stream_data_file: str):
     resource_path = ctx.parent.obj['resource_path']
     user_profile = ctx.parent.obj['usercontext']
     if not user_profile.projectname or not user_profile.tablename:
@@ -82,10 +81,7 @@ def ingest(ctx: click.Context,
         'x-hdx-table': f'{user_profile.projectname}.{user_profile.tablename}',
         'x-hdx-transform': transform_name
     }
-    rest_ops.create(url, body=data,
-                    body_type=bytes,
-                    headers=headers,
-                    timeout=timeout)
+    rest_ops.create(url, body=data, body_type=bytes, headers=headers, timeout=timeout)
     logger.info('Created stream ingest')
 
 

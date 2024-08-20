@@ -5,7 +5,7 @@ import click
 
 from ..common.migration import migrate_a_transform
 from ..common.undecorated_click_commands import basic_transform
-from ...library_api.utility.decorators import report_error_and_exit
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 from ...library_api.common.exceptions import CommandLineException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
@@ -34,6 +34,7 @@ logger = get_logger()
               metavar='TRANSFORMNAME', default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
+@ensure_logged_in
 def transform(ctx: click.Context,
               project_name,
               table_name,

@@ -4,8 +4,9 @@ import requests
 
 from ..common.migration import migrate_a_table
 from ...library_api.common import rest_operations as rest_ops
-from ...library_api.utility.decorators import report_error_and_exit
-from ...library_api.common.exceptions import LogicException
+from ...library_api.common.generic_resource import access_resource
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
 from ...library_api.userdata.token import AuthInfo
@@ -30,35 +31,27 @@ logger = get_logger()
               metavar='TABLENAME', default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
+@ensure_logged_in
 def table(ctx: click.Context,
-          project_name,
-          table_name):
+          project_name: str,
+          table_name: str):
     user_profile = ctx.parent.obj.get('usercontext')
     ProfileUserContext.update_context(user_profile,
                                       projectname=project_name,
                                       tablename=table_name)
-    project = user_profile.projectname
-    if not project:
+    project_name = user_profile.projectname
+    if not project_name:
         raise LogicException(f"No project parameter provided and "
                              f"no project is set in profile '{user_profile.profilename}'")
 
-    hostname = user_profile.hostname
+    project_body = access_resource(user_profile, [('projects', project_name)])
+    if not project_body:
+        raise ResourceNotFoundException(f"Project '{project_name}' not found.")
+
+    project_id = project_body.get('uuid')
     org_id = user_profile.org_id
-    scheme = user_profile.scheme
-    timeout = user_profile.timeout
-    list_projects_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/'
-    auth_token: AuthInfo = user_profile.auth
-    headers = {'Authorization': f'{auth_token.token_type} {auth_token.token}',
-               'Accept': 'application/json'}
-    try:
-        projects_list = rest_ops.list(list_projects_url,
-                                      headers=headers,
-                                      timeout=timeout)
-        project_id = [p['uuid'] for p in projects_list if p['name'] == project]
-        ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/projects/{project_id[0]}/tables/',
-                   'usercontext': user_profile}
-    except IndexError as idx_err:
-        raise LogicException(f'Cannot find project: {project}') from idx_err
+    ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/',
+               'usercontext': user_profile}
 
 
 @click.command(help='Create table.')
