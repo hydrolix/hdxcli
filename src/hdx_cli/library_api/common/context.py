@@ -41,7 +41,6 @@ class ProfileUserContext:
     kafkaname: Optional[str] = None
     kinesisname: Optional[str] = None
     siemname: Optional[str] = None
-    summaryname: Optional[str] = None
     poolname: Optional[str] = None
     useremail: Optional[str] = None
     rolename: Optional[str] = None
