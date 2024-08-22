@@ -1,18 +1,26 @@
 import json
 from functools import partial
+
 import click
 
 from ..common.migration import migrate_a_storage
-from ...library_api.utility.decorators import (report_error_and_exit,
-                                               dynamic_confirmation_prompt, ensure_logged_in)
+from ..common.rest_operations import list_ as command_list, show as command_show
+from ..common.undecorated_click_commands import (
+    basic_create_from_dict_body,
+    basic_delete,
+    basic_settings,
+    get_resource_list
+)
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
-from ..common.undecorated_click_commands import basic_create_from_dict_body, get_resource_list
-from ..common.undecorated_click_commands import basic_delete, basic_settings
-from ..common.rest_operations import (list_ as command_list,
-                                      show as command_show)
+from ...library_api.utility.decorators import (
+    report_error_and_exit,
+    dynamic_confirmation_prompt,
+    ensure_logged_in
+)
 
 logger = get_logger()
+
 
 @report_error_and_exit(exctype=Exception)
 def get_credential_id(ctx, param, value):
@@ -78,7 +86,9 @@ def create(ctx: click.Context,
            credential_id: str,
            io_perf_mode: str):
     if not settings_filename and not all((bucket_path, bucket_name, region, cloud)):
-        raise click.BadParameter("You must specify either a settings file or the bucket path, name, region, and cloud.")
+        raise click.BadParameter(
+            "You must specify either a settings file or the bucket path, name, region, and cloud."
+        )
 
     user_profile = ctx.parent.obj.get('usercontext')
     resource_path = ctx.parent.obj.get('resource_path')
