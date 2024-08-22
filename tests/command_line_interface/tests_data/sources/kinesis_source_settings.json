@@ -1,5 +1,4 @@
 {
-    "pool_name": "kinesis-pool",
     "k8s_deployment": {
         "cpu": 1,
         "memory": "10Gi",
