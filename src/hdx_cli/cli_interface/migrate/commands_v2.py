@@ -8,7 +8,7 @@ from hdx_cli.cli_interface.migrate.data import migrate_data
 from hdx_cli.cli_interface.migrate.helpers import MigrationData, get_catalog
 from hdx_cli.cli_interface.migrate.resources import get_resources, creating_resources
 from hdx_cli.cli_interface.migrate.validator import validates
-from hdx_cli.library_api.utility.decorators import report_error_and_exit
+from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 from hdx_cli.library_api.common.logging import get_logger
 
 logger = get_logger()
@@ -62,6 +62,7 @@ def validate_tablename_format(ctx, param, value):
               help='Number of worker threads to use for migrating partitions. Default is 10.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
+@ensure_logged_in
 def migrate(ctx: click.Context, source_table: str, target_table: str, target_profile_name: str,
             target_hostname: str, target_username: str, target_password: str,
             target_uri_scheme: str, allow_merge: bool, only: str, min_timestamp: datetime,
