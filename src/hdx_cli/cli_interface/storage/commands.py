@@ -31,8 +31,12 @@ def get_credential_id(ctx, param, value):
     org_id = user_profile.org_id
     resource_path = f'/config/v1/orgs/{org_id}/credentials/'
     credentials_list = get_resource_list(user_profile, resource_path)
-    credential_id = [c.get('uuid') for c in credentials_list if c.get('name') == value]
-    if not credential_id or credential_id[0] is None:
+    credential_id = [
+        c.get('uuid')
+        for c in credentials_list
+        if c.get('name') == value and c.get('uuid') is not None
+    ]
+    if not credential_id:
         raise click.BadParameter(f"Credential name '{value}' not found.")
     return credential_id[0]
 
