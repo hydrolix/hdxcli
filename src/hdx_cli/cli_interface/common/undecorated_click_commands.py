@@ -3,8 +3,12 @@ from typing import Optional, List, Tuple, Dict, Any
 import json
 import click
 
-from ...library_api.common.exceptions import (LogicException, TransformNotFoundException,
-                                              HdxCliException, ActionNotAvailableException)
+from ...library_api.common.exceptions import (
+    LogicException,
+    TransformNotFoundException,
+    HdxCliException,
+    ActionNotAvailableException
+)
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.logging import get_logger
 from ...library_api.userdata.token import AuthInfo
@@ -76,6 +80,7 @@ def basic_create_with_body_from_string(profile,
         body = body_from_string
     else:
         headers = {'Authorization': f'{token.token_type} {token.token}',
+                   'Content-Type': 'application/json',
                    'Accept': 'application/json'}
         body = json.loads(body_from_string)
         body['name'] = f'{resource_name}'

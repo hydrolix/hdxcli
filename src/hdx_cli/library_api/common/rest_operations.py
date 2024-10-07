@@ -1,6 +1,8 @@
+import time
 from typing import Dict, Any, Union
 import json
 import requests
+from requests import RequestException
 
 from .exceptions import HdxCliException, HttpException
 
@@ -36,6 +38,29 @@ def create_file(url: str, *,
 
     if result.status_code not in (201, 200):
         raise HttpException(result.status_code, result.content)
+
+
+def post_with_retries(url: str,
+                      data: dict,
+                      user: str = None,
+                      password: str = None,
+                      retries: int = 3,
+                      backoff_factor: float = 0.5,
+                      timeout: int = 30
+                      ):
+    auth = (user, password) if user and password else None
+
+    for attempt in range(retries):
+        response = None
+        try:
+            response = requests.post(url, json=data, timeout=timeout, auth=auth)
+            response.raise_for_status()
+            return response
+        except RequestException:
+            if attempt >= retries - 1:
+                return response
+            sleep_time = backoff_factor * (2 ** attempt)
+            time.sleep(sleep_time)
 
 
 def update_with_patch(url, *,

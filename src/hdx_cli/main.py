@@ -28,7 +28,7 @@ from hdx_cli.library_api.common.first_use import is_first_time_use, first_time_u
 from hdx_cli.library_api.common.logging import set_debug_logger, set_info_logger, get_logger
 from hdx_cli.cli_interface.set import commands as set_commands
 
-VERSION = "1.0-rc57"
+VERSION = "1.0-rc63"
 
 logger = get_logger()
 
