@@ -32,11 +32,7 @@ toml = "^0.10.2"
 sqlglot = "^10.5.10"
 trogon = "^0.5.0"
 pydantic = "^2.5.3"
-#logging = "^0.4.9.6"
-boto3 = "^1.34.142"
-google-cloud-storage = "^2.17.0"
 tqdm = "^4.66.4"
-azure-storage-blob = "^12.20.0"
 
 [tool.poetry.dev-dependencies]
 # pyinstaller = "^5.3"
