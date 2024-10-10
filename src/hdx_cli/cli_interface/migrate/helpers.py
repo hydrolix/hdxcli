@@ -1,6 +1,5 @@
 import time
 from dataclasses import dataclass, field
-from queue import Queue
 from typing import Optional, Dict, List
 
 from tqdm import tqdm
@@ -96,7 +95,7 @@ def print_summary(total_rows: int,
     logger.info('')
 
 
-def monitor_progress(total_bytes, migrated_size_queue, exceptions_queue):
+def monitor_progress(total_bytes, migrated_sizes_queue, exceptions_queue):
     total_bytes_processed = 0
     progress_bar = tqdm(
         total=total_bytes,
@@ -107,8 +106,8 @@ def monitor_progress(total_bytes, migrated_size_queue, exceptions_queue):
     )
 
     while total_bytes_processed < total_bytes:
-        if not migrated_size_queue.empty():
-            bytes_size = migrated_size_queue.get()
+        if not migrated_sizes_queue.empty():
+            bytes_size = migrated_sizes_queue.get()
             progress_bar.update(bytes_size)
             total_bytes_processed += bytes_size
         else:

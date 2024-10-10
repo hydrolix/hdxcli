@@ -4,6 +4,7 @@ import random
 import string
 
 from hdx_cli.cli_interface.migrate.rc.rc_manager import RcloneAPIConfig
+from hdx_cli.library_api.common.exceptions import RCloneRemoteException
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.common.rest_operations import post_with_retries
 
@@ -106,57 +107,62 @@ class RCloneRemote:
         self.bucket_name = None
         self.bucket_path = None
         self.region = None
+        self.rc_config = None
+        self.remote_config = None
 
-    def create_remote(self, rc_config: RcloneAPIConfig, remote_config: dict) -> None:
-        self.cloud = remote_config.get("cloud")
-        self.bucket_name = remote_config.get("bucket_name")
-        bucket_path = remote_config.get("bucket_path", "/")
+    def create_remote(self,
+                      rc_config: RcloneAPIConfig,
+                      storage_config: dict,
+                      bucket_side: str
+                      ) -> None:
+        self.cloud = storage_config.get("cloud")
+        self.bucket_name = storage_config.get("bucket_name")
+        bucket_path = storage_config.get("bucket_path", "/")
         self.bucket_path = bucket_path if bucket_path.endswith("/") else f"{bucket_path}/"
-        self.region = remote_config.get("region", "")
+        self.region = storage_config.get("region", "")
+        self.rc_config = rc_config
 
-        # logger.info(f"Requesting credentials for bucket: {self.bucket_name}")
-        logger.info(f"Please, provide credentials for bucket:")
+        logger.info(f"Please, provide credentials for the {bucket_side.upper()} bucket:")
         logger.info(f"  Name:   {self.bucket_name}")
         logger.info(f"  Path:   {self.bucket_path}")
         logger.info(f"  Cloud:  {self.cloud}")
         logger.info(f"  Region: {self.region}")
-        remote_config = self._get_remote_config(self.cloud)
+        self.remote_config = self._get_remote_config(self.cloud)
 
         self.name = f"{self.bucket_name}_{generate_random_string()}"
-        self._send_create_request(rc_config, remote_config)
-        self._check_remote_exists(rc_config)
+        self._send_create_request()
+        self._check_remote_exists()
         logger.info("")
 
-    def _send_create_request(self, rc_config: RcloneAPIConfig, remote_config: dict) -> None:
-        remote_config["name"] = self.name
-        base_url = rc_config.get_url()
+    def _send_create_request(self) -> None:
+        self.remote_config["name"] = self.name
+        base_url = self.rc_config.get_url()
         response = post_with_retries(
             f"{base_url}/config/create",
-            remote_config,
-            user=rc_config.user,
-            password=rc_config.password
+            self.remote_config,
+            user=self.rc_config.user,
+            password=self.rc_config.password
         )
 
         if not response or response.status_code != 200:
-            raise Exception(
-                f"Error creating connection: {response.json() if response else 'No response.'}"
+            raise RCloneRemoteException(
+                f"Error creating remote connection to {self.bucket_name} ({self.cloud})."
             )
 
-    def _check_remote_exists(self, rc_config: RcloneAPIConfig) -> None:
+    def _check_remote_exists(self) -> None:
         data = _get_check_remote_config(self)
-        base_url = rc_config.get_url()
+        base_url = self.rc_config.get_url()
         response = post_with_retries(
             f"{base_url}/operations/list",
             data,
-            user=rc_config.user,
-            password=rc_config.password
+            user=self.rc_config.user,
+            password=self.rc_config.password
         )
 
         if not response or response.status_code != 200:
-            self.close_remote(rc_config)
-            raise Exception(
-                f"Error checking remote connection: "
-                f"{response.json() if response else 'No response.'}"
+            self.close_remote()
+            raise RCloneRemoteException(
+                f"Error checking remote connection to {self.bucket_name} ({self.cloud})."
             )
 
     def _get_remote_config(self, cloud):
@@ -169,19 +175,26 @@ class RCloneRemote:
         elif cloud == "linode":
             return _get_linode_config(self)
         else:
-            raise ValueError("Unsupported cloud provider")
+            raise ValueError(
+                "Unsupported cloud provider. Supported providers: azure, gcp, aws, linode."
+            )
 
-    def close_remote(self, rc_config: RcloneAPIConfig) -> None:
+    def close_remote(self) -> None:
         data = {"name": self.name}
-        base_url = rc_config.get_url()
+        base_url = self.rc_config.get_url()
         response = post_with_retries(
             f"{base_url}/config/delete",
             data,
-            user=rc_config.user,
-            password=rc_config.password
+            user=self.rc_config.user,
+            password=self.rc_config.password
         )
 
         if response and response.status_code != 200:
-            raise Exception(
-                f"Error deleting connection: {response.text if response else 'No response'}"
+            raise RCloneRemoteException(
+                f"Error deleting remote connection for {self.bucket_name} ({self.cloud})."
             )
+
+    def recreate_remote(self) -> None:
+        self.close_remote()
+        self._send_create_request()
+        self._check_remote_exists()

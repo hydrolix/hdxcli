@@ -9,16 +9,15 @@ from .helpers import (
     MigrationData,
     update_catalog_and_upload, upload_catalog, monitor_progress
 )
-from .rc.rc_remotes import RCloneRemote
-from .rc.rc_utils import get_remote, close_remotes
-from .catalog_operations import Catalog
+from hdx_cli.cli_interface.migrate.rc.rc_remotes import RCloneRemote
+from hdx_cli.cli_interface.migrate.rc.rc_utils import get_remote, close_remotes, recreate_remotes
 from hdx_cli.cli_interface.migrate.rc.rc_manager import RcloneAPIConfig
+from hdx_cli.cli_interface.migrate.catalog_operations import Catalog
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.common.storage import get_storage_default_by_table
-
 from hdx_cli.library_api.common.rest_operations import post_with_retries
-from ...library_api.common.exceptions import HdxCliException
+from hdx_cli.library_api.common.exceptions import MigrationFailureException
 
 logger = get_logger()
 
@@ -35,28 +34,78 @@ def show_and_confirm_data_migration(catalog: Catalog) -> bool:
 
 
 def migrate_partitions_threaded(migration_list: list,
-                                migrated_size_queue: Queue,
+                                migrated_sizes_queue: Queue,
                                 exceptions: Queue,
                                 rc_config: RcloneAPIConfig,
-                                concurrency: int
-                                ):
+                                concurrency: int,
+                                remotes: dict
+                                ) -> None:
     base_url = rc_config.get_url()
     url = f"{base_url}/sync/copy"
 
+    failed_items = Queue()
+    total_items = len(migration_list)
+    max_failures = int(total_items * 0.10)
+
+    migration_done = threading.Event()
+
     def sync_partition(from_to_path):
+        if migration_done.is_set():
+            return
+
+        # If the migration process has failed more than 10% of the total items, stop the migration process
+        failed_count_ = failed_items.qsize()
+        if failed_count_ > max_failures:
+            migration_done.set()
+            exceptions.put(MigrationFailureException(
+                    f"Number of failed migrations ({failed_count_}) exceeds "
+                    f"the allowed maximum ({max_failures})."
+                )
+            )
+            return
+
         data = {"srcFs": from_to_path[0], "dstFs": from_to_path[1]}
         response = post_with_retries(url, data, user=rc_config.user, password=rc_config.password)
         if not response or response.status_code != 200:
-            exception = HdxCliException(
-                f"Failed to migrate partition: {response.json() if response else 'No response.'}"
-            )
-            exceptions.put(exception)
-            raise exception
+            failed_items.put(from_to_path)
         else:
-            migrated_size_queue.put(from_to_path[2])
+            migrated_sizes_queue.put(from_to_path[2])
+
+    def sync_partition_retry(from_to_path):
+        if migration_done.is_set():
+            return
+
+        data = {"srcFs": from_to_path[0], "dstFs": from_to_path[1]}
+        response = post_with_retries(url, data, user=rc_config.user, password=rc_config.password)
+        if not response or response.status_code != 200:
+            migration_done.set()
+            exceptions.put(MigrationFailureException(
+                "Failed to migrate partition for the second time."
+            ))
+            logger.debug(f"Failed to migrate partition for the second time: {from_to_path}")
+        else:
+            migrated_sizes_queue.put(from_to_path[2])
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         executor.map(sync_partition, migration_list)
+
+    failed_count = failed_items.qsize()
+    if failed_count == 0 or not exceptions.empty():
+        return
+
+    retry_failed_items = []
+    while not failed_items.empty():
+        retry_failed_items.append(failed_items.get())
+
+    # Recreate remotes to avoid consistency issues with the rclone remotes
+    # It keeps the same remotes names but creates new connections
+    recreate_remotes(remotes)
+
+    migration_done.clear()
+    # Reduce the number of workers to avoid overloading the rclone API
+    # In general, failed items are bigger than successful ones
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        executor.map(sync_partition_retry, retry_failed_items)
 
 
 def get_migration_list(src_remote: RCloneRemote,
@@ -89,13 +138,13 @@ def get_migration_list(src_remote: RCloneRemote,
 
 
 def migrate_data(target_profile: ProfileUserContext,
-                target_data: MigrationData,
-                source_storages: list[dict],
-                catalog: Catalog,
-                rc_config: RcloneAPIConfig,
-                concurrency: int,
-                reuse_partitions: bool = False
-                ) -> None:
+                 target_data: MigrationData,
+                 source_storages: list[dict],
+                 catalog: Catalog,
+                 rc_config: RcloneAPIConfig,
+                 concurrency: int,
+                 reuse_partitions: bool = False
+                 ) -> None:
     logger.info(f'{" Data ":=^50}')
 
     if reuse_partitions:
@@ -111,17 +160,29 @@ def migrate_data(target_profile: ProfileUserContext,
     partitions_size = catalog.get_total_size()
 
     migration_list = []
-    migrated_size_queue = Queue()
+    migrated_sizes_queue = Queue()
     exceptions = Queue()
     remotes = {}
 
     for source_storage_id, partitions_to_migrate in partitions_by_storage.items():
         try:
-            source_remote = get_remote(remotes, source_storages, source_storage_id, rc_config)
-            target_remote = get_remote(remotes, target_data.storages, target_storage_id, rc_config)
+            source_remote = get_remote(
+                remotes,
+                source_storages,
+                source_storage_id,
+                rc_config,
+                "source"
+            )
+            target_remote = get_remote(
+                remotes,
+                target_data.storages,
+                target_storage_id,
+                rc_config,
+                "target"
+            )
         except Exception as exc:
             exceptions.put(exc)
-            close_remotes(remotes, rc_config)
+            close_remotes(remotes)
             raise
 
         migration_list.extend(
@@ -141,12 +202,12 @@ def migrate_data(target_profile: ProfileUserContext,
 
     threading.Thread(
         target=migrate_partitions_threaded,
-        args=(migration_list, migrated_size_queue, exceptions, rc_config, concurrency)
+        args=(migration_list, migrated_sizes_queue, exceptions, rc_config, concurrency, remotes)
     ).start()
 
-    monitor_progress(partitions_size, migrated_size_queue, exceptions)
+    monitor_progress(partitions_size, migrated_sizes_queue, exceptions)
 
-    close_remotes(remotes, rc_config)
+    close_remotes(remotes)
     if exceptions.qsize() != 0:
         exception = exceptions.get()
         raise exception

@@ -124,34 +124,22 @@ class StorageNotFoundError(HdxCliException):
     pass
 
 
-class ProviderError(HdxCliException):
-    """
-    Base exception class for Provider errors.
-    """
-    def __init__(self, message):
-        self.message = message
-        super().__init__(self.message)
-
-
-class CredentialsNotFoundError(ProviderError):
-    def __init__(self, message="Credentials not found."):
-        super().__init__(message)
-
-
-class InvalidCredentialsError(ProviderError):
-    def __init__(self, message="Invalid credentials."):
-        super().__init__(message)
-
-
-class CloudConnectionError(ProviderError):
-    def __init__(self, message="There was an error connecting to the cloud service."):
-        super().__init__(message)
-
-
-class ProviderClassNotFoundError(ProviderError):
-    def __init__(self, message):
-        super().__init__(message)
-
-
 class CatalogException(HdxCliException):
     pass
+
+
+class MigrationException(HdxCliException):
+    """
+    Base exception class for Migration errors.
+    """
+    pass
+
+
+class MigrationFailureException(MigrationException):
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class RCloneRemoteException(MigrationException):
+    def __init__(self, message):
+        super().__init__(message)

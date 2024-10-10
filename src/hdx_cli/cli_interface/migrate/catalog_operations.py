@@ -8,6 +8,7 @@ from datetime import datetime
 from functools import reduce
 
 from hdx_cli.library_api.common import rest_operations as rest_ops
+from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.exceptions import (
     ResourceNotFoundException,
@@ -15,7 +16,8 @@ from hdx_cli.library_api.common.exceptions import (
     HdxCliException,
     CatalogException
 )
-from hdx_cli.library_api.provider.azure_provider import logger
+
+logger = get_logger()
 
 TIMESTAMP_FORMAT = '%Y-%m-%d %H:%M:%S'
 

@@ -3,7 +3,7 @@ import io
 import json
 from urllib.parse import urlparse
 
-from .helpers import MigrationData
+from hdx_cli.cli_interface.migrate.helpers import MigrationData
 from hdx_cli.library_api.common import rest_operations as lro
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create_with_body_from_string
 from hdx_cli.library_api.common.exceptions import HttpException, ResourceNotFoundException, HdxCliException
@@ -20,15 +20,12 @@ def normalize_summary_table(table: dict) -> dict:
     if isinstance(summary, dict) and summary:
         summary.pop('parents', None)
         summary.pop('summary_sql', None)
-
     return table
 
 
 def normalize_table(table: dict, reuse_partitions: bool) -> dict:
-    table.pop('url', None)
-    table.pop('created', None)
-    table.pop('modified', None)
-    table.pop('project', None)
+    for key in ['url', 'created', 'modified', 'project']:
+        table.pop(key, None)
     if not reuse_partitions:
         table.pop('uuid', None)
 
@@ -36,8 +33,8 @@ def normalize_table(table: dict, reuse_partitions: bool) -> dict:
 
     merge = table.get('settings', {}).get('merge')
     if isinstance(merge, dict) and merge:
-        merge.pop('pools', None)
-        merge.pop('sql', None)
+        for key in ['pools', 'sql']:
+            merge.pop(key, None)
 
     if table.get('type') == 'summary':
         table = normalize_summary_table(table)
@@ -46,11 +43,8 @@ def normalize_table(table: dict, reuse_partitions: bool) -> dict:
 
 
 def normalize_transform(transform: dict) -> dict:
-    transform.pop('uuid', None)
-    transform.pop('created', None)
-    transform.pop('modified', None)
-    transform.pop('table', None)
-    transform.pop('url', None)
+    for key in ['uuid', 'created', 'modified', 'table', 'url']:
+        transform.pop(key, None)
 
     sample_data = transform.get('settings', {}).get('sample_data')
     if isinstance(sample_data, dict) and not sample_data:
@@ -69,14 +63,55 @@ def create_resources(target_profile: ProfileUserContext,
     logger.info(f"{f'Creating resources in {target_profile.hostname[:27]}':<50}")
 
     # PROJECT
+    _create_project(target_profile, source_data, reuse_partitions)
+    target_data.project, target_project_url = access_resource_detailed(
+        target_profile,
+        [
+            ('projects', target_profile.projectname)
+        ]
+    )
+    if reuse_partitions and source_data.project.get('uuid') != target_data.project.get('uuid'):
+        raise HdxCliException('The source and target resources must have the same UUID.')
+
+    # FUNCTIONS
+    if source_data.functions:
+        _create_functions(target_profile, source_data)
+
+    # DICTIONARIES
+    if source_data.dictionaries:
+        _create_dictionaries(target_profile, source_profile, source_data)
+
+    # TABLE
+    _create_table(target_profile, source_data, target_project_url, reuse_partitions)
+    target_data.table, target_table_url = access_resource_detailed(
+        target_profile,
+        [
+            ('projects', target_profile.projectname),
+            ('tables', target_profile.tablename)
+        ]
+    )
+
+    # If table type is summary, then there are no transforms to create
+    if source_data.transforms and source_data.table.get('type') != 'summary':
+        # TRANSFORMS
+        _create_transforms(target_profile, source_data, target_table_url)
+
+    logger.info('')
+
+
+def _create_project(target_profile: ProfileUserContext,
+                    source_data: MigrationData,
+                    reuse_partitions: bool
+                    ) -> None:
     logger.info(f"{f'  Project: {target_profile.projectname[:31]}':<42} -> [!n]")
     _, target_projects_url = access_resource_detailed(target_profile, [('projects', None)])
     target_projects_path = urlparse(f'{target_projects_url}').path
 
     source_project_body = copy.deepcopy(source_data.project)
+
+    if not reuse_partitions:
+        source_project_body.pop('uuid', None)
     try:
-        if not reuse_partitions:
-            del source_project_body['uuid']
         basic_create_with_body_from_string(
             target_profile,
             target_projects_path,
@@ -88,62 +123,6 @@ def create_resources(target_profile: ProfileUserContext,
         if exc.error_code != 400 or 'already exists' not in str(exc.message):
             raise exc
         logger.info('Exists, skipping')
-
-    target_data.project, target_project_url = access_resource_detailed(
-        target_profile,
-        [
-            ('projects', target_profile.projectname)
-        ]
-    )
-    if reuse_partitions and source_project_body.get('uuid') != target_data.project.get('uuid'):
-        raise HdxCliException('The source and target resources must have the same UUID.')
-
-    if source_data.functions:
-        _create_functions(target_profile, source_data)
-
-    # DICTIONARIES
-    if source_data.dictionaries:
-        _create_dictionaries(target_profile, source_profile, source_data)
-
-    # TABLE
-    logger.info(f"{f'  Table: {target_profile.tablename[:33]}':<42} -> [!n]")
-    target_tables_path = urlparse(f'{target_project_url}tables/').path
-    table_body = copy.deepcopy(source_data.table)
-
-    normalized_table = normalize_table(table_body, reuse_partitions)
-    basic_create_with_body_from_string(
-        target_profile,
-        target_tables_path,
-        target_profile.tablename,
-        json.dumps(normalized_table)
-    )
-    logger.info('Done')
-
-    target_data.table, target_table_url = access_resource_detailed(
-        target_profile,
-        [
-            ('projects', target_profile.projectname),
-            ('tables', target_profile.tablename)
-        ]
-    )
-
-    # If table type is summary, then there are no transforms to create
-    if table_body.get('type') != 'summary':
-        # TRANSFORMS
-        logger.info(f"{f'  Transforms':<42} -> [!n]")
-        target_transforms_path = urlparse(f'{target_table_url}transforms/').path
-        for transform in source_data.transforms:
-            normalized_transform = normalize_transform(transform)
-            transform_name = normalized_transform.get('name')
-            basic_create_with_body_from_string(
-                target_profile,
-                target_transforms_path,
-                transform_name,
-                json.dumps(transform)
-            )
-        logger.info('Done')
-
-    logger.info('')
 
 
 def _create_functions(target_profile: ProfileUserContext,
@@ -256,6 +235,43 @@ def _create_dictionary_file(project_name: str,
     )
 
 
+def _create_table(target_profile: ProfileUserContext,
+                  source_data: MigrationData,
+                  target_project_url: str,
+                  reuse_partitions: bool
+                  ) -> None:
+    logger.info(f"{f'  Table: {target_profile.tablename[:33]}':<42} -> [!n]")
+    target_tables_path = urlparse(f'{target_project_url}tables/').path
+    table_body = copy.deepcopy(source_data.table)
+
+    normalized_table = normalize_table(table_body, reuse_partitions)
+    basic_create_with_body_from_string(
+        target_profile,
+        target_tables_path,
+        target_profile.tablename,
+        json.dumps(normalized_table)
+    )
+    logger.info('Done')
+
+
+def _create_transforms(target_profile: ProfileUserContext,
+                       source_data: MigrationData,
+                       target_table_url: str
+                       ) -> None:
+    logger.info(f"{f'  Transforms':<42} -> [!n]")
+    target_transforms_path = urlparse(f'{target_table_url}transforms/').path
+    for transform in source_data.transforms:
+        normalized_transform = normalize_transform(transform)
+        transform_name = normalized_transform.get('name')
+        basic_create_with_body_from_string(
+            target_profile,
+            target_transforms_path,
+            transform_name,
+            json.dumps(normalized_transform)
+        )
+    logger.info('Done')
+
+
 def get_resources(profile: ProfileUserContext,
                   data: MigrationData,
                   only_storages: bool = False
@@ -336,51 +352,6 @@ def update_equivalent_multi_storage_settings(source_data: MigrationData,
                 )
             new_mapping[new_storage] = values
         storage_map['column_value_mapping'] = new_mapping
-
-
-# def interactive_update_multi_bucket_settings(source_data: MigrationData,
-#                                             target_storages: list[dict]
-#                                             ) -> None:
-#     logger.info('')
-#     logger.info('')
-#     table_body = source_data.table
-#     storage_map = table_body.get('settings').get('storage_map')
-#
-#     logger.info(f'{" Multi-bucket settings ":-^50}')
-#     assert isinstance(storage_map, dict)
-#     for key, value in storage_map.items():
-#         logger.info(f'{key}: {value}')
-#
-#     logger.info('')
-#     logger.info('If the current multi-bucket settings need to be retained,')
-#     logger.info('it will be necessary to provide the storage UUIDs from the target cluster.')
-#     if not confirm_action(prompt='Do you want to retain this multi-bucket settings?'):
-#         logger.info(f'{"  ":-^40}')
-#         logger.info(f"{'  Removing multi-bucket settings':<42} -> [!n]")
-#         del table_body['settings']['storage_map']
-#         return
-#
-#     logger.info('')
-#     logger.info("Please, provide 'default_storage_id': [!i]")
-#     new_default_storage_id = input().lower()
-#     valid_storage_id(new_default_storage_id, target_storages)
-#     storage_map['default_storage_id'] = new_default_storage_id
-#
-#     default_column_value_mapping = storage_map.get('column_value_mapping')
-#     if default_column_value_mapping:
-#         new_column_value_mapping = {}
-#         assert isinstance(default_column_value_mapping, dict)
-#         logger.info('Column value mapping')
-#         for _, value in default_column_value_mapping.items():
-#             logger.info(f'  Values: {value}')
-#             logger.info('  Specify storage UUID for these values: [!i]')
-#             new_storage_id = input().lower()
-#             valid_storage_id(new_storage_id, target_storages)
-#             new_column_value_mapping[new_storage_id] = value
-#         storage_map['column_value_mapping'] = new_column_value_mapping
-#
-#     logger.info(f'{"  ":-^50}')
-#     logger.info(f"{'  Updating multi-bucket settings':<42} -> [!n]")
 
 
 def interactive_set_default_storage(source_data: MigrationData,
