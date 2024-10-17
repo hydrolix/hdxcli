@@ -1,12 +1,7 @@
 import sys
 import logging
 
-logging.getLogger('boto3').setLevel(logging.CRITICAL)
-logging.getLogger('botocore').setLevel(logging.CRITICAL)
 logging.getLogger('urllib3').setLevel(logging.CRITICAL)
-logging.getLogger('azure.storage.blob').setLevel(logging.CRITICAL)
-logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.CRITICAL)
-logging.getLogger('google').setLevel(logging.CRITICAL)
 
 # key to have logging outputs without '\n' new line.
 SPECIAL_CODE = '[!n]'
