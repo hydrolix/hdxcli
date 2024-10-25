@@ -118,7 +118,7 @@ def migrate(ctx: click.Context,
             'The data provided is incorrect. Please check your input and try again.'
         )
 
-    logger.info(f'{" Preparing Migration ":=^50}')
+    logger.info(f'{" Resource Retrieval ":=^50}')
     source_resources = source_table.split('.')
     source_profile.projectname = source_resources[0]
     source_profile.tablename = source_resources[1]
@@ -132,14 +132,18 @@ def migrate(ctx: click.Context,
     rc_config = RcloneAPIConfig(rc_host, rc_user, rc_pass)
 
     # Source
+    logger.info(f"Source Cluster: {source_profile.hostname}")
     get_resources(source_profile, source_data)
-    # Target
-    only_storages = only != 'data'
-    get_resources(target_profile, target_data, only_storages=only_storages)
-
     catalog = None
     if only != 'resources':
         catalog = get_catalog(source_profile, source_data, temp_catalog)
+    logger.info('')
+
+    # Target
+    only_storages = only != 'data'
+    logger.info(f"Target Cluster: {target_profile.hostname}")
+    get_resources(target_profile, target_data, only_storages=only_storages)
+    logger.info('')
 
     validations(
         source_profile,
@@ -176,4 +180,4 @@ def migrate(ctx: click.Context,
             reuse_partitions
         )
 
-    logger.info(f'{" Migration Process Completed ":=^50}')
+    logger.info(f'{" Migration Completed ":=^50}')

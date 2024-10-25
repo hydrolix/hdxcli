@@ -298,14 +298,6 @@ def _for_each_setting(settings_dict, prefix="",
     _do_for_each_setting(settings_dict, prefix, resource)
 
 
-def _cleanup_some_fields_when_updateworkaround(body_dict):
-    if ((settings := body_dict.get('settings')) and
-        (autoingest := settings.get('autoingest')) and
-         not autoingest[0]['enabled']):
-        del body_dict['settings']['autoingest']
-    return body_dict
-
-
 DottedKey = str
 
 
@@ -342,13 +334,12 @@ def basic_settings(profile,
     headers = {"Authorization": f"{auth.token_type} {auth.token}",
                "Accept": "application/json"}
 
-    options = rest_ops.options(settings_url,
-                               headers=headers,
-                               timeout=timeout)
-    try:
-        actions = options["actions"]["POST"]
-    except KeyError as exc:
-        raise ActionNotAvailableException("The 'settings' action is not available on this resource.") from exc
+    structure_resource_settings = get_resource_settings_structure(
+        profile,
+        settings_url
+    )
+    if not structure_resource_settings:
+        raise ActionNotAvailableException("The 'settings' action is not available on this resource.")
 
     resource_kind_plural, resource_kind = heuristically_get_resource_kind(resource_path)
     if not getattr(profile, resource_kind + "name"):
@@ -365,7 +356,7 @@ def basic_settings(profile,
         logger.info(f'{"-" * (90 + 30 + 40)}')
         logger.info(_format_settings_header([("name", 90), ("type", 30), ("value", 40)]))
         logger.info(f'{"-" * (90 + 30 + 40)}')
-        _for_each_setting(actions, resource=resource)
+        _for_each_setting(structure_resource_settings, resource=resource)
     elif key and not value:
         try:
             logger.info(f"{key}: {_get_dotted_key_from_dict(key, resource)}")
@@ -498,3 +489,17 @@ def get_resource_list(profile, resource_path, **kwargs):
                               timeout=timeout,
                               params=kwargs)
     return resources
+
+
+def get_resource_settings_structure(profile, url):
+    timeout = profile.timeout
+    auth = profile.auth
+    headers = {"Authorization": f"{auth.token_type} {auth.token}",
+               "Accept": "application/json"}
+
+    options = rest_ops.options(url, headers=headers, timeout=timeout)
+    try:
+        return options["actions"]["POST"]
+    except KeyError as exc:
+        logger.debug(f"The 'settings' action is not available on this resource: {exc}.")
+    return None

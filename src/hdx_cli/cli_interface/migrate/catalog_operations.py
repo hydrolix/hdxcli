@@ -6,6 +6,7 @@ import tempfile
 import time
 from datetime import datetime
 from functools import reduce
+from queue import Queue
 
 from hdx_cli.library_api.common import rest_operations as rest_ops
 from hdx_cli.library_api.common.logging import get_logger
@@ -144,7 +145,11 @@ class Catalog:
         except HttpException as exc:
             raise HdxCliException(f"Some error occurred while downloading the catalog: {exc}")
 
-    def upload(self, profile: ProfileUserContext, chunk_size: int=250) -> None:
+    def upload(self,
+               profile: ProfileUserContext,
+               uploaded_count: Queue,
+               chunk_size: int=250
+               ) -> None:
         upload_catalog_url = (
             f'{profile.scheme}://{profile.hostname}/config/v1/orgs/{profile.org_id}/'
             f'catalog/upload/?header=no')
@@ -168,11 +173,13 @@ class Catalog:
                         timeout=60,
                         remote_filename=None
                     )
+                    uploaded_count.put(len(chunk))
                     time.sleep(1)
                     break
                 except HttpException as exc:
                     message_error = str(exc.message)
                     if 'existing entries in Catalog' in message_error:
+                        uploaded_count.put(len(chunk))
                         time.sleep(1)
                         break
                     else:
@@ -224,7 +231,10 @@ class Catalog:
 
     def get_summary_information(self) -> tuple[int, int, int]:
         row_count = reduce(lambda count, item: count + int(item.rows), self.partitions, 0)
-        return row_count, len(self.partitions), self.get_total_size()
+        return row_count, self.get_total_partitions(), self.get_total_size()
+
+    def get_total_partitions(self) -> int:
+        return len(self.partitions)
 
     def get_total_size(self) -> int:
         if not self.total_size:
