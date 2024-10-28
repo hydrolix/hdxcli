@@ -91,19 +91,16 @@ def migrate(ctx: click.Context,
             concurrency: int,
             temp_catalog: bool
             ):
-    source_profile = ctx.parent.obj['usercontext']
+    source_profile = ctx.parent.obj["usercontext"]
     if target_profile_name is None and not (
             target_hostname or target_username or target_password or target_uri_scheme
     ):
-        if reuse_partitions:
-            raise click.BadParameter(
-                '--reuse-partitions must be used for migrations between different clusters.'
-            )
-        target_profile = copy.deepcopy(source_profile)
+        raise click.BadParameter(
+            "You must provide either --target-profile or a set of target data including "
+            "hostname, username, schema, and password to proceed with the migration."
+        )
 
-    elif target_profile_name or (
-            target_hostname and target_username and target_password and target_uri_scheme
-    ):
+    else:
         target_profile = get_target_profile(
             target_profile_name,
             target_hostname,
@@ -113,12 +110,12 @@ def migrate(ctx: click.Context,
             source_profile.timeout
         )
 
-    else:
+    if source_profile.hostname == target_profile.hostname and reuse_partitions:
         raise click.BadParameter(
-            'The data provided is incorrect. Please check your input and try again.'
+            "--reuse-partitions must be used for migrations between different clusters."
         )
 
-    logger.info(f'{" Resource Retrieval ":=^50}')
+    logger.info(f"{' Resource Retrieval ':=^50}")
     source_resources = source_table.split('.')
     source_profile.projectname = source_resources[0]
     source_profile.tablename = source_resources[1]
@@ -135,12 +132,12 @@ def migrate(ctx: click.Context,
     logger.info(f"Source Cluster: {source_profile.hostname}")
     get_resources(source_profile, source_data)
     catalog = None
-    if only != 'resources':
+    if only != "resources":
         catalog = get_catalog(source_profile, source_data, temp_catalog)
-    logger.info('')
+    logger.info("")
 
     # Target
-    only_storages = only != 'data'
+    only_storages = only != "data"
     logger.info(f"Target Cluster: {target_profile.hostname}")
     get_resources(target_profile, target_data, only_storages=only_storages)
     logger.info('')
@@ -161,7 +158,7 @@ def migrate(ctx: click.Context,
     # Migrations
     # 'only' parameter has 3 possible values: 'resources', 'data', None
     # with these two if statements, it handles all the possible combinations
-    if only != 'data':
+    if only != "data":
         create_resources(
             target_profile,
             target_data,
@@ -169,7 +166,7 @@ def migrate(ctx: click.Context,
             source_data,
             reuse_partitions
         )
-    if only != 'resources':
+    if only != "resources":
         migrate_data(
             target_profile,
             target_data,
@@ -180,4 +177,4 @@ def migrate(ctx: click.Context,
             reuse_partitions
         )
 
-    logger.info(f'{" Migration Completed ":=^50}')
+    logger.info(f"{' Migration Completed ':=^50}")
