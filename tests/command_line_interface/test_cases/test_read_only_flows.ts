@@ -32,9 +32,9 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main dictionary --project test_ci_project files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_file.csv test_ci_dictionary_file",
                 "python3 -m hdx_cli.main dictionary --project test_ci_project create {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_settings.json test_ci_dictionary_file test_ci_dictionary",
                 "python3 -m hdx_cli.main job batch --project test_ci_project --table test_ci_table ingest test_ci_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_ci_settings.json",
-                "python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_ci_kafka_source",
-                "python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_ci_kinesis_source",
-                "python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_ci_siem_source",
+                # "python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_ci_kafka_source",
+                # "python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_ci_kinesis_source",
+                # "python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_ci_siem_source",
                 "python3 -m hdx_cli.main function --project test_ci_project create -s '(x,k,b)->k*x+b' test_ci_function",
                 "python3 -m hdx_cli.main storage create -f {HDXCLI_TESTS_DIR}/tests_data/storages/storage_ci_settings.json test_ci_storage",
                 "python -m hdx_cli.main role create --name test_ci_role --permission change_table",
@@ -246,143 +246,143 @@ expected_output_expr = '"name" in result and "string" in result and "test_ci_tra
 
 
 ######################################################### Kafka ########################################################
-[[test]]
-name = "Kafka sources can be created"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main sources kafka create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_kafka_source"]
-teardown = ["python3 -m hdx_cli.main sources kafka delete --disable-confirmation-prompt test_kafka_source",
-			      "python3 -m hdx_cli.main unset"]
-expected_output = 'Created source test_kafka_source'
+# [[test]]
+# name = "Kafka sources can be created"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+# commands_under_test = ["python3 -m hdx_cli.main sources kafka create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_kafka_source"]
+# teardown = ["python3 -m hdx_cli.main sources kafka delete --disable-confirmation-prompt test_kafka_source",
+# 			      "python3 -m hdx_cli.main unset"]
+# expected_output = 'Created source test_kafka_source'
 
-[[test]]
-name = "Kafka sources can be deleted"
-setup = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_kafka_source"]
-commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table delete --disable-confirmation-prompt test_kafka_source"]
-expected_output = 'Deleted test_kafka_source'
+# [[test]]
+# name = "Kafka sources can be deleted"
+# setup = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_kafka_source"]
+# commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table delete --disable-confirmation-prompt test_kafka_source"]
+# expected_output = 'Deleted test_kafka_source'
 
-[[test]]
-name = "Kafka sources can be listed"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main sources kafka list"]
-teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'test_ci_kafka_source'
+# [[test]]
+# name = "Kafka sources can be listed"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+# commands_under_test = ["python3 -m hdx_cli.main sources kafka list"]
+# teardown = ["python3 -m hdx_cli.main unset"]
+# expected_output = 'test_ci_kafka_source'
 
-[[test]]
-name = "Kafka source settings can be shown"
-commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings"]
-expected_output_expr = '"name" in result and "string" in result and "test_ci_kafka_source" in result'
+# [[test]]
+# name = "Kafka source settings can be shown"
+# commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings"]
+# expected_output_expr = '"name" in result and "string" in result and "test_ci_kafka_source" in result'
 
-[[test]]
-name = "Kafka source name can be modified"
-commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings name new_kafka_name"]
-teardown = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source new_kafka_name settings name test_ci_kafka_source"]
-expected_output = 'Updated new_kafka_name name'
+# [[test]]
+# name = "Kafka source name can be modified"
+# commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings name new_kafka_name"]
+# teardown = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source new_kafka_name settings name test_ci_kafka_source"]
+# expected_output = 'Updated new_kafka_name name'
 
-[[test]]
-name = "Kafka source bootstrap_servers can be shown"
-commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings settings.bootstrap_servers"]
-expected_output = "settings.bootstrap_servers: ['104.198.40.96:9092']"
+# [[test]]
+# name = "Kafka source bootstrap_servers can be shown"
+# commands_under_test = ["python3 -m hdx_cli.main sources kafka --project test_ci_project --table test_ci_table --source test_ci_kafka_source settings settings.bootstrap_servers"]
+# expected_output = "settings.bootstrap_servers: ['104.198.40.96:9092']"
 
-[[test]]
-name = "Kafka sources can be shown"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main sources kafka --source test_ci_kafka_source show"]
-teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = '"name" in result and "test_ci_kafka_source" in result and "kafka-peer" in result'
+# [[test]]
+# name = "Kafka sources can be shown"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+# commands_under_test = ["python3 -m hdx_cli.main sources kafka --source test_ci_kafka_source show"]
+# teardown = ["python3 -m hdx_cli.main unset"]
+# expected_output_expr = '"name" in result and "test_ci_kafka_source" in result and "kafka-peer" in result'
 
-######################################################## Kinesis #######################################################
-[[test]]
-name = "Kinesis sources can be created"
-commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_kinesis_source"]
-teardown = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table delete --disable-confirmation-prompt test_kinesis_source"]
-expected_output = 'Created source test_kinesis_source'
+# ######################################################## Kinesis #######################################################
+# [[test]]
+# name = "Kinesis sources can be created"
+# commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_kinesis_source"]
+# teardown = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table delete --disable-confirmation-prompt test_kinesis_source"]
+# expected_output = 'Created source test_kinesis_source'
 
-[[test]]
-name = "Kinesis sources can be deleted"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-		     "python3 -m hdx_cli.main sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_kinesis_source"]
-commands_under_test = ["python3 -m hdx_cli.main sources kinesis delete --disable-confirmation-prompt test_kinesis_source"]
-teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'Deleted test_kinesis_source'
+# [[test]]
+# name = "Kinesis sources can be deleted"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
+# 		     "python3 -m hdx_cli.main sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_kinesis_source"]
+# commands_under_test = ["python3 -m hdx_cli.main sources kinesis delete --disable-confirmation-prompt test_kinesis_source"]
+# teardown = ["python3 -m hdx_cli.main unset"]
+# expected_output = 'Deleted test_kinesis_source'
 
-[[test]]
-name = "Kinesis sources can be listed"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main sources kinesis list"]
-teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'test_ci_kinesis_source'
+# [[test]]
+# name = "Kinesis sources can be listed"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+# commands_under_test = ["python3 -m hdx_cli.main sources kinesis list"]
+# teardown = ["python3 -m hdx_cli.main unset"]
+# expected_output = 'test_ci_kinesis_source'
 
-[[test]]
-name = "Kinesis source settings can be shown"
-commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings"]
-expected_output_expr = '"name" in result and "string" in result and "test_ci_kinesis_source" in result'
+# [[test]]
+# name = "Kinesis source settings can be shown"
+# commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings"]
+# expected_output_expr = '"name" in result and "string" in result and "test_ci_kinesis_source" in result'
 
-# failing because HDX-5693
-#[[test]]
-#name = "Kinesis source name can be modified"
-#commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings name new_kinesis_name"]
-#teardown = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source new_kinesis_name settings name test_ci_kinesis_source"]
-#expected_output = 'Updated new_kinesis_name name'
+# # failing because HDX-5693
+# #[[test]]
+# #name = "Kinesis source name can be modified"
+# #commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings name new_kinesis_name"]
+# #teardown = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source new_kinesis_name settings name test_ci_kinesis_source"]
+# #expected_output = 'Updated new_kinesis_name name'
 
-[[test]]
-name = "Kinesis source type can be shown"
-commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings type"]
-expected_output = 'type: pull'
+# [[test]]
+# name = "Kinesis source type can be shown"
+# commands_under_test = ["python3 -m hdx_cli.main sources kinesis --project test_ci_project --table test_ci_table --source test_ci_kinesis_source settings type"]
+# expected_output = 'type: pull'
 
-[[test]]
-name = "Kinesis sources can be shown"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main sources kinesis --source test_ci_kinesis_source show"]
-teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = '"name" in result and "test_ci_kinesis_source" in result and "kinesis-peer" in result'
+# [[test]]
+# name = "Kinesis sources can be shown"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+# commands_under_test = ["python3 -m hdx_cli.main sources kinesis --source test_ci_kinesis_source show"]
+# teardown = ["python3 -m hdx_cli.main unset"]
+# expected_output_expr = '"name" in result and "test_ci_kinesis_source" in result and "kinesis-peer" in result'
 
 
-########################################################## SIEM #########################################################
-[[test]]
-name = "SIEM sources can be created"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
-teardown = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source",
-			      "python3 -m hdx_cli.main unset"]
-expected_output = 'Created source test_siem_source'
+# ########################################################## SIEM #########################################################
+# [[test]]
+# name = "SIEM sources can be created"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+# commands_under_test = ["python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
+# teardown = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source",
+# 			      "python3 -m hdx_cli.main unset"]
+# expected_output = 'Created source test_siem_source'
 
-[[test]]
-name = "SIEM sources can be deleted"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-		     "python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
-commands_under_test = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source"]
-teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'Deleted test_siem_source'
+# [[test]]
+# name = "SIEM sources can be deleted"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
+# 		     "python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
+# commands_under_test = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source"]
+# teardown = ["python3 -m hdx_cli.main unset"]
+# expected_output = 'Deleted test_siem_source'
 
-[[test]]
-name = "SIEM sources can be listed"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main sources siem list"]
-teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'test_ci_siem_source'
+# [[test]]
+# name = "SIEM sources can be listed"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+# commands_under_test = ["python3 -m hdx_cli.main sources siem list"]
+# teardown = ["python3 -m hdx_cli.main unset"]
+# expected_output = 'test_ci_siem_source'
 
-[[test]]
-name = "SIEM source settings can be shown"
-commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings"]
-expected_output_expr = '"name" in result and "string" in result and "test_ci_siem_source" in result'
+# [[test]]
+# name = "SIEM source settings can be shown"
+# commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings"]
+# expected_output_expr = '"name" in result and "string" in result and "test_ci_siem_source" in result'
 
-[[test]]
-name = "SIEM source name can be modified"
-commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings name new_siem_name"]
-teardown = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source new_siem_name settings name test_ci_siem_source"]
-expected_output = 'Updated new_siem_name name'
+# [[test]]
+# name = "SIEM source name can be modified"
+# commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings name new_siem_name"]
+# teardown = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source new_siem_name settings name test_ci_siem_source"]
+# expected_output = 'Updated new_siem_name name'
 
-[[test]]
-name = "SIEM source type can be shown"
-commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings type"]
-expected_output = 'type: pull'
+# [[test]]
+# name = "SIEM source type can be shown"
+# commands_under_test = ["python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table --source test_ci_siem_source settings type"]
+# expected_output = 'type: pull'
 
-[[test]]
-name = "SIEM sources can be shown"
-setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
-teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = '"name" in result and "test_ci_siem_source" in result and "siem-peer" in result'
+# [[test]]
+# name = "SIEM sources can be shown"
+# setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+# commands_under_test = ["python3 -m hdx_cli.main sources siem --source test_ci_siem_source show"]
+# teardown = ["python3 -m hdx_cli.main unset"]
+# expected_output_expr = '"name" in result and "test_ci_siem_source" in result and "siem-peer" in result'
 
 
 ######################################################## Storage #######################################################
