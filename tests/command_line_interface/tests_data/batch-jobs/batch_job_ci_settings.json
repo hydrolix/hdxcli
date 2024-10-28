@@ -7,7 +7,9 @@
 		    "subtype": "aws s3",
 		    "transform": "test_ci_transform",
 		    "settings": {
-		    	"url": "s3://qe-datasets/every_datatype/json/every_datatype-data.json"
+		    	"bucket_name": "qe-datasets",
+		    	"bucket_path": "every_datatype/json/every_datatype-data.json",
+		    	"cloud": "aws"
 		    }
 		}
 	}
