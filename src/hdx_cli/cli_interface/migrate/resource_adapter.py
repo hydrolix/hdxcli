@@ -1,0 +1,240 @@
+from hdx_cli.cli_interface.common.undecorated_click_commands import get_resource_settings_structure
+from hdx_cli.library_api.common.context import ProfileUserContext
+from hdx_cli.library_api.common.logging import get_logger
+
+
+logger = get_logger()
+
+MISSING_VALUES_HEADER = " Required Fields "
+first_time_user_input = True
+
+
+def ask_yes_no(question: str) -> bool:
+    logger.info(f"{question} [yes/no]: [!n]")
+    response = input().strip().lower()
+    return response in ('y', 'yes')
+
+
+def prompt_user_for_value(key: str, message=None, default=None):
+    if not message:
+        default_message = f" (default: {default})" if default else ""
+        prompt_message = f"*  Please, provide a value for '{key}'{default_message}"
+    else:
+        prompt_message = message
+    prompt_message = f"{prompt_message}: [!n]"
+
+    logger.info(prompt_message)
+    user_input = input().strip()
+    return user_input if user_input else default
+
+
+def adapt_table_merge_pools(pools: dict) -> dict | None:
+    logger.info("In progress")
+    logger.info(f"{' Merge Pools Settings ':*^40}")
+    logger.info("* Current merge pools settings for SOURCE table")
+    for key, value in pools.items():
+        logger.info(f"*  {key}: {value}")
+
+    updated_pools = {}
+    if not ask_yes_no("* Remove this settings for the TARGET table?"):
+        for key in pools.keys():
+            new_value = prompt_user_for_value(key)
+            if new_value:
+                updated_pools[key] = new_value
+
+    logger.info(f"{'*' * 40:<42} -> [!n]")
+    return updated_pools if updated_pools else None
+
+
+def adapt_table_autoingest(autoingest: dict) -> dict | None:
+    logger.info("In progress")
+    logger.info(f"{' Autoingest Settings ':*^40}")
+    logger.info("* Current autoingest settings for SOURCE table")
+    for key, value in autoingest.items():
+        logger.info(f"*  {key}: {value}")
+
+    if ask_yes_no("* Remove these settings from the TARGET table?"):
+        logger.info(f"{'*' * 40:<42} -> [!n]")
+        return None
+
+    for key in ["transform", "source_credential_id", "bucket_credential_id"]:
+        new_value = prompt_user_for_value(key)
+        if new_value:
+            autoingest[key] = new_value
+        else:
+            autoingest.pop(key, None)
+
+    logger.info(f"{'*' * 40:<42} -> [!n]")
+    return autoingest if autoingest else None
+
+
+def normalize_project(project: dict, reuse_partitions: bool) -> dict:
+    if not reuse_partitions:
+        project.pop("uuid", None)
+
+    return project
+
+
+def normalize_table(table: dict, reuse_partitions: bool) -> dict:
+    if not reuse_partitions:
+        table.pop("uuid", None)
+
+    table_settings = table.get("settings", {})
+
+    # Autoingest
+    autoingest = table_settings.get("autoingest")
+    filtered_autoingest = []
+    if autoingest and isinstance(autoingest, list):
+        for element in autoingest:
+            if isinstance(element, dict) and element.get("enabled"):
+                updated_element = adapt_table_autoingest(element)
+                if updated_element:
+                    filtered_autoingest.append(updated_element)
+
+    if filtered_autoingest:
+        table_settings["autoingest"] = filtered_autoingest
+    else:
+        table_settings.pop("autoingest", None)
+
+    # Merge pools
+    merge = table_settings.get("merge")
+    if merge and isinstance(merge, dict) and (pools := merge.get("pools")):
+        updated_pools = adapt_table_merge_pools(pools)
+        if updated_pools:
+            merge["pools"] = updated_pools
+        else:
+            merge.pop("pools", None)
+
+    return table
+
+
+def normalize_transform(transform: dict) -> dict:
+    # Always remove the UUID
+    transform.pop("uuid", None)
+    return transform
+
+
+def normalize_function(function: dict) -> dict:
+    # Always remove the UUID
+    function.pop("uuid", None)
+    return function
+
+
+def normalize_dictionary(dictionary: dict) -> dict:
+    # Always remove the UUID
+    dictionary.pop("uuid", None)
+    return dictionary
+
+
+def get_user_value_input(field_name: str, field_type: str):
+    while True:
+        user_input = prompt_user_for_value(
+            field_name,
+            message=f"*  {field_name} ({field_type})"
+        )
+
+        if not user_input:
+            logger.info(f"*  Invalid value. Please, try again.")
+            continue
+
+        if "integer" in field_type:
+            try:
+                return int(user_input)
+            except ValueError or TypeError:
+                logger.info("*  Invalid integer. Please enter a valid number.")
+        elif "list" in field_type:
+            return [item.strip() for item in user_input.split(",") if item.strip()]
+        elif "boolean" in field_type:
+            if user_input.lower() in ('1', 'true', 't', 'yes', 'y'):
+                return True
+            elif user_input.lower() in ('0', 'false', 'f', 'no', 'n'):
+                return False
+            else:
+                logger.info("*  Invalid value. Please enter 'true' or 'false'.")
+        elif "decimal" in field_type:
+            try:
+                return float(user_input)
+            except ValueError or TypeError:
+                logger.info("*  Invalid value. Please enter a valid decimal number.")
+        else:
+            return user_input
+
+
+def _adapt_resource_to_api_structure(resource_structure: dict,
+                                     resource_settings: dict | None,
+                                     parent_path=""
+                                     ) -> dict:
+    def is_empty(value):
+        return value in (None, {}, [], "")
+
+    global first_time_user_input
+    adapted_resource_settings = {}
+
+    for field_name, field_props in resource_structure.items():
+        if field_props.get("read_only", False):
+            continue
+
+        is_required = field_props.get("required", False)
+        field_type = field_props.get("type", "")
+        resource_settings_value = resource_settings.get(field_name) if resource_settings else None
+
+        current_path = f"{parent_path}.{field_name}" if parent_path else field_name
+
+        if field_type == "nested object":
+            children_structure = field_props.get("children", {})
+            child_structure = field_props.get("child", None)
+
+            if children_structure:
+                if not resource_settings_value and not is_required:
+                    continue
+                nested_dict = _adapt_resource_to_api_structure(
+                    children_structure,
+                    resource_settings_value or {},
+                    parent_path=current_path
+                )
+                if nested_dict or is_required:
+                    adapted_resource_settings[field_name] = nested_dict
+
+            elif child_structure:
+                if resource_settings_value and isinstance(resource_settings_value, dict):
+                    adapted_resource_settings[field_name] = {}
+                    for key, value in resource_settings_value.items():
+                        adapted_resource_settings[field_name][key] = value
+
+        else:
+            if resource_settings_value is not None and not is_empty(resource_settings_value):
+                adapted_resource_settings[field_name] = resource_settings_value
+            elif is_required:
+                if first_time_user_input:
+                    logger.info("In progress")
+                    logger.info(f"{MISSING_VALUES_HEADER:*^40}")
+                    logger.info(f"* The following fields are required to proceed:")
+                    first_time_user_input = False
+
+                new_value = get_user_value_input(current_path, field_type)
+                adapted_resource_settings[field_name] = new_value
+            else:
+                logger.debug(f"Field '{current_path}' was omitted because it is empty or None.")
+
+    return adapted_resource_settings
+
+
+def adapt_resource_to_api_structure(profile: ProfileUserContext,
+                                    resource_url: str,
+                                    resource_settings: dict
+                                    ) -> dict:
+    resource_structure = get_resource_settings_structure(profile, resource_url)
+    if not resource_structure:
+        return resource_settings
+
+    global first_time_user_input
+    adapted_resource = _adapt_resource_to_api_structure(
+        resource_structure,
+        resource_settings
+    )
+
+    if not first_time_user_input:
+        logger.info(f"{'*' * 40:<42} -> [!n]")
+        first_time_user_input = True
+
+    return adapted_resource
