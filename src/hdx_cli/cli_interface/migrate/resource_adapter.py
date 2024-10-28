@@ -1,3 +1,5 @@
+import re
+
 from hdx_cli.cli_interface.common.undecorated_click_commands import get_resource_settings_structure
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.logging import get_logger
@@ -10,7 +12,7 @@ first_time_user_input = True
 
 
 def ask_yes_no(question: str) -> bool:
-    logger.info(f"{question} [yes/no]: [!n]")
+    logger.info(f"{question} [yes/no]: [!i]")
     response = input().strip().lower()
     return response in ('y', 'yes')
 
@@ -21,7 +23,7 @@ def prompt_user_for_value(key: str, message=None, default=None):
         prompt_message = f"*  Please, provide a value for '{key}'{default_message}"
     else:
         prompt_message = message
-    prompt_message = f"{prompt_message}: [!n]"
+    prompt_message = f"{prompt_message}: [!i]"
 
     logger.info(prompt_message)
     user_input = input().strip()
@@ -68,6 +70,66 @@ def adapt_table_autoingest(autoingest: dict) -> dict | None:
     return autoingest if autoingest else None
 
 
+def extract_table_name_from_sql(sql):
+    if not sql:
+        return None, None
+
+    pattern = r"(?i)\bFROM\s+([`\"']?\w+[`\"']?\.\w+)"
+    match = re.search(pattern, sql)
+    if not match:
+        return None, None
+
+    table_name = match.group(1).replace('`', '').replace('"', '').replace("'", "")
+    project, table = table_name.split(".")
+    return project, table
+
+
+def update_parent_in_summary_sql(summary_settings: dict) -> dict:
+    logger.info("In progress")
+    logger.info(f"{' Summary Settings ':*^40}")
+
+    sql = summary_settings.get("sql")
+    summary_sql = summary_settings.get("summary_sql")
+    current_project, current_table = extract_table_name_from_sql(sql)
+
+    current_summary_parents = (
+        "Not Found"
+        if not current_project or not current_table
+        else f"{current_project}.{current_table}"
+    )
+    logger.info(f"* The current parents for the SUMMARY TABLE are: {current_summary_parents}")
+    logger.info("*")
+    attempts = 3
+    while attempts > 0:
+        logger.info(
+            "*  Enter new project and table in 'project.table' format (leave blank to keep current): [!i]"
+        )
+        new_project_table = input().strip()
+
+        if not new_project_table and current_project and current_table:
+            new_project, new_table = current_project, current_table
+            break
+
+        try:
+            new_project, new_table = new_project_table.split(".")
+            if new_project and new_table:
+                break
+            logger.info("*  Invalid input. Ensure 'project.table' format is used.")
+        except ValueError:
+            logger.info("*  Invalid format. Please enter 'project.table' with a single dot.")
+            attempts -= 1
+
+    if attempts == 0:
+        logger.info("*  Maximum attempts reached. Keeping current project.table.")
+        new_project, new_table = current_project, current_table
+
+    summary_settings["sql"] = sql.replace(current_project, new_project).replace(current_table, new_table)
+    summary_settings["summary_sql"] = summary_sql.replace(current_project, new_project).replace(current_table, new_table)
+
+    logger.info(f"{'*' * 40:<42} -> [!n]")
+    return summary_settings
+
+
 def normalize_project(project: dict, reuse_partitions: bool) -> dict:
     if not reuse_partitions:
         project.pop("uuid", None)
@@ -75,11 +137,20 @@ def normalize_project(project: dict, reuse_partitions: bool) -> dict:
     return project
 
 
+def normalize_summary_table(summary_settings: dict) -> dict:
+    return update_parent_in_summary_sql(summary_settings)
+
+
 def normalize_table(table: dict, reuse_partitions: bool) -> dict:
     if not reuse_partitions:
         table.pop("uuid", None)
 
     table_settings = table.get("settings", {})
+
+    # Summary
+    if table.get("type") == "summary":
+        summary_settings = table_settings.get("summary", {})
+        table_settings["summary"] = normalize_summary_table(summary_settings)
 
     # Autoingest
     autoingest = table_settings.get("autoingest")
