@@ -80,8 +80,10 @@ def confirm_action(prompt: str = 'Continue with migration?') -> bool:
     while True:
         logger.info(f'{prompt} (yes/no): [!i]')
         response = input().strip().lower()
-        if response in ['yes', 'no', 'y', 'n']:
-            return response == 'yes'
+        if response in ['yes','y']:
+            return True
+        elif response in ['no','n']:
+            return False
         logger.info("Invalid input. Please enter 'yes' or 'no'.")
 
 

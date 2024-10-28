@@ -1,6 +1,7 @@
 import re
 
 from hdx_cli.cli_interface.common.undecorated_click_commands import get_resource_settings_structure
+from hdx_cli.cli_interface.migrate.helpers import confirm_action
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.logging import get_logger
 
@@ -9,12 +10,6 @@ logger = get_logger()
 
 MISSING_VALUES_HEADER = " Required Fields "
 first_time_user_input = True
-
-
-def ask_yes_no(question: str) -> bool:
-    logger.info(f"{question} [yes/no]: [!i]")
-    response = input().strip().lower()
-    return response in ('y', 'yes')
 
 
 def prompt_user_for_value(key: str, message=None, default=None):
@@ -38,7 +33,7 @@ def adapt_table_merge_pools(pools: dict) -> dict | None:
         logger.info(f"*  {key}: {value}")
 
     updated_pools = {}
-    if not ask_yes_no("* Remove this settings for the TARGET table?"):
+    if not confirm_action("* Remove these settings for the TARGET table?"):
         for key in pools.keys():
             new_value = prompt_user_for_value(key)
             if new_value:
@@ -55,7 +50,7 @@ def adapt_table_autoingest(autoingest: dict) -> dict | None:
     for key, value in autoingest.items():
         logger.info(f"*  {key}: {value}")
 
-    if ask_yes_no("* Remove these settings from the TARGET table?"):
+    if confirm_action("* Remove these settings from the TARGET table?"):
         logger.info(f"{'*' * 40:<42} -> [!n]")
         return None
 
