@@ -107,7 +107,6 @@ def _create_functions(target_profile: ProfileUserContext,
     )
     target_functions_path = urlparse(target_functions_url).path
 
-    error_flag = False
     for function in source_function_list:
         function_name = function.get("name")
         logger.info(f"{f'    name: {function_name}':<42} -> [!n]")
@@ -118,7 +117,7 @@ def _create_functions(target_profile: ProfileUserContext,
             function
         )
         normalized_function = normalize_function(adapted_function)
-
+        message = None
         try:
             basic_create_with_body_from_string(
                 target_profile,
@@ -126,15 +125,16 @@ def _create_functions(target_profile: ProfileUserContext,
                 function_name,
                 json.dumps(normalized_function)
             )
+            message = "Done"
         except HttpException as exc:
             if exc.error_code != 400 or "already exists" not in str(exc.message):
                 logger.debug(f"Error creating function '{function_name}': {exc}")
-                error_flag = True
+                message = "Done with errors"
             else:
                 logger.debug(f"Function '{function_name}' already exists, skipping")
-            continue
-        message = "Done with errors" if error_flag else "Done"
-        logger.info(message)
+                message = "Exists, skipping"
+        finally:
+            logger.info(message)
 
 
 def _create_dictionaries(target_profile: ProfileUserContext,
@@ -152,7 +152,6 @@ def _create_dictionaries(target_profile: ProfileUserContext,
     target_dictionaries_path = urlparse(target_dictionaries_url).path
 
     dictionary_files_so_far = set()
-    error_flag = False
     for dictionary in source_dictionary_list:
         d_name = dictionary.get("name")
         logger.info(f"{f'    name: {d_name}':<42} -> [!n]")
@@ -186,11 +185,11 @@ def _create_dictionaries(target_profile: ProfileUserContext,
         except HttpException as exc:
             if exc.error_code != 400 or "already exists" not in str(exc.message):
                 logger.debug(f"Error creating dictionary file '{d_file}': {exc}")
-                error_flag = True
             else:
                 logger.debug(f"Dictionary file '{d_file}' already exists, skipping")
             continue
         finally:
+            message = None
             try:
                 basic_create_with_body_from_string(
                     target_profile,
@@ -198,15 +197,16 @@ def _create_dictionaries(target_profile: ProfileUserContext,
                     d_name,
                     json.dumps(normalized_dictionary)
                 )
+                message = "Done"
             except HttpException as exc:
                 if exc.error_code != 400 or "already exists" not in str(exc.message):
                     logger.debug(f"Error creating dictionary file '{d_file}': {exc}")
-                    error_flag = True
+                    message = "Done with errors"
                 else:
                     logger.debug(f"Dictionary '{d_name}' already exists, skipping")
-
-        message = "Done with errors" if error_flag else "Done"
-        logger.info(message)
+                    message = "Exists, skipping"
+            finally:
+                logger.info(message)
 
 
 def _create_dictionary_file(project_name: str,

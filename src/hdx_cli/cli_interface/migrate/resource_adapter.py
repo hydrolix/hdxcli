@@ -5,11 +5,7 @@ from hdx_cli.cli_interface.migrate.helpers import confirm_action
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.logging import get_logger
 
-
 logger = get_logger()
-
-MISSING_VALUES_HEADER = " Required Fields "
-first_time_user_input = True
 
 
 def prompt_user_for_value(key: str, message=None, default=None):
@@ -66,9 +62,6 @@ def adapt_table_autoingest(autoingest: dict) -> dict | None:
 
 
 def extract_table_name_from_sql(sql):
-    if not sql:
-        return None, None
-
     pattern = r"(?i)\bFROM\s+([`\"']?\w+[`\"']?\.\w+)"
     match = re.search(pattern, sql)
     if not match:
@@ -85,6 +78,12 @@ def update_parent_in_summary_sql(summary_settings: dict) -> dict:
 
     sql = summary_settings.get("sql")
     summary_sql = summary_settings.get("summary_sql")
+
+    if not sql:
+        logger.info("* SQL not found in the summary settings.")
+        sql = get_user_value_input("sql", "string")
+        logger.info("*")
+
     current_project, current_table = extract_table_name_from_sql(sql)
 
     current_summary_parents = (
@@ -93,7 +92,6 @@ def update_parent_in_summary_sql(summary_settings: dict) -> dict:
         else f"{current_project}.{current_table}"
     )
     logger.info(f"* The current parents for the SUMMARY TABLE are: {current_summary_parents}")
-    logger.info("*")
     attempts = 3
     while attempts > 0:
         logger.info(
@@ -119,7 +117,8 @@ def update_parent_in_summary_sql(summary_settings: dict) -> dict:
         new_project, new_table = current_project, current_table
 
     summary_settings["sql"] = sql.replace(current_project, new_project).replace(current_table, new_table)
-    summary_settings["summary_sql"] = summary_sql.replace(current_project, new_project).replace(current_table, new_table)
+    if summary_sql:
+        summary_settings["summary_sql"] = summary_sql.replace(current_project, new_project).replace(current_table, new_table)
 
     logger.info(f"{'*' * 40:<42} -> [!n]")
     return summary_settings
@@ -228,14 +227,13 @@ def get_user_value_input(field_name: str, field_type: str):
 
 def _adapt_resource_to_api_structure(resource_structure: dict,
                                      resource_settings: dict | None,
-                                     parent_path=""
-                                     ) -> dict:
+                                     parent_path="",
+                                     first_time_input=True
+                                     ) -> (dict, bool):
     def is_empty(value):
         return value in (None, {}, [], "")
 
-    global first_time_user_input
     adapted_resource_settings = {}
-
     for field_name, field_props in resource_structure.items():
         if field_props.get("read_only", False):
             continue
@@ -253,10 +251,11 @@ def _adapt_resource_to_api_structure(resource_structure: dict,
             if children_structure:
                 if not resource_settings_value and not is_required:
                     continue
-                nested_dict = _adapt_resource_to_api_structure(
+                nested_dict, first_time_input = _adapt_resource_to_api_structure(
                     children_structure,
                     resource_settings_value or {},
-                    parent_path=current_path
+                    parent_path=current_path,
+                    first_time_input=first_time_input
                 )
                 if nested_dict or is_required:
                     adapted_resource_settings[field_name] = nested_dict
@@ -271,18 +270,18 @@ def _adapt_resource_to_api_structure(resource_structure: dict,
             if resource_settings_value is not None and not is_empty(resource_settings_value):
                 adapted_resource_settings[field_name] = resource_settings_value
             elif is_required:
-                if first_time_user_input:
+                if first_time_input:
                     logger.info("In progress")
-                    logger.info(f"{MISSING_VALUES_HEADER:*^40}")
+                    logger.info(f"{' Required Fields ':*^40}")
                     logger.info(f"* The following fields are required to proceed:")
-                    first_time_user_input = False
+                    first_time_input = False
 
                 new_value = get_user_value_input(current_path, field_type)
                 adapted_resource_settings[field_name] = new_value
             else:
                 logger.debug(f"Field '{current_path}' was omitted because it is empty or None.")
 
-    return adapted_resource_settings
+    return adapted_resource_settings, first_time_input
 
 
 def adapt_resource_to_api_structure(profile: ProfileUserContext,
@@ -293,14 +292,12 @@ def adapt_resource_to_api_structure(profile: ProfileUserContext,
     if not resource_structure:
         return resource_settings
 
-    global first_time_user_input
-    adapted_resource = _adapt_resource_to_api_structure(
+    adapted_resource, first_time_input = _adapt_resource_to_api_structure(
         resource_structure,
         resource_settings
     )
 
-    if not first_time_user_input:
+    if not first_time_input:
         logger.info(f"{'*' * 40:<42} -> [!n]")
-        first_time_user_input = True
 
     return adapted_resource
