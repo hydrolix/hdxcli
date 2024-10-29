@@ -7,7 +7,8 @@ from .helpers import (
     print_summary,
     confirm_action,
     MigrationData,
-    update_catalog_and_upload, upload_catalog, monitor_progress
+    update_catalog_and_upload,
+    monitor_progress
 )
 from hdx_cli.cli_interface.migrate.rc.rc_remotes import RCloneRemote
 from hdx_cli.cli_interface.migrate.rc.rc_utils import get_remote, close_remotes, recreate_remotes
@@ -22,7 +23,7 @@ from hdx_cli.library_api.common.exceptions import MigrationFailureException
 logger = get_logger()
 
 
-def show_and_confirm_data_migration(catalog: Catalog) -> bool:
+def show_and_confirm_data_migration(catalog: Catalog, reuse_partitions=False) -> bool:
     """
     Displays a summary of the migration process,
     validates that the number of files to migrate is greater than 0,
@@ -30,7 +31,21 @@ def show_and_confirm_data_migration(catalog: Catalog) -> bool:
     """
     total_rows, total_partitions, total_size = catalog.get_summary_information()
     print_summary(total_rows, total_partitions, total_size)
+
+    if reuse_partitions:
+        logger.info("The catalog will be uploaded without migrating the data.")
+
     return confirm_action()
+
+
+def summary_and_confirm(catalog: Catalog, reuse_partitions=False, remotes=None) -> None:
+    if not show_and_confirm_data_migration(catalog, reuse_partitions):
+        if remotes:
+            close_remotes(remotes)
+
+        logger.info('')
+        logger.info(f'{" Migration Finished ":=^50}')
+        sys.exit(0)
 
 
 def migrate_partitions_threaded(migration_list: list,
@@ -137,6 +152,52 @@ def get_migration_list(src_remote: RCloneRemote,
     return migration_list
 
 
+def migrate_partition_and_monitor(migration_list: list,
+                                  exceptions: Queue,
+                                  rc_config: RcloneAPIConfig,
+                                  concurrency: int,
+                                  remotes: dict,
+                                  partitions_size: int
+                                  ) -> None:
+    migrated_sizes_queue = Queue()
+    threading.Thread(
+        target=migrate_partitions_threaded,
+        args=(migration_list, migrated_sizes_queue, exceptions, rc_config, concurrency, remotes)
+    ).start()
+    monitor_progress(partitions_size, migrated_sizes_queue, exceptions)
+
+
+def upload_catalog_and_monitor(profile: ProfileUserContext,
+                               catalog: Catalog,
+                               reuse_partitions: bool,
+                               target_data: MigrationData=None,
+                               target_storage_id: str=None,
+                               ) -> None:
+    total_partitions_count = catalog.get_total_partitions()
+    uploaded_count = Queue()
+    exceptions = Queue()
+    threading.Thread(
+        target=update_catalog_and_upload,
+        args=(
+            profile,
+            catalog,
+            uploaded_count,
+            exceptions,
+            target_data,
+            target_storage_id,
+            reuse_partitions
+        )
+    ).start()
+    monitor_progress(
+        total_partitions_count,
+        uploaded_count, exceptions,
+        unit="units",
+        unit_scale=False,
+        unit_divisor=1,
+        desc="Catalog"
+    )
+
+
 def migrate_data(target_profile: ProfileUserContext,
                  target_data: MigrationData,
                  source_storages: list[dict],
@@ -145,10 +206,11 @@ def migrate_data(target_profile: ProfileUserContext,
                  concurrency: int,
                  reuse_partitions: bool = False
                  ) -> None:
-    logger.info(f'{" Data ":=^50}')
+    logger.info(f'{" Data Migration ":=^50}')
 
     if reuse_partitions:
-        upload_catalog(target_profile, catalog)
+        summary_and_confirm(catalog, reuse_partitions, {})
+        upload_catalog_and_monitor(target_profile, catalog, reuse_partitions)
         logger.info('')
         return
 
@@ -160,7 +222,6 @@ def migrate_data(target_profile: ProfileUserContext,
     partitions_size = catalog.get_total_size()
 
     migration_list = []
-    migrated_sizes_queue = Queue()
     exceptions = Queue()
     remotes = {}
 
@@ -195,22 +256,26 @@ def migrate_data(target_profile: ProfileUserContext,
             )
         )
 
-    if not show_and_confirm_data_migration(catalog):
-        logger.info(f'{" Migration Process Finished ":=^50}')
-        logger.info('')
-        sys.exit(0)
-
-    threading.Thread(
-        target=migrate_partitions_threaded,
-        args=(migration_list, migrated_sizes_queue, exceptions, rc_config, concurrency, remotes)
-    ).start()
-
-    monitor_progress(partitions_size, migrated_sizes_queue, exceptions)
-
+    summary_and_confirm(catalog, reuse_partitions, remotes)
+    migrate_partition_and_monitor(
+        migration_list,
+        exceptions,
+        rc_config,
+        concurrency,
+        remotes,
+        partitions_size
+    )
     close_remotes(remotes)
+
     if exceptions.qsize() != 0:
         exception = exceptions.get()
         raise exception
 
-    update_catalog_and_upload(target_profile, catalog, target_data, target_storage_id)
+    upload_catalog_and_monitor(
+        target_profile,
+        catalog,
+        reuse_partitions,
+        target_data=target_data,
+        target_storage_id=target_storage_id
+    )
     logger.info('')

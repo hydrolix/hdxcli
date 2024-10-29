@@ -25,31 +25,38 @@ def validations(source_profile: ProfileUserContext,
                 allow_merge: bool,
                 reuse_partitions: bool
                 ) -> None:
-    logger.info("Running some validations")
+    logger.info(f'{" Validation ":=^50}')
     table_constraints(source_profile, source_data.table, only, allow_merge)
     filter_catalog(catalog, from_date, to_date)
     validate_reuse_partitions(source_data, target_data, catalog, only, reuse_partitions)
     validate_multi_bucket(source_data, target_data.storages, only, reuse_partitions)
 
 
-def table_constraints(profile: ProfileUserContext,
-                      table_body: dict,
-                      only: str,
-                      allow_merge=False
-                      ) -> None:
-    if only == 'resources':
-        return
-
-    logger.info(f"{'  Checking merge table settings':<42} -> [!n]")
-    if not allow_merge and is_merge_enable(table_body):
+def check_merge_table_settings(profile: ProfileUserContext,
+                               table_body: dict,
+                               is_only_resources: bool,
+                               allow_merge=False
+                               ) -> None:
+    logger.info(f"{'Checking merge table settings':<42} -> [!n]")
+    if not allow_merge and not is_only_resources and is_merge_enable(table_body):
         raise HdxCliException(
             f"The merging process is enabled in the '{profile.tablename}' table. "
             'To successfully migrate data, be sure to disable it or use --allow-merge '
             'to skip this validation.'
         )
-    logger.info(f'{"Done" if not allow_merge else "Skip due to --allow-merge"}')
+    message = 'Skipped '
+    message += '(--only resources)' if is_only_resources else '(--allow-merge)'
+    if not allow_merge and not is_only_resources:
+        message = 'Done'
+    logger.info(message)
 
-    logger.info(f"{'  Looking for running alter jobs':<42} -> [!n]")
+
+def check_alter_jobs(profile: ProfileUserContext, is_only_resources: bool) -> None:
+    logger.info(f"{'Checking for running alter jobs':<42} -> [!n]")
+    if is_only_resources:
+        logger.info('Skipped (--only resources)')
+        return
+
     alter_path = f'/config/v1/orgs/{profile.org_id}/jobs/alter/'
     alter_jobs = get_resource_list(profile, alter_path).get('results')
     is_alter_job_running = list(filter(
@@ -64,6 +71,16 @@ def table_constraints(profile: ProfileUserContext,
             'running on this table.'
         )
     logger.info('Done')
+
+
+def table_constraints(profile: ProfileUserContext,
+                      table_body: dict,
+                      only: str,
+                      allow_merge
+                      ) -> None:
+    is_only_resources = only == 'resources'
+    check_merge_table_settings(profile, table_body, is_only_resources, allow_merge)
+    check_alter_jobs(profile, is_only_resources)
 
 
 def is_merge_enable(table_body: dict) -> bool:
@@ -90,7 +107,7 @@ def filter_catalog(catalog: Catalog,
     if not catalog or not (from_date or to_date):
         return
 
-    logger.info(f"{'  Filtering catalog by timestamp':<42} -> [!n]")
+    logger.info(f"{'Filtering catalog by timestamp':<42} -> [!n]")
     catalog.filter_by_timestamp(from_date, to_date)
     logger.info('Done')
 
@@ -105,13 +122,13 @@ def validate_reuse_partitions(source_data: MigrationData,
         return
 
     if only != 'resources':
-        logger.info(f"{'  Updating catalog':<42} -> [!n]")
+        logger.info(f"{'Updating catalog (--reuse-partitions)':<42} -> [!n]")
         storage_equivalences = get_equivalent_storages(source_data.storages, target_data.storages)
         catalog.update_with_shared_storages(storage_equivalences)
         logger.info('Done')
 
     if only == 'data':
-        logger.info(f"{'  Checking resources UUID':<42} -> [!n]")
+        logger.info(f"{'Checking UUIDs (--reuse-partitions)':<42} -> [!n]")
         if (
                 not is_same_uuid(source_data.project, target_data.project) or
                 not is_same_uuid(source_data.table, target_data.table)
@@ -128,7 +145,7 @@ def validate_multi_bucket(source_data: MigrationData,
     if only == 'data':
         return
 
-    logger.info(f"{'  Checking multi-bucket settings':<42} -> [!n]")
+    logger.info(f"{'Verifying table storage settings':<42} -> [!n]")
     if has_multi_buckets(source_data.table) and reuse_partitions:
         update_equivalent_multi_storage_settings(source_data, target_storages)
     else:

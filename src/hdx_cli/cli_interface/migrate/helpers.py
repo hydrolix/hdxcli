@@ -1,5 +1,6 @@
 import time
 from dataclasses import dataclass, field
+from queue import Queue
 from typing import Optional, Dict, List
 
 from tqdm import tqdm
@@ -36,7 +37,7 @@ def get_catalog(profile: ProfileUserContext,
                 temp_catalog: bool
                 ) -> Catalog:
     project_table_name = f'{profile.projectname}.{profile.tablename}'
-    logger.info(        f"{f'Downloading catalog of {project_table_name[:19]}':<42} -> [!n]")
+    logger.info(f"{f'  Catalog: {project_table_name[:31]}':<42} -> [!n]")
     catalog = Catalog()
     catalog.download(
         profile,
@@ -48,23 +49,23 @@ def get_catalog(profile: ProfileUserContext,
     return catalog
 
 
-def upload_catalog(profile: ProfileUserContext, catalog: Catalog) -> None:
-    logger.info(f"{f'Uploading catalog':<42} -> [!n]")
-    catalog.upload(profile)
-    logger.info('Done')
-
-
 def update_catalog_and_upload(profile: ProfileUserContext,
                               catalog: Catalog,
+                              uploaded_count: Queue,
+                              exceptions: Queue,
                               target_data: MigrationData,
-                              target_storage_id: str
+                              target_storage_id: str,
+                              reuse_partitions
                               ) -> None:
-    logger.info(f"{f'Updating catalog':<42} -> [!n]")
-    project_id = target_data.project.get('uuid')
-    table_id = target_data.table.get('uuid')
-    catalog.update(project_id, table_id, target_storage_id)
-    logger.info('Done')
-    upload_catalog(profile, catalog)
+    try:
+        if not reuse_partitions:
+            project_id = target_data.project.get('uuid')
+            table_id = target_data.table.get('uuid')
+            catalog.update(project_id, table_id, target_storage_id)
+
+        catalog.upload(profile, uploaded_count)
+    except Exception as exc:
+        exceptions.put(exc)
 
 
 def bytes_to_human_readable(amount: int) -> str:
@@ -79,8 +80,10 @@ def confirm_action(prompt: str = 'Continue with migration?') -> bool:
     while True:
         logger.info(f'{prompt} (yes/no): [!i]')
         response = input().strip().lower()
-        if response in ['yes', 'no']:
-            return response == 'yes'
+        if response in ['yes','y']:
+            return True
+        elif response in ['no','n']:
+            return False
         logger.info("Invalid input. Please enter 'yes' or 'no'.")
 
 
@@ -88,26 +91,35 @@ def print_summary(total_rows: int,
                   total_files: int,
                   total_size: int
                   ) -> None:
-    logger.info(f'{" Summary ":=^30}')
-    logger.info(f'- Total rows: {total_rows}')
-    logger.info(f'- Total partitions: {total_files}')
-    logger.info(f'- Total size: {bytes_to_human_readable(total_size)}')
+    logger.info(f'{" Summary ":*^35}')
+    logger.info(f'{f"* Total rows: {total_rows}":<34}*')
+    logger.info(f'{f"* Total partitions: {total_files}":<34}*')
+    logger.info(f'{f"* Total size: {bytes_to_human_readable(total_size)}":<34}*')
+    logger.info(f'{"*"*35}')
     logger.info('')
 
 
-def monitor_progress(total_bytes, migrated_sizes_queue, exceptions_queue):
+def monitor_progress(total_count: int,
+                     migrated_queue: Queue,
+                     exceptions_queue: Queue,
+                     unit: str = "B",
+                     unit_scale: bool = True,
+                     unit_divisor: int = 1024,
+                     desc: str = "Partitions"
+                     ):
     total_bytes_processed = 0
     progress_bar = tqdm(
-        total=total_bytes,
-        unit="B",
-        unit_scale=True,
-        unit_divisor=1024,
-        bar_format="{desc}{bar:10} {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+        total=total_count,
+        unit=unit,
+        unit_scale=unit_scale,
+        unit_divisor=unit_divisor,
+        desc=desc,
+        bar_format="{desc} {bar:10} {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
     )
 
-    while total_bytes_processed < total_bytes:
-        if not migrated_sizes_queue.empty():
-            bytes_size = migrated_sizes_queue.get()
+    while total_bytes_processed < total_count:
+        if not migrated_queue.empty():
+            bytes_size = migrated_queue.get()
             progress_bar.update(bytes_size)
             total_bytes_processed += bytes_size
         else:
