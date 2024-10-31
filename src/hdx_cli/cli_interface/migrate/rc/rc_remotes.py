@@ -77,12 +77,13 @@ def _get_linode_config(remote):
     if not access_key or not secret_key:
         raise ValueError("Access Key and Secret Key must not be empty.")
 
-    endpoint = f"{remote.region}.linodeobjects.com"
+    if not remote.endpoint:
+        remote.endpoint = f"{remote.region}.linodeobjects.com"
     credentials = {
         "access_key_id": access_key,
         "secret_access_key": secret_key,
         "provider": "Linode",
-        "endpoint": endpoint,
+        "endpoint": remote.endpoint,
     }
     config = {"type": "s3", "parameters": credentials}
     return config
@@ -107,6 +108,7 @@ class RCloneRemote:
         self.bucket_name = None
         self.bucket_path = None
         self.region = None
+        self.endpoint = None
         self.rc_config = None
         self.remote_config = None
 
@@ -120,6 +122,7 @@ class RCloneRemote:
         bucket_path = storage_config.get("bucket_path", "/")
         self.bucket_path = bucket_path if bucket_path.endswith("/") else f"{bucket_path}/"
         self.region = storage_config.get("region", "")
+        self.endpoint = storage_config.get("endpoint", "")
         self.rc_config = rc_config
 
         logger.info(f"Please, provide credentials for the {bucket_side.upper()} bucket:")
@@ -127,7 +130,7 @@ class RCloneRemote:
         logger.info(f"  Path:   {self.bucket_path}")
         logger.info(f"  Cloud:  {self.cloud}")
         logger.info(f"  Region: {self.region}")
-        self.remote_config = self._get_remote_config(self.cloud)
+        self.remote_config = self._get_remote_config()
 
         self.name = f"{self.bucket_name}_{generate_random_string()}"
         self._send_create_request()
@@ -165,15 +168,15 @@ class RCloneRemote:
                 f"Error checking remote connection to {self.bucket_name} ({self.cloud})."
             )
 
-    def _get_remote_config(self, cloud):
-        if cloud == "azure":
+    def _get_remote_config(self):
+        if self.cloud == "azure":
             return _get_azure_config()
-        elif cloud == "gcp":
+        elif self.cloud == "gcp":
             return _get_gcp_config(self)
-        elif cloud == "aws":
+        elif self.cloud in ["aws", "linode"]:
+            if self.endpoint or self.cloud == "linode":
+                return _get_linode_config(self)
             return _get_aws_config(self)
-        elif cloud == "linode":
-            return _get_linode_config(self)
         else:
             raise ValueError(
                 "Unsupported cloud provider. Supported providers: azure, gcp, aws, linode."
