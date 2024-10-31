@@ -143,3 +143,14 @@ class MigrationFailureException(MigrationException):
 class RCloneRemoteException(MigrationException):
     def __init__(self, message):
         super().__init__(message)
+
+class RCloneRemoteCreationException(RCloneRemoteException):
+    def __init__(self, bucket_name, cloud):
+        message = f"Error creating remote connection to {bucket_name} ({cloud})."
+        super().__init__(message)
+
+
+class RCloneRemoteCheckException(RCloneRemoteException):
+    def __init__(self, bucket_name, cloud):
+        message = f"Error checking remote connection to {bucket_name} ({cloud})."
+        super().__init__(message)

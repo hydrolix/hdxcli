@@ -1,3 +1,4 @@
+import sys
 import time
 from dataclasses import dataclass, field
 from queue import Queue
@@ -129,3 +130,9 @@ def monitor_progress(total_count: int,
             progress_bar.close()
             return
     progress_bar.close()
+
+
+def cancel_migration():
+    logger.info("")
+    logger.info(f'{" Migration Cancelled ":=^50}')
+    sys.exit(0)

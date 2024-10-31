@@ -8,7 +8,8 @@ from .helpers import (
     confirm_action,
     MigrationData,
     update_catalog_and_upload,
-    monitor_progress
+    monitor_progress,
+    cancel_migration
 )
 from hdx_cli.cli_interface.migrate.rc.rc_remotes import RCloneRemote
 from hdx_cli.cli_interface.migrate.rc.rc_utils import get_remote, close_remotes, recreate_remotes
@@ -43,9 +44,7 @@ def summary_and_confirm(catalog: Catalog, reuse_partitions=False, remotes=None) 
         if remotes:
             close_remotes(remotes)
 
-        logger.info('')
-        logger.info(f'{" Migration Finished ":=^50}')
-        sys.exit(0)
+        cancel_migration()
 
 
 def migrate_partitions_threaded(migration_list: list,
