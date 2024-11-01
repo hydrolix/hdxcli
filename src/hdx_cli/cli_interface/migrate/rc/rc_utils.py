@@ -13,7 +13,8 @@ def get_remote(remotes: dict,
     if remote := remotes.get(storage_id):
         return remote
 
-    storage_id, storage_settings = get_storage_by_id(storages, storage_id)
+    storage_id, storage = get_storage_by_id(storages, storage_id)
+    storage_settings = storage.get("settings")
     if not storage_settings:
         raise StorageNotFoundError(f"Storage UUID ({storage_id}) not found.")
 

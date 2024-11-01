@@ -3,15 +3,31 @@ import io
 import json
 from urllib.parse import urlparse
 
-from hdx_cli.cli_interface.migrate.helpers import MigrationData
-from hdx_cli.cli_interface.migrate.resource_adapter import normalize_table, normalize_transform, \
-    adapt_resource_to_api_structure, normalize_project, normalize_function, normalize_dictionary
+from hdx_cli.cli_interface.migrate.helpers import MigrationData, confirm_action
+from hdx_cli.cli_interface.migrate.resource_adapter import (
+    normalize_project,
+    normalize_table,
+    normalize_transform,
+    normalize_function,
+    normalize_dictionary,
+    adapt_resource_to_api_structure
+)
 from hdx_cli.library_api.common import rest_operations as lro
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create_with_body_from_string
-from hdx_cli.library_api.common.exceptions import HttpException, ResourceNotFoundException, HdxCliException
+from hdx_cli.library_api.common.exceptions import (
+    HttpException,
+    ResourceNotFoundException,
+    HdxCliException,
+    StorageNotFoundError
+)
 from hdx_cli.library_api.common.generic_resource import access_resource_detailed
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.common.storage import get_equivalent_storages, get_storage_default, valid_storage_id
+from hdx_cli.library_api.common.storage import (
+    get_equivalent_storages,
+    get_storage_default,
+    valid_storage_id,
+    get_storage_by_id
+)
 from hdx_cli.library_api.common.context import ProfileUserContext
 
 logger = get_logger()
@@ -375,36 +391,42 @@ def update_equivalent_multi_storage_settings(source_data: MigrationData,
         storage_map['column_value_mapping'] = new_mapping
 
 
-def interactive_set_default_storage(source_data: MigrationData,
+def interactive_set_default_storage(table_body: dict,
                                     target_storages: list[dict]
                                     ) -> None:
     logger.info('In progress')
     logger.info('')
-
-    table_body = source_data.table
     default_storage_id, _ = get_storage_default(target_storages)
 
-    header = ' Default Storage Settings '
+    header = ' Storage Settings '
     logger.info(f'{header:*^40}')
     logger.info('* Specify the storage UUID for the new table, or')
-    logger.info('* press Enter to use the cluster default storage.')
+    logger.info('* press Enter to use the default storage.')
     logger.info('*')
 
     for attempt in range(3):
         logger.info(f'* Default storage UUID ({default_storage_id}): [!i]')
         user_input = input().strip().lower()
 
-        if not user_input:
-            break
-        elif valid_storage_id(user_input, target_storages):
-            default_storage_id = user_input
-            break
+        if not user_input or valid_storage_id(user_input, target_storages):
+            default_storage_id = user_input if user_input else default_storage_id
+            _, storage = get_storage_by_id(target_storages, default_storage_id)
+            storage_name = storage.get('name')
+            storage_settings = storage.get('settings')
+
+            if storage_name and storage_settings:
+                logger.info(f'*  Storage Name: {storage_name}')
+                for key, value in storage_settings.items():
+                    logger.info(f'*   {key}: {value}')
+                logger.info('*')
+                if confirm_action(prompt='* Confirm this as the default storage for the table?'):
+                    break
         else:
             logger.info('* Invalid storage UUID. Please try again.')
     else:
-        raise HdxCliException("Storage UUID not found in the target cluster.")
+        raise StorageNotFoundError(
+            'Attempt limit reached. Storage UUID not found in the target cluster.'
+        )
 
-    table_settings = table_body.get('settings')
-    table_settings['storage_map'] = {'default_storage_id': default_storage_id}
-
-    logger.info(f"{'*' * 40:<42} -> [!n]")
+    table_body['settings']['storage_map'] = {'default_storage_id': default_storage_id}
+    logger.info(f'{"*" * 40:<42} -> [!n]')
