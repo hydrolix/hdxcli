@@ -229,14 +229,14 @@ class Catalog:
         if not self.partitions:
             raise CatalogException("No partitions found matching the given date range.")
 
-    def get_summary_information(self) -> tuple[int, int, int]:
+    def get_summary(self) -> tuple[int, int, int]:
         row_count = reduce(lambda count, item: count + int(item.rows), self.partitions, 0)
-        return row_count, self.get_total_partitions(), self.get_total_size()
+        return row_count, self.get_partitions_count(), self.get_size()
 
-    def get_total_partitions(self) -> int:
+    def get_partitions_count(self) -> int:
         return len(self.partitions)
 
-    def get_total_size(self) -> int:
+    def get_size(self) -> int:
         if not self.total_size:
             self.total_size = reduce(
                 lambda count, item: count + item.get_partition_size(),

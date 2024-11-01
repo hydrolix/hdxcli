@@ -129,7 +129,7 @@ def migrate(ctx: click.Context,
     rc_config = RcloneAPIConfig(rc_host, rc_user, rc_pass)
 
     # Source
-    logger.info(f"Source Cluster: {source_profile.hostname}")
+    logger.info(f"Source Hostname: {source_profile.hostname}")
     get_resources(source_profile, source_data)
     catalog = None
     if only != "resources":
@@ -138,9 +138,9 @@ def migrate(ctx: click.Context,
 
     # Target
     only_storages = only != "data"
-    logger.info(f"Target Cluster: {target_profile.hostname}")
+    logger.info(f"Target Hostname: {target_profile.hostname}")
     get_resources(target_profile, target_data, only_storages=only_storages)
-    logger.info('')
+    logger.info("")
 
     validations(
         source_profile,
@@ -153,7 +153,7 @@ def migrate(ctx: click.Context,
         allow_merge,
         reuse_partitions
     )
-    logger.info('')
+    logger.info("")
 
     # Migrations
     # 'only' parameter has 3 possible values: 'resources', 'data', None
@@ -168,9 +168,10 @@ def migrate(ctx: click.Context,
         )
     if only != "resources":
         migrate_data(
+            source_profile,
+            source_data.storages,
             target_profile,
             target_data,
-            source_data.storages,
             catalog,
             rc_config,
             concurrency,

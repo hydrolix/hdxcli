@@ -419,7 +419,7 @@ def interactive_set_default_storage(table_body: dict,
                 for key, value in storage_settings.items():
                     logger.info(f'*   {key}: {value}')
                 logger.info('*')
-                if confirm_action(prompt='* Confirm this as the default storage for the table?'):
+                if confirm_action(prompt='* Set this as the default storage for the table?'):
                     break
         else:
             logger.info('* Invalid storage UUID. Please try again.')
