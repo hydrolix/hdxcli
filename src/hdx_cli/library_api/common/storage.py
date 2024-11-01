@@ -62,7 +62,7 @@ def get_storage_default_by_table(profile: ProfileUserContext,
 def get_storage_by_id(storages: list[dict], storage_id: str) -> Tuple[str, Optional[dict]]:
     for storage in storages:
         if storage.get('uuid') == storage_id:
-            return storage_id, storage.get('settings')
+            return storage_id, storage
     return storage_id, None
 
 

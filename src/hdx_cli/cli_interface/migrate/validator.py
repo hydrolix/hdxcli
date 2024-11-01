@@ -149,5 +149,5 @@ def validate_multi_bucket(source_data: MigrationData,
     if has_multi_buckets(source_data.table) and reuse_partitions:
         update_equivalent_multi_storage_settings(source_data, target_storages)
     else:
-        interactive_set_default_storage(source_data, target_storages)
+        interactive_set_default_storage(source_data.table, target_storages)
     logger.info('Done')

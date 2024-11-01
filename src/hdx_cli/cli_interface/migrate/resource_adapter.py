@@ -176,6 +176,13 @@ def normalize_table(table: dict, reuse_partitions: bool) -> dict:
 def normalize_transform(transform: dict) -> dict:
     # Always remove the UUID
     transform.pop("uuid", None)
+
+    # If sample_data is a list, normalize it to a single json or csv format
+    settings = transform.get("settings", {})
+    sample_data = settings.get("sample_data", None)
+    if isinstance(sample_data, list) and len(sample_data) == 1:
+        settings["sample_data"] = sample_data[0]
+
     return transform
 
 

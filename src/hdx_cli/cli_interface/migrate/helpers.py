@@ -1,3 +1,4 @@
+import sys
 import time
 from dataclasses import dataclass, field
 from queue import Queue
@@ -76,7 +77,7 @@ def bytes_to_human_readable(amount: int) -> str:
     return f"{amount:.2f} PB"
 
 
-def confirm_action(prompt: str = 'Continue with migration?') -> bool:
+def confirm_action(prompt: str = 'Confirm this action?') -> bool:
     while True:
         logger.info(f'{prompt} (yes/no): [!i]')
         response = input().strip().lower()
@@ -87,16 +88,28 @@ def confirm_action(prompt: str = 'Continue with migration?') -> bool:
         logger.info("Invalid input. Please enter 'yes' or 'no'.")
 
 
-def print_summary(total_rows: int,
-                  total_files: int,
-                  total_size: int
+def print_summary(source_hostname: str,
+                  source_table: str,
+                  target_hostname: str,
+                  target_table: str,
+                  rows: int,
+                  partitions: int,
+                  size: int
                   ) -> None:
-    logger.info(f'{" Summary ":*^35}')
-    logger.info(f'{f"* Total rows: {total_rows}":<34}*')
-    logger.info(f'{f"* Total partitions: {total_files}":<34}*')
-    logger.info(f'{f"* Total size: {bytes_to_human_readable(total_size)}":<34}*')
-    logger.info(f'{"*"*35}')
-    logger.info('')
+    logger.info(f"{' MIGRATION SUMMARY ':=^50}")
+    logger.info(f"- Source:")
+    logger.info(f"    Hostname: {source_hostname}")
+    logger.info(f"    Table: {source_table}")
+    logger.info(f"- Target:")
+    logger.info(f"    Hostname: {target_hostname}")
+    logger.info(f"    Table: {target_table}")
+    logger.info("")
+    logger.info(f"- Data:")
+    logger.info(f"    Rows: {rows}")
+    logger.info(f"    Partitions: {partitions}")
+    logger.info(f"    Size: {bytes_to_human_readable(size)}")
+    logger.info(f"{'=' * 50}")
+    logger.info("")
 
 
 def monitor_progress(total_count: int,
@@ -129,3 +142,9 @@ def monitor_progress(total_count: int,
             progress_bar.close()
             return
     progress_bar.close()
+
+
+def cancel_migration():
+    logger.info("")
+    logger.info(f'{" Migration Cancelled ":=^50}')
+    sys.exit(0)
