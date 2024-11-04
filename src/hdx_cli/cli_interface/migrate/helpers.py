@@ -1,4 +1,5 @@
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from queue import Queue
@@ -54,6 +55,7 @@ def update_catalog_and_upload(profile: ProfileUserContext,
                               catalog: Catalog,
                               uploaded_count: Queue,
                               exceptions: Queue,
+                              upload_done: threading.Event,
                               target_data: MigrationData,
                               target_storage_id: str,
                               reuse_partitions
@@ -67,6 +69,8 @@ def update_catalog_and_upload(profile: ProfileUserContext,
         catalog.upload(profile, uploaded_count)
     except Exception as exc:
         exceptions.put(exc)
+
+    upload_done.set()
 
 
 def bytes_to_human_readable(amount: int) -> str:
@@ -103,7 +107,6 @@ def print_summary(source_hostname: str,
     logger.info(f"- Target:")
     logger.info(f"    Hostname: {target_hostname}")
     logger.info(f"    Table: {target_table}")
-    logger.info("")
     logger.info(f"- Data:")
     logger.info(f"    Rows: {rows}")
     logger.info(f"    Partitions: {partitions}")
@@ -115,6 +118,7 @@ def print_summary(source_hostname: str,
 def monitor_progress(total_count: int,
                      migrated_queue: Queue,
                      exceptions_queue: Queue,
+                     event_done: threading.Event,
                      unit: str = "B",
                      unit_scale: bool = True,
                      unit_divisor: int = 1024,
@@ -138,9 +142,11 @@ def monitor_progress(total_count: int,
         else:
             time.sleep(0.5)
         if not exceptions_queue.empty():
-            progress_bar.set_description(desc="ERROR")
-            progress_bar.close()
-            return
+            progress_bar.set_description(desc="Error, finishing")
+            event_done.wait()
+            break
+            # progress_bar.close()
+            # return
     progress_bar.close()
 
 
