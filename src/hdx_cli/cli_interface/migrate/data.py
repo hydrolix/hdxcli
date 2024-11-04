@@ -71,7 +71,7 @@ def migrate_partitions_threaded(migration_list: list,
 
     failed_items = Queue()
     total_items = len(migration_list)
-    max_failures = 1 # int(total_items * MAX_FAILURE_RATIO)
+    max_failures = int(total_items * MAX_FAILURE_RATIO)
     stop_migration = threading.Event()
 
     def sync_partition(from_to_path):
