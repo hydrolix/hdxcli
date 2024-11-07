@@ -22,7 +22,7 @@ from hdx_cli.library_api.common.exceptions import MigrationFailureException
 
 logger = get_logger()
 
-MAX_FAILURE_RATIO = 0.10
+MAX_FAILURE_RATIO = 0.15
 
 def summarize_migration_and_request_confirmation(source_profile: ProfileUserContext,
                                                  target_profile: ProfileUserContext,
@@ -61,6 +61,7 @@ def summarize_migration_and_request_confirmation(source_profile: ProfileUserCont
 def migrate_partitions_threaded(migration_list: list,
                                 migrated_sizes_queue: Queue,
                                 exceptions: Queue,
+                                migration_done: threading.Event,
                                 rc_config: RcloneAPIConfig,
                                 concurrency: int,
                                 remotes: dict
@@ -71,17 +72,16 @@ def migrate_partitions_threaded(migration_list: list,
     failed_items = Queue()
     total_items = len(migration_list)
     max_failures = int(total_items * MAX_FAILURE_RATIO)
-
-    migration_done = threading.Event()
+    stop_migration = threading.Event()
 
     def sync_partition(from_to_path):
-        if migration_done.is_set():
+        if stop_migration.is_set():
             return
 
         # If the migration process has failed more than 10% (MAX_FAILURE_RATIO) of the total items, stop the migration process
         failed_count_ = failed_items.qsize()
         if failed_count_ > max_failures:
-            migration_done.set()
+            stop_migration.set()
             exceptions.put(MigrationFailureException(
                     f"Number of failed migrations ({failed_count_}) exceeds "
                     f"the allowed maximum ({max_failures})."
@@ -93,17 +93,18 @@ def migrate_partitions_threaded(migration_list: list,
         response = post_with_retries(url, data, user=rc_config.user, password=rc_config.password)
         if not response or response.status_code != 200:
             failed_items.put(from_to_path)
+            logger.debug(f"Failed to migrate partition: {from_to_path}")
         else:
             migrated_sizes_queue.put(from_to_path[2])
 
     def sync_partition_retry(from_to_path):
-        if migration_done.is_set():
+        if stop_migration.is_set():
             return
 
         data = {"srcFs": from_to_path[0], "dstFs": from_to_path[1]}
         response = post_with_retries(url, data, user=rc_config.user, password=rc_config.password)
         if not response or response.status_code != 200:
-            migration_done.set()
+            stop_migration.set()
             exceptions.put(MigrationFailureException(
                 "Failed to migrate partition for the second time."
             ))
@@ -116,6 +117,7 @@ def migrate_partitions_threaded(migration_list: list,
 
     failed_count = failed_items.qsize()
     if failed_count == 0 or not exceptions.empty():
+        migration_done.set()
         return
 
     retry_failed_items = []
@@ -126,11 +128,13 @@ def migrate_partitions_threaded(migration_list: list,
     # It keeps the same remotes names but creates new connections
     recreate_remotes(remotes)
 
-    migration_done.clear()
+    stop_migration.clear()
     # Reduce the number of workers to avoid overloading the rclone API
     # In general, failed items are bigger than successful ones
     with ThreadPoolExecutor(max_workers=4) as executor:
         executor.map(sync_partition_retry, retry_failed_items)
+
+    migration_done.set()
 
 
 def get_migration_list(src_remote: RCloneRemote,
@@ -170,11 +174,20 @@ def migrate_partition_and_monitor(migration_list: list,
                                   partitions_size: int
                                   ) -> None:
     migrated_sizes_queue = Queue()
+    migration_done = threading.Event()
     threading.Thread(
         target=migrate_partitions_threaded,
-        args=(migration_list, migrated_sizes_queue, exceptions, rc_config, concurrency, remotes)
+        args=(
+            migration_list,
+            migrated_sizes_queue,
+            exceptions,
+            migration_done,
+            rc_config,
+            concurrency,
+            remotes
+        )
     ).start()
-    monitor_progress(partitions_size, migrated_sizes_queue, exceptions)
+    monitor_progress(partitions_size, migrated_sizes_queue, exceptions, migration_done)
 
 
 def upload_catalog_and_monitor(profile: ProfileUserContext,
@@ -186,6 +199,7 @@ def upload_catalog_and_monitor(profile: ProfileUserContext,
     partitions_count = catalog.get_partitions_count()
     uploaded_count = Queue()
     exceptions = Queue()
+    upload_done = threading.Event()
     threading.Thread(
         target=update_catalog_and_upload,
         args=(
@@ -193,6 +207,7 @@ def upload_catalog_and_monitor(profile: ProfileUserContext,
             catalog,
             uploaded_count,
             exceptions,
+            upload_done,
             target_data,
             target_storage_id,
             reuse_partitions
@@ -200,7 +215,9 @@ def upload_catalog_and_monitor(profile: ProfileUserContext,
     ).start()
     monitor_progress(
         partitions_count,
-        uploaded_count, exceptions,
+        uploaded_count,
+        exceptions,
+        upload_done,
         unit="units",
         unit_scale=False,
         unit_divisor=1,
