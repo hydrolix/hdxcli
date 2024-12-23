@@ -1,17 +1,16 @@
-import copy
 from datetime import datetime
 
 import click
 
 from .data import migrate_data
 from .helpers import MigrationData, get_catalog
-from hdx_cli.cli_interface.migrate.rc.rc_manager import RcloneAPIConfig
+from .rc.rc_manager import RcloneAPIConfig
 from .resources import get_resources, create_resources
 from .validator import validations
-from hdx_cli.cli_interface.common.migration import get_target_profile
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
-from hdx_cli.library_api.common.logging import get_logger
+from ..common.migrations import get_target_profile
 from ..profile.commands import validate_hostname
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from ...library_api.common.logging import get_logger
 
 logger = get_logger()
 

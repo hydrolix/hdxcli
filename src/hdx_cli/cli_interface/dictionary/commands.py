@@ -2,22 +2,28 @@
 import json
 import click
 
-from ..common.migration import migrate_a_dictionary
+from ..common.migrations import migrate_a_dictionary
+from ..common.misc_operations import settings as command_settings
+from ..common.undecorated_click_commands import (
+    basic_create,
+    basic_create_with_body_from_string
+)
+from ..common.rest_operations import (
+    delete as command_delete,
+    list_ as command_list,
+    show as command_show
+)
 from ...library_api.common.generic_resource import access_resource
 from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
-from ...library_api.common.exceptions import (ResourceNotFoundException,
-                                              MissingSettingsException,
-                                              InvalidFormatFileException)
+from ...library_api.common.exceptions import (
+    ResourceNotFoundException,
+    MissingSettingsException,
+    InvalidFormatFileException
+)
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
-from ..common.rest_operations import (delete as command_delete,
-                                      list_ as command_list,
-                                      show as command_show)
 
-from ..common.misc_operations import settings as command_settings
-from ..common.undecorated_click_commands import (basic_create,
-                                                 basic_create_with_body_from_string)
 
 logger = get_logger()
 

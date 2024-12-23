@@ -1,24 +1,34 @@
 """Transform resource command. It flows down url for current table"""
+from pathlib import Path
 from typing import Optional
 import json
+
 import click
 
-from ..common.migration import migrate_a_transform
+from ..common.migrations import migrate_a_transform, get_target_profile
 from ..common.undecorated_click_commands import basic_transform
-from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from ..common.misc_operations import settings_with_force as command_settings_with_force
+from ..common.undecorated_click_commands import basic_create_with_body_from_string
+from ..common.rest_operations import (
+    delete as command_delete,
+    list_ as command_list,
+    show as command_show
+)
+from ...library_api.utility.decorators import (
+    report_error_and_exit,
+    ensure_logged_in,
+    force_operation_option
+)
 from ...library_api.common.exceptions import CommandLineException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
-
-from ..common.rest_operations import (delete as command_delete,
-                                      list_ as command_list,
-                                      show as command_show)
-from ...library_api.ddl.common_algo import (ddl_to_create_table_info,
-                                            ddl_datatype_to_hdx_datatype,
-                                            generate_transform_dict)
+from ...library_api.ddl.common_algo import (
+    ddl_to_create_table_info,
+    ddl_datatype_to_hdx_datatype,
+    generate_transform_dict
+)
 from ...library_api.ddl.common_intermediate_representation import DdlCreateTableInfo
-from ..common.misc_operations import settings as command_settings
-from ..common.undecorated_click_commands import basic_create_with_body_from_string
+
 
 logger = get_logger()
 
@@ -36,34 +46,45 @@ logger = get_logger()
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def transform(ctx: click.Context,
-              project_name,
-              table_name,
-              transform_name):
+              project_name: str,
+              table_name: str,
+              transform_name: str):
     user_profile = ctx.parent.obj['usercontext']
-    ProfileUserContext.update_context(user_profile,
-                                      projectname=project_name,
-                                      tablename=table_name,
-                                      transformname=transform_name)
+    ProfileUserContext.update_context(
+        user_profile,
+        projectname=project_name,
+        tablename=table_name,
+        transformname=transform_name
+    )
     basic_transform(ctx)
 
 
 @click.command(help='Create transform.')
+@click.argument('transform_name')
 @click.option('--body-from-file', '-f',
+              type=click.Path(exists=True, readable=True, path_type=Path),
               help='Use file contents as the transform settings.'
               "'name' key from the body will be replaced by the given 'resource_name'.",
               metavar='BODYFROMFILE',
               default=None)
-@click.argument('transform_name')
+@force_operation_option
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context,
            transform_name: str,
-           body_from_file):
+           body_from_file: Path,
+           force_operation: bool):
     user_profile = ctx.parent.obj['usercontext']
     resource_path = ctx.parent.obj['resource_path']
-    with open(body_from_file, "r", encoding="utf-8") as file:
-        basic_create_with_body_from_string(user_profile, resource_path,
-                                           transform_name, file.read())
+    params = {'force_operation': str(force_operation).lower()}
+    body = body_from_file.read_text(encoding="utf-8")
+    basic_create_with_body_from_string(
+        user_profile,
+        resource_path,
+        transform_name,
+        body,
+        params=params
+    )
     logger.info(f'Created transform {transform_name}')
 
 
@@ -137,40 +158,51 @@ def map_from(ctx: click.Context,
 
 
 @click.command(help='Migrate a table.')
-@click.argument('transform_name', metavar='TRANSFORM_NAME', required=True, default=None)
-@click.option('-tp', '--target-profile', required=False, default=None)
+@click.argument('new_transform_name', metavar='NEW_TRANSFORM_NAME', required=True, default=None)
+@click.option('-tp', '--target-profile', 'target_profile_name', required=False, default=None)
 @click.option('-h', '--target-cluster-hostname', required=False, default=None)
 @click.option('-u', '--target-cluster-username', required=False, default=None)
 @click.option('-p', '--target-cluster-password', required=False, default=None)
 @click.option('-s', '--target-cluster-uri-scheme', required=False, default='https')
 @click.option('-P', '--target-project-name', required=True, default=None)
 @click.option('-T', '--target-table-name', required=True, default=None)
+@force_operation_option
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def migrate(ctx: click.Context,
-            transform_name: str,
-            target_profile,
-            target_cluster_hostname,
-            target_cluster_username,
-            target_cluster_password,
-            target_cluster_uri_scheme,
-            target_project_name,
-            target_table_name):
-    if target_profile is None and not (target_cluster_hostname and target_cluster_username
+            new_transform_name: str,
+            target_profile_name: str,
+            target_cluster_hostname: str,
+            target_cluster_username: str,
+            target_cluster_password: str,
+            target_cluster_uri_scheme: str,
+            target_project_name: str,
+            target_table_name: str,
+            force_operation: bool):
+    if target_profile_name is None and not (target_cluster_hostname and target_cluster_username
                                        and target_cluster_password and target_cluster_uri_scheme):
-        raise click.BadParameter('Either provide a --target-profile or all four target cluster options.')
+        raise click.BadParameter(
+            'Either provide a --target-profile or all four target cluster options.'
+        )
 
-    user_profile = ctx.parent.obj['usercontext']
-    migrate_a_transform(user_profile,
-                        transform_name,
-                        target_profile,
-                        target_cluster_hostname,
-                        target_cluster_username,
-                        target_cluster_password,
-                        target_cluster_uri_scheme,
-                        target_project_name,
-                        target_table_name)
-    logger.info(f'Migrated transform {transform_name}')
+    source_profile = ctx.parent.obj['usercontext']
+    target_profile = get_target_profile(
+        target_profile_name,
+        target_cluster_hostname,
+        target_cluster_username,
+        target_cluster_password,
+        target_cluster_uri_scheme,
+        source_profile.timeout
+    )
+    migrate_a_transform(
+        source_profile,
+        target_profile,
+        new_transform_name,
+        target_project_name,
+        target_table_name,
+        force_operation
+    )
+    logger.info(f"Migrated transform '{new_transform_name}'")
 
 
 transform.add_command(map_from)
@@ -178,5 +210,5 @@ transform.add_command(create)
 transform.add_command(command_delete)
 transform.add_command(command_list)
 transform.add_command(command_show)
-transform.add_command(command_settings)
+transform.add_command(command_settings_with_force, "settings")
 transform.add_command(migrate)

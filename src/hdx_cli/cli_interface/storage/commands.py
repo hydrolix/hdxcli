@@ -3,7 +3,7 @@ from functools import partial
 
 import click
 
-from ..common.migration import migrate_a_storage
+from ..common.migrations import migrate_a_storage
 from ..common.rest_operations import list_ as command_list, show as command_show
 from ..common.undecorated_click_commands import (
     basic_create_from_dict_body,
@@ -18,6 +18,7 @@ from ...library_api.utility.decorators import (
     dynamic_confirmation_prompt,
     ensure_logged_in
 )
+
 
 logger = get_logger()
 

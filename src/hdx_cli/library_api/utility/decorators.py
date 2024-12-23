@@ -128,3 +128,14 @@ def with_profiles_context(f):
         config_profiles = get_profiles(profile_config_file=profile_context.profile_config_file)
         return f(ctx, profile_context, config_profiles, *args, **kwargs)
     return decorated_function
+
+
+def force_operation_option(func):
+    """Decorator to add the --force-operation option."""
+    func = click.option(
+        '-F', '--force-operation',
+        is_flag=True,
+        default=False,
+        help='This flag allows adding the "force_operation" parameter to the request.'
+    )(func)
+    return func
