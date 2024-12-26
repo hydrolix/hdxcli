@@ -2,7 +2,13 @@
 import json
 import click
 
-from ..common.migration import migrate_a_function
+from ..common.migrations import migrate_a_function
+from ..common.rest_operations import (
+    delete as command_delete,
+    list_ as command_list,
+    show as command_show
+)
+from ..common.misc_operations import settings as command_settings
 from ...library_api.common.generic_resource import access_resource
 from ...library_api.userdata.token import AuthInfo
 from ...library_api.common import rest_operations as rest_ops
@@ -10,11 +16,7 @@ from ...library_api.common.context import ProfileUserContext
 from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.common.logging import get_logger
-from ..common.rest_operations import (delete as command_delete,
-                                      list_ as command_list,
-                                      show as command_show)
 
-from ..common.misc_operations import settings as command_settings
 
 logger = get_logger()
 

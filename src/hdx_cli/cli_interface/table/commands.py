@@ -2,7 +2,16 @@
 import click
 import requests
 
-from ..common.migration import migrate_a_table
+from ..common.migrations import migrate_a_table
+from ..common.rest_operations import (
+    delete as command_delete,
+    list_ as command_list,
+    show as command_show,
+    activity as command_activity,
+    stats as command_stats
+)
+from ..common.misc_operations import settings as command_settings
+from ..common.undecorated_click_commands import basic_create_from_dict_body
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.generic_resource import access_resource
 from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
@@ -10,15 +19,6 @@ from ...library_api.common.exceptions import LogicException, ResourceNotFoundExc
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
 from ...library_api.userdata.token import AuthInfo
-
-from ..common.rest_operations import (delete as command_delete,
-                                      list_ as command_list,
-                                      show as command_show,
-                                      activity as command_activity,
-                                      stats as command_stats)
-
-from ..common.misc_operations import settings as command_settings
-from ..common.undecorated_click_commands import basic_create_from_dict_body
 from ...library_api.utility.file_handling import load_json_settings_file, load_plain_file
 
 logger = get_logger()

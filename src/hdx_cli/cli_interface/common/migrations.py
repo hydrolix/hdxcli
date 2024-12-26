@@ -69,37 +69,44 @@ def migrate_a_table(source_profile,
     basic_create_from_dict_body(target_profile, target_tables_path, source_table_body)
 
 
-def migrate_a_transform(source_profile,
-                        transform_name,
-                        target_profile_name,
-                        target_cluster_hostname,
-                        target_cluster_username,
-                        target_cluster_password,
-                        target_cluster_uri_scheme,
-                        target_project_name,
-                        target_table_name):
-    target_profile = get_target_profile(target_profile_name,
-                                        target_cluster_hostname,
-                                        target_cluster_username,
-                                        target_cluster_password,
-                                        target_cluster_uri_scheme,
-                                        source_profile.timeout)
-
-    source_transform_body, _ = access_resource_detailed(source_profile,
-                                                        [('projects', source_profile.projectname),
-                                                         ('tables', source_profile.tablename),
-                                                         ('transforms', transform_name)])
-    _, target_transforms_url = access_resource_detailed(target_profile,
-                                                        [('projects', target_project_name),
-                                                         ('tables', target_table_name),
-                                                         ('transforms', None)])
+def migrate_a_transform(
+        source_profile: ProfileUserContext,
+        target_profile: ProfileUserContext,
+        new_transform_name: str,
+        target_project_name: str,
+        target_table_name: str,
+        force_operation: bool
+):
+    source_transform_body, _ = access_resource_detailed(
+        source_profile,
+        [
+            ('projects', source_profile.projectname),
+            ('tables', source_profile.tablename),
+            ('transforms', source_profile.transformname)
+        ]
+    )
+    _, target_transforms_url = access_resource_detailed(
+        target_profile,
+        [
+            ('projects', target_project_name),
+            ('tables', target_table_name),
+            ('transforms', None)
+        ]
+    )
     target_transforms_path = urlparse(target_transforms_url).path
-
+    source_transform_body['name'] = new_transform_name
     try:
         del source_transform_body['uuid']
     except KeyError:
         pass
-    basic_create_from_dict_body(target_profile, target_transforms_path, source_transform_body)
+
+    params = {'force_operation': str(force_operation).lower()}
+    basic_create_from_dict_body(
+        target_profile,
+        target_transforms_path,
+        source_transform_body,
+        params=params
+    )
 
 
 def migrate_a_dictionary(source_profile,

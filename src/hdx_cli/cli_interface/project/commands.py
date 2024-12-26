@@ -2,9 +2,6 @@
 import click
 
 from ..common.undecorated_click_commands import basic_create
-from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
-from ...library_api.common.context import ProfileUserContext
-from ...library_api.common.logging import get_logger
 from ..common.rest_operations import (
     delete as command_delete,
     list_ as command_list,
@@ -13,7 +10,11 @@ from ..common.rest_operations import (
     stats as command_stats
 )
 from ..common.misc_operations import settings as command_settings
-from ..common.migration import migrate_a_project
+from ..common.migrations import migrate_a_project
+from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
+
 
 logger = get_logger()
 

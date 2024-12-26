@@ -1,6 +1,6 @@
 from typing import Optional, List, Tuple, Dict, Any
-
 import json
+
 import click
 
 from ...library_api.common.exceptions import (
@@ -59,11 +59,13 @@ def basic_create(profile,
         rest_ops.create(url, body=body, headers=headers, timeout=timeout)
 
 
-def basic_create_with_body_from_string(profile,
-                                       resource_path,
+def basic_create_with_body_from_string(profile: ProfileUserContext,
+                                       resource_path: str,
                                        resource_name: str,
                                        body_from_string: Optional[str],
-                                       body_from_string_type='json'):
+                                       body_from_string_type: str = 'json',
+                                       *,
+                                       params: dict = None):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -84,25 +86,35 @@ def basic_create_with_body_from_string(profile,
                    'Accept': 'application/json'}
         body = json.loads(body_from_string)
         body['name'] = f'{resource_name}'
-    rest_ops.create(url, body=body,
-                    headers=headers,
-                    body_type=body_from_string_type,
-                    timeout=timeout)
+    rest_ops.create(
+        url,
+        body=body,
+        headers=headers,
+        body_type=body_from_string_type,
+        timeout=timeout,
+        params=params
+    )
 
 
-def basic_create_from_dict_body(profile,
-                                resource_path,
-                                body: dict):
+def basic_create_from_dict_body(profile: ProfileUserContext,
+                                resource_path: str,
+                                body: dict,
+                                *,
+                                params: dict = None):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
-    list_url = f'{scheme}://{hostname}{resource_path}'
+    url = f'{scheme}://{hostname}{resource_path}'
     auth_info: AuthInfo = profile.auth
     headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
                'Accept': 'application/json'}
-    rest_ops.create(list_url, headers=headers,
-                    timeout=timeout,
-                    body=body)
+    rest_ops.create(
+        url,
+        headers=headers,
+        timeout=timeout,
+        body=body,
+        params=params
+    )
 
 
 def basic_show(profile,
@@ -162,20 +174,13 @@ def basic_transform(ctx: click.Context):
     except IndexError as idx_err:
         raise LogicException('Cannot find resource.') from idx_err
 
-    if not profile_info.transformname:
-        try:
-            transform_name = [t['name'] for t in transforms_list if t['settings']['is_default']][0]
-            profile_info.transformname = transform_name
-        except:
-            pass
-    else:
+    if profile_info.transformname:
         try:
             transform_name = [t['name'] for t in transforms_list if t['name'] == profile_info.transformname][0]
             profile_info.transformname = transform_name
         except IndexError as ex:
             raise TransformNotFoundException(f'Transform not found: {profile_info.transformname}') from ex
-    ctx.obj = {'resource_path':
-               transforms_path,
+    ctx.obj = {'resource_path': transforms_path,
                'usercontext': profile_info}
 
 
