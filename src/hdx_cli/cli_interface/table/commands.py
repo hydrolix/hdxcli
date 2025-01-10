@@ -2,7 +2,7 @@
 import click
 import requests
 
-from ..common.migrations import migrate_a_table
+from ..common.migrations import migrate_resource_config
 from ..common.rest_operations import (
     delete as command_delete,
     list_ as command_list,
@@ -14,11 +14,15 @@ from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import basic_create_from_dict_body
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.generic_resource import access_resource
-from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from ...library_api.utility.decorators import (
+    report_error_and_exit,
+    ensure_logged_in,
+    target_cluster_options,
+    no_rollback_option
+)
 from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
-from ...library_api.userdata.token import AuthInfo
 from ...library_api.utility.file_handling import load_json_settings_file, load_plain_file
 
 logger = get_logger()
@@ -145,38 +149,59 @@ def command_truncate(ctx: click.Context,
     logger.info(f'Truncated table {table_name}')
 
 
-@click.command(help='Migrate a table.')
-@click.argument('table_name', metavar='TABLE_NAME', required=True, default=None)
-@click.option('-tp', '--target-profile', required=False, default=None)
-@click.option('-h', '--target-cluster-hostname', required=False, default=None)
-@click.option('-u', '--target-cluster-username', required=False, default=None)
-@click.option('-p', '--target-cluster-password', required=False, default=None)
-@click.option('-s', '--target-cluster-uri-scheme', required=False, default='https')
-@click.option('-P', '--target-project-name', required=True, default=None)
+@click.command(
+    help=(
+        "Migrate a table and its associated transforms.\n\n"
+        "This command migrates a table from the source project in the current profile to a "
+        "target project and profile. By default, the associated transforms within the table "
+        "are also migrated.\n\n"
+        "Options allow you to customize the migration:\n"
+        "- Use --only (-O) to migrate only the table, skipping all associated transforms.\n\n"
+        "Provide a target profile using --target-profile or specify cluster details "
+        "(hostname, username, password, and URI scheme)."
+    )
+)
+@click.argument('target_project_name', metavar='TARGET_PROJECT_NAME', required=True, default=None)
+@click.argument('new_table_name', metavar='NEW_TABLE_NAME', required=True, default=None)
+@target_cluster_options
+@no_rollback_option
+@click.option('-O', '--only', required=False, default=False, is_flag=True,
+              help='Migrate only the table, skipping its associated transforms.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def migrate(ctx: click.Context,
-            table_name: str,
-            target_profile,
-            target_cluster_hostname,
-            target_cluster_username,
-            target_cluster_password,
-            target_cluster_uri_scheme,
-            target_project_name):
+            target_project_name: str,
+            new_table_name: str,
+            target_profile: str,
+            target_cluster_hostname: str,
+            target_cluster_username: str,
+            target_cluster_password: str,
+            target_cluster_uri_scheme: str,
+            no_rollback: bool,
+            only: bool):
+    source_profile = ctx.parent.obj['usercontext']
+
+    if not source_profile.tablename:
+        raise click.BadParameter('No source table name provided.')
     if target_profile is None and not (target_cluster_hostname and target_cluster_username
                                        and target_cluster_password and target_cluster_uri_scheme):
         raise click.BadParameter('Either provide a --target-profile or all four target cluster options.')
 
-    user_profile = ctx.parent.obj['usercontext']
-    migrate_a_table(user_profile,
-                    table_name,
-                    target_profile,
-                    target_cluster_hostname,
-                    target_cluster_username,
-                    target_cluster_password,
-                    target_cluster_uri_scheme,
-                    target_project_name)
-    logger.info(f'Migrated table {table_name}')
+    data = {
+        "source_profile": source_profile,
+        "target_profile_name": target_profile,
+        "target_cluster_hostname": target_cluster_hostname,
+        "target_cluster_username": target_cluster_username,
+        "target_cluster_password": target_cluster_password,
+        "target_cluster_uri_scheme": target_cluster_uri_scheme,
+        "source_project": source_profile.projectname,
+        "target_project": target_project_name,
+        "source_table": source_profile.tablename,
+        "target_table": new_table_name,
+        "no_rollback": no_rollback,
+        "only": only,
+    }
+    migrate_resource_config('table', **data)
 
 
 table.add_command(create)

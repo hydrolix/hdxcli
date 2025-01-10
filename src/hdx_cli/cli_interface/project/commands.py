@@ -10,8 +10,13 @@ from ..common.rest_operations import (
     stats as command_stats
 )
 from ..common.misc_operations import settings as command_settings
-from ..common.migrations import migrate_a_project
-from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from ..common.migrations import migrate_resource_config
+from ...library_api.utility.decorators import (
+    report_error_and_exit,
+    ensure_logged_in,
+    no_rollback_option,
+    target_cluster_options
+)
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
 
@@ -50,37 +55,65 @@ def create(ctx: click.Context, project_name: str):
     logger.info(f'Created project {project_name}')
 
 
-@click.command(help='Migrate a project.')
-@click.argument('project_name', metavar='PROJECT_NAME', required=True, default=None)
-@click.option('-tp', '--target-profile', required=False, default=None)
-@click.option('-h', '--target-cluster-hostname', required=False, default=None)
-@click.option('-u', '--target-cluster-username', required=False, default=None)
-@click.option('-p', '--target-cluster-password', required=False, default=None)
-@click.option('-s', '--target-cluster-uri-scheme', required=False, default='https')
+@click.command(
+    help=(
+        "Migrate a project and its associated resources.\n\n"
+        "This command migrates a project from the source profile to the specified target profile "
+        "or cluster. By default, all resources associated with the project are also migrated, "
+        "including tables (and their associated transforms).\n\n"
+        "Options allow you to customize the migration:\n"
+        "- Use --dictionaries (-D) to include dictionaries in the migration.\n"
+        "- Use --functions (-F) to include functions in the migration.\n"
+        "- Use --only (-O) to migrate only the project, skipping all dependencies.\n\n"
+        "Provide a target profile using --target-profile or specify cluster details "
+        "(hostname, username, password, and URI scheme)."
+    )
+)
+@click.argument('new_project_name', metavar='NEW_PROJECT_NAME', required=True, default=None)
+@target_cluster_options
+@no_rollback_option
+@click.option('-O', '--only', required=False, default=False, is_flag=True,
+              help='Migrate only the project, skipping dependencies.')
+@click.option('-D', '--dictionaries', required=False, default=False, is_flag=True,
+              help='Migrate dictionaries associated with the project.')
+@click.option('-F', '--functions', required=False, default=False, is_flag=True,
+              help='Migrate functions associated with the project.')
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def migrate(ctx: click.Context,
-            project_name: str,
+            new_project_name: str,
             target_profile: str,
             target_cluster_hostname: str,
             target_cluster_username: str,
             target_cluster_password: str,
-            target_cluster_uri_scheme: str):
+            target_cluster_uri_scheme: str,
+            no_rollback: bool,
+            only: bool,
+            dictionaries: bool,
+            functions: bool):
+    source_profile = ctx.parent.obj['usercontext']
+
+    if not source_profile.projectname:
+        raise click.BadParameter('No source project name provided.')
     if target_profile is None and not (target_cluster_hostname and target_cluster_username
                                        and target_cluster_password and target_cluster_uri_scheme):
         raise click.BadParameter('Either provide a --target-profile or all four target cluster options.')
 
-    user_profile = ctx.parent.obj['usercontext']
-    migrate_a_project(
-        user_profile,
-        project_name,
-        target_profile,
-        target_cluster_hostname,
-        target_cluster_username,
-        target_cluster_password,
-        target_cluster_uri_scheme
-    )
-    logger.info(f'Migrated project {project_name}')
+    data = {
+        "source_profile": source_profile,
+        "target_profile_name": target_profile,
+        "target_cluster_hostname": target_cluster_hostname,
+        "target_cluster_username": target_cluster_username,
+        "target_cluster_password": target_cluster_password,
+        "target_cluster_uri_scheme": target_cluster_uri_scheme,
+        "source_project": source_profile.projectname,
+        "target_project": new_project_name,
+        "no_rollback": no_rollback,
+        "only": only,
+        "dicts": dictionaries,
+        "functs": functions,
+    }
+    migrate_resource_config('project', **data)
 
 
 project.add_command(command_list)

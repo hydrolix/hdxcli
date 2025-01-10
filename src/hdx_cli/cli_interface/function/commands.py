@@ -2,7 +2,7 @@
 import json
 import click
 
-from ..common.migrations import migrate_a_function
+from ..common.migrations import migrate_resource_config
 from ..common.rest_operations import (
     delete as command_delete,
     list_ as command_list,
@@ -10,10 +10,14 @@ from ..common.rest_operations import (
 )
 from ..common.misc_operations import settings as command_settings
 from ...library_api.common.generic_resource import access_resource
-from ...library_api.userdata.token import AuthInfo
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileUserContext
-from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from ...library_api.utility.decorators import (
+    report_error_and_exit,
+    ensure_logged_in,
+    target_cluster_options,
+    no_rollback_option
+)
 from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.common.logging import get_logger
 
@@ -103,40 +107,52 @@ def create(ctx: click.Context,
     logger.info(f'Created function {function_name}')
 
 
-@click.command(help='Migrate a function.')
-@click.argument('function_name', metavar='FUNCTION_NAME', required=True, default=None)
-@click.option('-tp', '--target-profile', required=False, default=None)
-@click.option('-h', '--target-cluster-hostname', required=False, default=None)
-@click.option('-u', '--target-cluster-username', required=False, default=None)
-@click.option('-p', '--target-cluster-password', required=False, default=None)
-@click.option('-s', '--target-cluster-uri-scheme', required=False, default='https')
-@click.option('-P', '--target-project-name', required=True, default=None)
+@click.command(
+    help=(
+        "Migrate a function to a target project and profile.\n\n"
+        "This command migrates a function from the current source profile to the specified "
+        "target project and target profile. The target profile can be provided directly using "
+        "the --target-profile option, or by specifying the target cluster details such as "
+        "hostname, username, password, and URI scheme."
+    )
+)
+@click.argument('target_project_name', metavar='TARGET_PROJECT_NAME', required=True, default=None)
+@click.argument('new_function_name', metavar='FUNCTION_NAME', required=True, default=None)
+@target_cluster_options
+@no_rollback_option
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def migrate(ctx: click.Context,
-            function_name: str,
-            target_profile,
-            target_cluster_hostname,
-            target_cluster_username,
-            target_cluster_password,
-            target_cluster_uri_scheme,
-            target_project_name):
+            target_project_name: str,
+            new_function_name: str,
+            target_profile: str,
+            target_cluster_hostname: str,
+            target_cluster_username: str,
+            target_cluster_password: str,
+            target_cluster_uri_scheme: str,
+            no_rollback: bool):
+    source_profile = ctx.parent.obj['usercontext']
+
+    if not source_profile.functionname:
+        raise click.BadParameter('No source function provided.')
     if target_profile is None and not (target_cluster_hostname and target_cluster_username
                                        and target_cluster_password and target_cluster_uri_scheme):
         raise click.BadParameter('Either provide a --target-profile or all four target cluster options.')
 
-    user_profile = ctx.parent.obj['usercontext']
-    migrate_a_function(
-        user_profile,
-        function_name,
-        target_profile,
-        target_cluster_hostname,
-        target_cluster_username,
-        target_cluster_password,
-        target_cluster_uri_scheme,
-        target_project_name
-    )
-    logger.info(f'Migrated function {function_name}')
+    data = {
+        "source_profile": source_profile,
+        "target_profile_name": target_profile,
+        "target_cluster_hostname": target_cluster_hostname,
+        "target_cluster_username": target_cluster_username,
+        "target_cluster_password": target_cluster_password,
+        "target_cluster_uri_scheme": target_cluster_uri_scheme,
+        "source_project": source_profile.projectname,
+        "target_project": target_project_name,
+        "source_function": source_profile.functionname,
+        "target_function": new_function_name,
+        "no_rollback": no_rollback,
+    }
+    migrate_resource_config('function', **data)
 
 
 function.add_command(create)

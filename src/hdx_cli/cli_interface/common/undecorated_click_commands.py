@@ -135,7 +135,12 @@ def basic_show(profile,
     for resource in resources:
         if resource.get(filter_field) == resource_name:
             return json.dumps(resource, indent=indentation)
-    raise ResourceNotFoundException('Cannot find resource.')
+
+    if resource_name is not None:
+        message = f"Resource with {filter_field} '{resource_name}' not found."
+    else:
+        message = "Cannot find resource."
+    raise ResourceNotFoundException(message)
 
 
 def basic_transform(ctx: click.Context):
@@ -152,34 +157,36 @@ def basic_transform(ctx: click.Context):
     token = profile_info.auth
     headers = {'Authorization': f'{token.token_type} {token.token}',
                'Accept': 'application/json'}
-    projects_list = rest_ops.list(list_projects_url,
-                                  headers=headers,
-                                  timeout=timeout)
 
     try:
+        projects_list = rest_ops.list(list_projects_url,
+                                      headers=headers,
+                                      timeout=timeout)
         project_id = [p['uuid'] for p in projects_list if p['name'] == project_name][0]
+    except IndexError as idx_err:
+        raise LogicException(f"Project '{project_name}' not found.") from idx_err
 
+    try:
         list_tables_url = f'{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/{project_id}/tables'
         tables_list = rest_ops.list(list_tables_url,
                                     headers=headers,
                                     timeout=timeout)
         table_id = [t['uuid'] for t in tables_list if t['name'] == table_name][0]
+    except IndexError as idx_err:
+        raise LogicException(f"Table '{table_name}' not found.") from idx_err
 
-        transforms_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/'
+    transforms_path = f'/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/'
+
+    if profile_info.transformname:
         transforms_url = f'{scheme}://{hostname}{transforms_path}'
-
         transforms_list = rest_ops.list(transforms_url,
                                         headers=headers,
                                         timeout=timeout)
-    except IndexError as idx_err:
-        raise LogicException('Cannot find resource.') from idx_err
-
-    if profile_info.transformname:
         try:
             transform_name = [t['name'] for t in transforms_list if t['name'] == profile_info.transformname][0]
             profile_info.transformname = transform_name
         except IndexError as ex:
-            raise TransformNotFoundException(f'Transform not found: {profile_info.transformname}') from ex
+            raise TransformNotFoundException(f"Transform '{profile_info.transformname}' not found.") from ex
     ctx.obj = {'resource_path': transforms_path,
                'usercontext': profile_info}
 
