@@ -2,7 +2,7 @@
 import click
 import requests
 
-from ..common.migrations import migrate_resource_config
+from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.rest_operations import (
     delete as command_delete,
     list_ as command_list,
@@ -202,6 +202,8 @@ def migrate(ctx: click.Context,
         "only": only,
     }
     migrate_resource_config('table', **data)
+
+    logger.info('All resources migrated successfully')
 
 
 table.add_command(create)

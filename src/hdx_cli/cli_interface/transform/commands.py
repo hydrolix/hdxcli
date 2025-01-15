@@ -5,7 +5,7 @@ import json
 
 import click
 
-from ..common.migrations import migrate_resource_config
+from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.undecorated_click_commands import basic_transform
 from ..common.misc_operations import settings_with_force as command_settings_with_force
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
@@ -211,6 +211,8 @@ def migrate(ctx: click.Context,
         "no_rollback": no_rollback,
     }
     migrate_resource_config('transform', **data)
+
+    logger.info('All resources migrated successfully')
 
 
 transform.add_command(map_from)

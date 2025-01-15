@@ -2,7 +2,7 @@
 import json
 import click
 
-from ..common.migrations import migrate_resource_config
+from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.rest_operations import (
     delete as command_delete,
     list_ as command_list,
@@ -153,6 +153,8 @@ def migrate(ctx: click.Context,
         "no_rollback": no_rollback,
     }
     migrate_resource_config('function', **data)
+
+    logger.info('All resources migrated successfully')
 
 
 function.add_command(create)

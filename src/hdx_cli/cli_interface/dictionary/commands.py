@@ -2,7 +2,7 @@
 import json
 import click
 
-from ..common.migrations import migrate_resource_config
+from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import (
     basic_create,
@@ -197,6 +197,8 @@ def migrate_dictionary(ctx: click.Context,
         "no_rollback": no_rollback,
     }
     migrate_resource_config('dictionary', **data)
+
+    logger.info('All resources migrated successfully')
 
 
 dictionary.add_command(create_dict, name='create')

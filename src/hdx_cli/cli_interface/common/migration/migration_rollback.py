@@ -4,10 +4,10 @@ from typing import List
 from urllib.parse import urlparse
 
 
-from ..common.undecorated_click_commands import basic_delete
-from ...library_api.common.logging import get_logger
-from ...library_api.common.generic_resource import access_resource_detailed
-from ...library_api.common.context import ProfileUserContext
+from ...common.undecorated_click_commands import basic_delete
+from ....library_api.common.logging import get_logger
+from ....library_api.common.generic_resource import access_resource_detailed
+from ....library_api.common.context import ProfileUserContext
 
 logger = get_logger()
 

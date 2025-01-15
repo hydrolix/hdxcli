@@ -3,21 +3,27 @@ import json
 
 from urllib.parse import urlparse
 
+from .logs import log_message, LogType, log_migration_status
+from .resource_adapters import (
+    normalize_project,
+    normalize_transform,
+    normalize_table,
+    normalize_dictionary,
+    normalize_function
+)
 from .migration_rollback import (
     MigrationRollbackManager,
     DoNothingMigrationRollbackManager,
-    MigrationEntry,
     ResourceKind,
     MigrateStatus
 )
-from ..common.undecorated_click_commands import basic_create_from_dict_body, basic_show
-from ...library_api.common.auth_utils import get_profile
-from ...library_api.common.context import ProfileUserContext
-from ...library_api.common.exceptions import HttpException, HdxCliException
-from ...library_api.common import rest_operations as lro
-from ...library_api.common.generic_resource import access_resource_detailed
-from ...library_api.common.logging import get_logger
-
+from ...common.undecorated_click_commands import basic_create_from_dict_body, basic_show
+from ....library_api.common.auth_utils import get_profile
+from ....library_api.common.context import ProfileUserContext
+from ....library_api.common.exceptions import HttpException, HdxCliException
+from ....library_api.common import rest_operations as lro
+from ....library_api.common.generic_resource import access_resource_detailed
+from ....library_api.common.logging import get_logger
 
 logger = get_logger()
 
@@ -93,34 +99,6 @@ def migrate_resource_config(
         )
 
 
-def log_migration_status(
-        resource_type: str,
-        resource_name: str,
-        status: MigrateStatus,
-        rollback_manager: MigrationRollbackManager,
-        resource_kind: ResourceKind,
-        parents: list[str] = None
-):
-    """
-    Logs the migration status of a resource.
-
-    Args:
-        resource_type (str): The type of resource being migrated.
-        resource_name (str): The name of the resource.
-        status (MigrateStatus): The status of the migration.
-        rollback_manager (MigrationRollbackManager): The rollback manager instance.
-        resource_kind (ResourceKind): The kind of the resource.
-        parents (list[str]): The list of parent resources, if any.
-    """
-    logger.info(f"{resource_type} {resource_name}: [!n]")
-    if status == MigrateStatus.CREATED:
-        logger.info("Created Successfully")
-        m_entry = MigrationEntry(resource_name, resource_kind, parents)
-        rollback_manager.push_entry(m_entry)
-    elif status == MigrateStatus.SKIPPED:
-        logger.info("Skipped (was found)")
-
-
 def migrate_projects(
         source_profile: ProfileUserContext,
         target_profile: ProfileUserContext,
@@ -184,19 +162,20 @@ def migrate_project(
         source_project: str,
         target_project: str
 ):
+    """Migrates a single project."""
+    log_message(LogType.INFO, f"Migrating project '{target_project}'...", indent=0)
+    project_settings = json.loads(basic_show(source_profile, source_projects_path, source_project))
     try:
-        project_settings = json.loads(basic_show(source_profile, source_projects_path, source_project))
-        try:
-            del project_settings["uuid"]
-        except KeyError:
-            pass
-
         project_settings["name"] = target_project
+        project_settings = normalize_project(project_settings)
+
         basic_create_from_dict_body(target_profile, target_projects_path, project_settings)
     except HttpException as exc:
-        if exc.error_code != 400:
-            logger.debug(f"Error creating project: {exc}")
-            raise
+        if exc.error_code != 400 or "already exists" not in str(exc.message):
+            logger.debug(f"Error migrating project: {exc}")
+            raise exc
+
+        logger.debug(f"Project already exists: {exc}")
         return target_project, MigrateStatus.SKIPPED
     else:
         return target_project, MigrateStatus.CREATED
@@ -314,20 +293,19 @@ def migrate_table(
         target_table: str
 ):
     """Migrates a single table."""
+    log_message(LogType.INFO, f"Migrating table '{target_table}'...", indent=0)
     table_settings = json.loads(basic_show(source_profile, source_tables_path, source_table))
     try:
-        try:
-            del table_settings["uuid"]
-            del table_settings["settings"]["autoingest"][0]["source"]
-        except KeyError:
-            pass
-
         table_settings["name"] = target_table
+        table_settings = normalize_table(table_settings)
+
         basic_create_from_dict_body(target_profile, target_tables_path, table_settings)
     except HttpException as exc:
-        if exc.error_code != 400:
-            logger.debug(f"Error creating table: {exc}")
+        if exc.error_code != 400 or "already exists" not in str(exc.message):
+            logger.debug(f"Error migrating table: {exc}")
             raise
+
+        logger.debug(f"Table already exists: {exc}")
         return target_table, MigrateStatus.SKIPPED
     else:
         return target_table, MigrateStatus.CREATED
@@ -410,21 +388,21 @@ def migrate_transform(
         target_transform: str
 ):
     """Migrates a single transform."""
+    log_message(LogType.INFO, f"Migrating transform '{target_transform}'...", indent=0)
     transform_settings = json.loads(
         basic_show(source_profile, source_transforms_path, source_transform)
     )
     try:
-        try:
-            del transform_settings["uuid"]
-        except KeyError:
-            pass
-
         transform_settings["name"] = target_transform
+        transform_settings = normalize_transform(transform_settings)
+
         basic_create_from_dict_body(target_profile, target_transforms_path, transform_settings)
     except HttpException as exc:
-        if exc.error_code != 400:
-            logger.debug(f"Error creating transform: {exc}")
-            raise
+        if exc.error_code != 400 or "already exists" not in str(exc.message):
+            logger.debug(f"Error migrating transform: {exc}")
+            raise exc
+
+        logger.debug(f"Transform already exists: {exc}")
         return target_transform, MigrateStatus.SKIPPED
     else:
         return target_transform, MigrateStatus.CREATED
@@ -503,6 +481,7 @@ def migrate_dictionary(
         target_dict: str
 ):
     """Migrates a single dictionary."""
+    log_message(LogType.INFO, f"Migrating dictionary '{target_dict}'...", indent=0)
     dictionary = json.loads(basic_show(source_profile, source_dicts_path, source_dict))
 
     d_settings = dictionary["settings"]
@@ -530,22 +509,21 @@ def migrate_dictionary(
         )
     except HttpException as exc:
         if exc.error_code != 400:
-            logger.debug(f"Error creating dictionary file for project: {exc}")
+            logger.debug(f"Error migrating dictionary file for project: {exc}")
             raise
         logger.debug(f"Dictionary file {d_file} already exists ({exc}). Skipping.")
     finally:
         try:
             dictionary["name"] = target_dict
-            try:
-                del dictionary["uuid"]
-            except KeyError:
-                pass
+            dictionary = normalize_dictionary(dictionary)
+
             basic_create_from_dict_body(target_profile, target_dicts_path, dictionary)
         except HttpException as exc:
-            if exc.error_code != 400:
-                logger.debug(f"Error creating dictionary for project: {exc}")
-                raise
-            logger.debug(f"Dictionary {target_dict} already exists ({exc}). Skipping.")
+            if exc.error_code != 400 or "already exists" not in str(exc.message):
+                logger.debug(f"Error migrating dictionary: {exc}")
+                raise exc
+
+            logger.debug(f"Dictionary already exists: {exc}")
             return target_dict, MigrateStatus.SKIPPED
         else:
             return target_dict, MigrateStatus.CREATED
@@ -643,19 +621,19 @@ def migrate_function(
         target_function: str
 ):
     """Migrates a single function."""
+    log_message(LogType.INFO, f"Migrating function '{target_function}'...", indent=0)
     function_settings = json.loads(basic_show(source_profile, source_functs_path, source_function))
     try:
-        try:
-            del function_settings["uuid"]
-        except KeyError:
-            pass
-
         function_settings["name"] = target_function
+        function_settings = normalize_function(function_settings)
+
         basic_create_from_dict_body(target_profile, target_functs_path, function_settings)
     except HttpException as exc:
-        if exc.error_code != 400:
-            logger.debug(f"Error creating function: {exc}")
-            raise
+        if exc.error_code != 400 or "already exists" not in str(exc.message):
+            logger.debug(f"Error migrating function: {exc}")
+            raise exc
+
+        logger.debug(f"Function already exists: {exc}")
         return target_function, MigrateStatus.SKIPPED
     else:
         return target_function, MigrateStatus.CREATED

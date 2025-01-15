@@ -10,7 +10,7 @@ from ..common.rest_operations import (
     stats as command_stats
 )
 from ..common.misc_operations import settings as command_settings
-from ..common.migrations import migrate_resource_config
+from ..common.migration.resource_migrations import migrate_resource_config
 from ...library_api.utility.decorators import (
     report_error_and_exit,
     ensure_logged_in,
@@ -114,6 +114,8 @@ def migrate(ctx: click.Context,
         "functs": functions,
     }
     migrate_resource_config('project', **data)
+
+    logger.info('All resources migrated successfully')
 
 
 project.add_command(command_list)
