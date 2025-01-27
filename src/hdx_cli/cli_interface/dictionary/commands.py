@@ -2,7 +2,7 @@
 import json
 import click
 
-from ..common.migrations import migrate_a_dictionary
+from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.misc_operations import settings as command_settings
 from ..common.undecorated_click_commands import (
     basic_create,
@@ -14,7 +14,12 @@ from ..common.rest_operations import (
     show as command_show
 )
 from ...library_api.common.generic_resource import access_resource
-from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from ...library_api.utility.decorators import (
+    report_error_and_exit,
+    ensure_logged_in,
+    target_cluster_options,
+    no_rollback_option
+)
 from ...library_api.common.exceptions import (
     ResourceNotFoundException,
     MissingSettingsException,
@@ -146,38 +151,54 @@ def dict_file_delete(ctx: click.Context, dictionary_filename):
     logger.info(f'Deleted {dictionary_filename}')
 
 
-@click.command(help='Migrate a dictionary.', name='migrate')
-@click.argument('dictionary_name', metavar='DICTIONARY_NAME', required=True, default=None)
-@click.option('-tp', '--target-profile', required=False, default=None)
-@click.option('-h', '--target-cluster-hostname', required=False, default=None)
-@click.option('-u', '--target-cluster-username', required=False, default=None)
-@click.option('-p', '--target-cluster-password', required=False, default=None)
-@click.option('-s', '--target-cluster-uri-scheme', required=False, default='https')
-@click.option('-P', '--target-project-name', required=True, default=None)
+@click.command(
+    help=(
+        "Migrate a dictionary to a target project and profile.\n\n"
+        "This command migrates a dictionary from the current source profile to the specified "
+        "target project and target profile. The target profile can be provided directly using "
+        "the --target-profile option, or by specifying the target cluster details such as "
+        "hostname, username, password, and URI scheme."
+    ), name='migrate'
+)
+@click.argument('target_project_name', metavar='TARGET_PROJECT_NAME', required=True, default=None)
+@click.argument('new_dictionary_name', metavar='NEW_DICTIONARY_NAME', required=True, default=None)
+@target_cluster_options
+@no_rollback_option
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def migrate_dictionary(ctx: click.Context,
-                       dictionary_name: str,
-                       target_profile,
-                       target_cluster_hostname,
-                       target_cluster_username,
-                       target_cluster_password,
-                       target_cluster_uri_scheme,
-                       target_project_name):
+                       target_project_name: str,
+                       new_dictionary_name: str,
+                       target_profile: str,
+                       target_cluster_hostname: str,
+                       target_cluster_username: str,
+                       target_cluster_password: str,
+                       target_cluster_uri_scheme: str,
+                       no_rollback: bool):
+    source_profile = ctx.parent.obj['usercontext']
+
+    if not source_profile.dictionaryname:
+        raise click.BadParameter('No source dictionary provided.')
     if target_profile is None and not (target_cluster_hostname and target_cluster_username
                                        and target_cluster_password and target_cluster_uri_scheme):
         raise click.BadParameter('Either provide a --target-profile or all four target cluster options.')
 
-    user_profile = ctx.parent.obj['usercontext']
-    migrate_a_dictionary(user_profile,
-                         dictionary_name,
-                         target_profile,
-                         target_cluster_hostname,
-                         target_cluster_username,
-                         target_cluster_password,
-                         target_cluster_uri_scheme,
-                         target_project_name)
-    logger.info(f'Migrated dictionary {dictionary_name}')
+    data = {
+        "source_profile": source_profile,
+        "target_profile_name": target_profile,
+        "target_cluster_hostname": target_cluster_hostname,
+        "target_cluster_username": target_cluster_username,
+        "target_cluster_password": target_cluster_password,
+        "target_cluster_uri_scheme": target_cluster_uri_scheme,
+        "source_project": source_profile.projectname,
+        "target_project": target_project_name,
+        "source_dictionary": source_profile.dictionaryname,
+        "target_dictionary": new_dictionary_name,
+        "no_rollback": no_rollback,
+    }
+    migrate_resource_config('dictionary', **data)
+
+    logger.info('All resources migrated successfully')
 
 
 dictionary.add_command(create_dict, name='create')

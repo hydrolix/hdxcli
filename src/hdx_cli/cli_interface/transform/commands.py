@@ -5,7 +5,7 @@ import json
 
 import click
 
-from ..common.migrations import migrate_a_transform, get_target_profile
+from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.undecorated_click_commands import basic_transform
 from ..common.misc_operations import settings_with_force as command_settings_with_force
 from ..common.undecorated_click_commands import basic_create_with_body_from_string
@@ -17,7 +17,9 @@ from ..common.rest_operations import (
 from ...library_api.utility.decorators import (
     report_error_and_exit,
     ensure_logged_in,
-    force_operation_option
+    force_operation_option,
+    target_cluster_options,
+    no_rollback_option
 )
 from ...library_api.common.exceptions import CommandLineException
 from ...library_api.common.context import ProfileUserContext
@@ -157,52 +159,60 @@ def map_from(ctx: click.Context,
     logger.info(f'Created transform {transform_name}')
 
 
-@click.command(help='Migrate a table.')
+@click.command(
+    help=(
+        "Migrate a transform to a target project and table.\n\n"
+        "This command migrates a transform from the source project and table in the current profile "
+        "to a specified target project and table in the target profile or cluster.\n\n"
+        "Provide a target profile using --target-profile or specify cluster details "
+        "(hostname, username, password, and URI scheme)."
+    )
+)
+@click.argument('target_project_name', metavar='TARGET_PROJECT_NAME', required=True, default=None)
+@click.argument('target_table_name', metavar='TARGET_TABLE_NAME', required=True, default=None)
 @click.argument('new_transform_name', metavar='NEW_TRANSFORM_NAME', required=True, default=None)
-@click.option('-tp', '--target-profile', 'target_profile_name', required=False, default=None)
-@click.option('-h', '--target-cluster-hostname', required=False, default=None)
-@click.option('-u', '--target-cluster-username', required=False, default=None)
-@click.option('-p', '--target-cluster-password', required=False, default=None)
-@click.option('-s', '--target-cluster-uri-scheme', required=False, default='https')
-@click.option('-P', '--target-project-name', required=True, default=None)
-@click.option('-T', '--target-table-name', required=True, default=None)
-@force_operation_option
+@target_cluster_options
+@no_rollback_option
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def migrate(ctx: click.Context,
+            target_project_name: str,
+            target_table_name: str,
             new_transform_name: str,
-            target_profile_name: str,
+            target_profile: str,
             target_cluster_hostname: str,
             target_cluster_username: str,
             target_cluster_password: str,
             target_cluster_uri_scheme: str,
-            target_project_name: str,
-            target_table_name: str,
-            force_operation: bool):
-    if target_profile_name is None and not (target_cluster_hostname and target_cluster_username
+            no_rollback: bool):
+    source_profile = ctx.parent.obj['usercontext']
+
+    if not source_profile.transformname:
+        raise click.BadParameter('No source transform provided.')
+    if target_profile is None and not (target_cluster_hostname and target_cluster_username
                                        and target_cluster_password and target_cluster_uri_scheme):
         raise click.BadParameter(
             'Either provide a --target-profile or all four target cluster options.'
         )
 
-    source_profile = ctx.parent.obj['usercontext']
-    target_profile = get_target_profile(
-        target_profile_name,
-        target_cluster_hostname,
-        target_cluster_username,
-        target_cluster_password,
-        target_cluster_uri_scheme,
-        source_profile.timeout
-    )
-    migrate_a_transform(
-        source_profile,
-        target_profile,
-        new_transform_name,
-        target_project_name,
-        target_table_name,
-        force_operation
-    )
-    logger.info(f"Migrated transform '{new_transform_name}'")
+    data = {
+        "source_profile": source_profile,
+        "target_profile_name": target_profile,
+        "target_cluster_hostname": target_cluster_hostname,
+        "target_cluster_username": target_cluster_username,
+        "target_cluster_password": target_cluster_password,
+        "target_cluster_uri_scheme": target_cluster_uri_scheme,
+        "source_project": source_profile.projectname,
+        "target_project": target_project_name,
+        "source_table": source_profile.tablename,
+        "target_table": target_table_name,
+        "source_transform": source_profile.transformname,
+        "target_transform": new_transform_name,
+        "no_rollback": no_rollback,
+    }
+    migrate_resource_config('transform', **data)
+
+    logger.info('All resources migrated successfully')
 
 
 transform.add_command(map_from)

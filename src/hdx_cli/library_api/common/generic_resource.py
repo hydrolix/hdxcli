@@ -2,6 +2,7 @@ from typing import Tuple, Optional, List, Any
 
 from . import rest_operations as rest_ops
 from .context import ProfileUserContext
+from .exceptions import ResourceNotFoundException
 
 ResourceKind = str
 ResourceName = str
@@ -43,7 +44,7 @@ def access_resource_detailed(ctx: ProfileUserContext,
                                  timeout=timeout)
         return (resource, resource_url)
 
-    for resource, resource_name in resource_kind_and_name:
+    for idx, (resource, resource_name) in enumerate(resource_kind_and_name):
         resource_url = f'{resource_url}{resource}/'
         resource_list = rest_ops.list(resource_url,
                                       headers=headers,
@@ -53,10 +54,14 @@ def access_resource_detailed(ctx: ProfileUserContext,
 
         a_resource = [r for r in resource_list if r['name'] == resource_name]
         if not a_resource:
+            if idx < len(resource_kind_and_name) - 1:  # More items to go through
+                raise ResourceNotFoundException(
+                    f"Resource '{resource_name}' not found.")
             return None, resource_url
 
         a_resource = a_resource[0]
         resource_url = f'{resource_url}{a_resource["uuid"]}/'
+
     if not resource_kind_and_name:
         pass
 

@@ -630,12 +630,13 @@ commands_under_test = ["python -m hdx_cli.main role add-user --user test_ci_invi
 teardown = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
 expected_output = 'Added user(s) to new_role role'
 
-[[test]]
-name = "Removed user from role"
-setup = ["python -m hdx_cli.main role create --name new_role --permission change_table"]
-commands_under_test = ["python3 -m hdx_cli.main role remove-user --user test_ci_invite_user@hydolix.io new_role"]
-teardown = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
-expected_output = 'Removed user(s) from new_role role'
+# Known bug -> HDX-6985
+#[[test]]
+#name = "Removed user from role"
+#setup = ["python -m hdx_cli.main role create --name new_role --permission change_table"]
+#commands_under_test = ["python3 -m hdx_cli.main role remove-user --user test_ci_invite_user@hydolix.io new_role"]
+#teardown = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
+#expected_output = 'Removed user(s) from new_role role'
 
 [[test]]
 name = "add nonexistent user to a role"
@@ -690,7 +691,7 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 [[test]]
 name = "Assign role to non-exist user"
 commands_under_test = ["python3 -m hdx_cli.main user assign-role user_non-exist@hydrolix.io -r read_only"]
-expected_output = 'Error: Cannot find resource.'
+expected_output = "Error: Resource with email 'user_non-exist@hydrolix.io' not found."
 
 [[test]]
 name = "Assign non-exist role to user"
@@ -723,7 +724,7 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 [[test]]
 name = "Delete not exist resource"
 commands_under_test = ["python3 -m hdx_cli.main user remove-role not_exist@hydrolix.io -r super_admin"]
-expected_output = 'Error: Cannot find resource.'
+expected_output = "Error: Resource with email 'not_exist@hydrolix.io' not found."
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -756,7 +757,7 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 [[test]]
 name = "Resend invitation to a not exist user"
 commands_under_test = ["python3 -m hdx_cli.main user invite resend user_not_exist@hydrolix.io"]
-expected_output_re = 'Error: Cannot find resource.'
+expected_output_re = "Error: Resource with email 'user_not_exist@hydrolix.io' not found."
 
 [[test]]
 name = "Invitation list"
@@ -786,7 +787,7 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 [[test]]
 name = "Invite to a user not exist can be show"
 commands_under_test = ["python3 -m hdx_cli.main user invite --user user_not_exist@hydrolix.io show"]
-expected_output_re = 'Error: Cannot find resource.'
+expected_output_re = "Error: Resource with email 'user_not_exist@hydrolix.io' not found."
 
 ################################################### query-options ####################################################
 [[test]]

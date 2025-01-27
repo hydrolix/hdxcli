@@ -1,9 +1,9 @@
 import re
 
-from hdx_cli.cli_interface.common.undecorated_click_commands import get_resource_settings_structure
-from hdx_cli.cli_interface.migrate.helpers import confirm_action
-from hdx_cli.library_api.common.context import ProfileUserContext
-from hdx_cli.library_api.common.logging import get_logger
+from ..common.undecorated_click_commands import get_resource_settings_structure
+from ..migrate.helpers import confirm_action
+from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.logging import get_logger
 
 logger = get_logger()
 
@@ -21,7 +21,7 @@ def prompt_user_for_value(key: str, message=None, default=None):
     return user_input if user_input else default
 
 
-def adapt_table_merge_pools(pools: dict) -> dict | None:
+def _adapt_table_merge_pools(pools: dict) -> dict | None:
     logger.info("In progress")
     logger.info(f"{' Merge Pools Settings ':*^40}")
     logger.info("* Current merge pools settings for SOURCE table")
@@ -39,7 +39,7 @@ def adapt_table_merge_pools(pools: dict) -> dict | None:
     return updated_pools if updated_pools else None
 
 
-def adapt_table_autoingest(autoingest: dict) -> dict | None:
+def _adapt_table_autoingest(autoingest: dict) -> dict | None:
     logger.info("In progress")
     logger.info(f"{' Autoingest Settings ':*^40}")
     logger.info("* Current autoingest settings for SOURCE table")
@@ -61,7 +61,7 @@ def adapt_table_autoingest(autoingest: dict) -> dict | None:
     return autoingest if autoingest else None
 
 
-def extract_table_name_from_sql(sql):
+def _extract_table_name_from_sql(sql):
     pattern = r"(?i)\bFROM\s+([`\"']?\w+[`\"']?\.\w+)"
     match = re.search(pattern, sql)
     if not match:
@@ -72,7 +72,7 @@ def extract_table_name_from_sql(sql):
     return project, table
 
 
-def update_parent_in_summary_sql(summary_settings: dict) -> dict:
+def _update_parent_in_summary_sql(summary_settings: dict) -> dict:
     logger.info("In progress")
     logger.info(f"{' Summary Settings ':*^40}")
 
@@ -84,7 +84,7 @@ def update_parent_in_summary_sql(summary_settings: dict) -> dict:
         sql = get_user_value_input("sql", "string")
         logger.info("*")
 
-    current_project, current_table = extract_table_name_from_sql(sql)
+    current_project, current_table = _extract_table_name_from_sql(sql)
 
     current_summary_parents = (
         "Not Found"
@@ -132,7 +132,7 @@ def normalize_project(project: dict, reuse_partitions: bool) -> dict:
 
 
 def normalize_summary_table(summary_settings: dict) -> dict:
-    return update_parent_in_summary_sql(summary_settings)
+    return _update_parent_in_summary_sql(summary_settings)
 
 
 def normalize_table(table: dict, reuse_partitions: bool) -> dict:
@@ -152,7 +152,7 @@ def normalize_table(table: dict, reuse_partitions: bool) -> dict:
     if autoingest and isinstance(autoingest, list):
         for element in autoingest:
             if isinstance(element, dict) and element.get("enabled"):
-                updated_element = adapt_table_autoingest(element)
+                updated_element = _adapt_table_autoingest(element)
                 if updated_element:
                     filtered_autoingest.append(updated_element)
 
@@ -164,7 +164,7 @@ def normalize_table(table: dict, reuse_partitions: bool) -> dict:
     # Merge pools
     merge = table_settings.get("merge")
     if merge and isinstance(merge, dict) and (pools := merge.get("pools")):
-        updated_pools = adapt_table_merge_pools(pools)
+        updated_pools = _adapt_table_merge_pools(pools)
         if updated_pools:
             merge["pools"] = updated_pools
         else:

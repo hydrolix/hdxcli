@@ -7,8 +7,8 @@ from .helpers import MigrationData, get_catalog
 from .rc.rc_manager import RcloneAPIConfig
 from .resources import get_resources, create_resources
 from .validator import validations
-from ..common.migrations import get_target_profile
 from ..profile.commands import validate_hostname
+from ...library_api.common.auth_utils import get_profile
 from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 from ...library_api.common.logging import get_logger
 
@@ -100,7 +100,7 @@ def migrate(ctx: click.Context,
         )
 
     else:
-        target_profile = get_target_profile(
+        target_profile = get_profile(
             target_profile_name,
             target_hostname,
             target_username,

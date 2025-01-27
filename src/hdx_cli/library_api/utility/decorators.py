@@ -106,8 +106,8 @@ def find_in_disk_cache(cache_file, namespace):
     return find_in_disk_cache_wrapper
 
 
-def ensure_logged_in(f):
-    @wraps(f)
+def ensure_logged_in(func):
+    @wraps(func)
     def decorated_function(ctx: click.Context, *args, **kwargs):
         profile_context = ctx.parent.obj['profilecontext']
         user_options = ctx.parent.obj['useroptions']
@@ -117,16 +117,16 @@ def ensure_logged_in(f):
                                          uri_scheme=user_options.get('uri_scheme'),
                                          timeout=user_options.get('timeout'))
         ctx.parent.obj['usercontext'] = user_context
-        return f(ctx, *args, **kwargs)
+        return func(ctx, *args, **kwargs)
     return decorated_function
 
 
-def with_profiles_context(f):
-    @functools.wraps(f)
+def with_profiles_context(func):
+    @functools.wraps(func)
     def decorated_function(ctx, *args, **kwargs):
         profile_context = ctx.parent.obj['profilecontext']
         config_profiles = get_profiles(profile_config_file=profile_context.profile_config_file)
-        return f(ctx, profile_context, config_profiles, *args, **kwargs)
+        return func(ctx, profile_context, config_profiles, *args, **kwargs)
     return decorated_function
 
 
@@ -138,4 +138,61 @@ def force_operation_option(func):
         default=False,
         help='This flag allows adding the "force_operation" parameter to the request.'
     )(func)
+    return func
+
+
+def no_rollback_option(func):
+    """
+    Decorator for handling the '--no-rollback' option.
+    If the user provides --no-rollback, then no_rollback == True.
+    Otherwise, it remains False by default.
+    """
+    func = click.option(
+        '--no-rollback',
+        is_flag=True,
+        default=False,
+        help='Disable rollback behavior in case of errors.'
+    )(func)
+    return func
+
+
+def target_cluster_options(func):
+    """
+    Decorator that adds all the common target cluster/profile options.
+    """
+    func = click.option(
+        '-tp', '--target-profile',
+        required=False,
+        default=None,
+        help="Name of an existing profile to connect to the target host."
+    )(func)
+
+    func = click.option(
+        '-h', '--target-cluster-hostname',
+        required=False,
+        default=None,
+        help="Hostname of the target cluster."
+    )(func)
+
+    func = click.option(
+        '-u', '--target-cluster-username',
+        required=False,
+        default=None,
+        help="Username to authenticate to the target cluster."
+    )(func)
+
+    func = click.option(
+        '-p', '--target-cluster-password',
+        required=False,
+        default=None,
+        help="Password for the target cluster user."
+    )(func)
+
+    func = click.option(
+        '-s', '--target-cluster-uri-scheme',
+        required=False,
+        default='https',
+        help="Protocol to use (http or https). Defaults to 'https'."
+    )(func)
+
     return func
