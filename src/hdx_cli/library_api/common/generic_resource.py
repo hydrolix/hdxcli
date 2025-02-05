@@ -54,7 +54,7 @@ def access_resource_detailed(ctx: ProfileUserContext,
 
         a_resource = [r for r in resource_list if r['name'] == resource_name]
         if not a_resource:
-            if idx < len(resource_kind_and_name) - 1:  # More items to go through
+            if idx <= len(resource_kind_and_name) - 1:  # More items to go through
                 raise ResourceNotFoundException(
                     f"Resource '{resource_name}' not found.")
             return None, resource_url
