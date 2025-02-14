@@ -18,6 +18,7 @@ from hdx_cli.cli_interface.integration import commands as integration_
 from hdx_cli.cli_interface.user import commands as user_
 from hdx_cli.cli_interface.role import commands as role_
 from hdx_cli.cli_interface.query_option import commands as query_option_
+from hdx_cli.cli_interface.credential import commands as credentials_
 from hdx_cli.cli_interface.check_health import commands as check_health_
 
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
@@ -125,6 +126,7 @@ hdx_cli.add_command(integration_.integration)
 hdx_cli.add_command(user_.user)
 hdx_cli.add_command(role_.role)
 hdx_cli.add_command(query_option_.query_option)
+hdx_cli.add_command(credentials_.credential)
 hdx_cli.add_command(check_health_.check_health)
 hdx_cli.add_command(version)
 
