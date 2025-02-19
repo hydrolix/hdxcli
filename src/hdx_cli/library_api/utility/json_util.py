@@ -1,10 +1,10 @@
-import logging
-from typing import Mapping, Any
 import json
+import logging
+from typing import Any, Mapping
 
 
 def get_dot_separated_key(dot_sep_key: str, mapping: Mapping[str, Any]):
-    dot_sep_key_parts = dot_sep_key.split('.')
+    dot_sep_key_parts = dot_sep_key.split(".")
     key_ref = mapping[dot_sep_key_parts[0]]
     if len(dot_sep_key_parts[0]) > 1:
         for part in dot_sep_key_parts[1:]:
@@ -15,12 +15,12 @@ def get_dot_separated_key(dot_sep_key: str, mapping: Mapping[str, Any]):
 def http_error_pretty_format(error):
     try:
         status_code = error.error_code
-        error_data = json.loads(error.message.decode('utf-8'))
+        error_data = json.loads(error.message.decode("utf-8"))
     except json.JSONDecodeError as exc:
-        logging.debug(f'Failed to decode JSON: {exc}')
+        logging.debug(f"Failed to decode JSON: {exc}")
         return f"{error}"
     except AttributeError as exc:
-        logging.debug(f'Missing attribute: {exc}')
+        logging.debug(f"Missing attribute: {exc}")
         return f"{error}"
 
     error_message = _find_error_messages(error_data)

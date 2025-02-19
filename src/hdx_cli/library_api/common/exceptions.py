@@ -1,11 +1,10 @@
-
-
 class HdxCliException(Exception):
-   'Base class for all exceptions'
+    "Base class for all exceptions"
 
 
 class HttpException(HdxCliException):
-    'Exception thrown from problems in Http calls to the config API'
+    "Exception thrown from problems in Http calls to the config API"
+
     def __init__(self, error_code, message):
         self.error_code = error_code
         self.message = message
@@ -132,6 +131,7 @@ class MigrationException(HdxCliException):
     """
     Base exception class for Migration errors.
     """
+
     pass
 
 
@@ -143,6 +143,7 @@ class MigrationFailureException(MigrationException):
 class RCloneRemoteException(MigrationException):
     def __init__(self, message):
         super().__init__(message)
+
 
 class RCloneRemoteCreationException(RCloneRemoteException):
     def __init__(self, bucket_name, cloud):

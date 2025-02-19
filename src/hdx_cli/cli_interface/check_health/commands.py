@@ -9,11 +9,13 @@ from ...library_api.common.logging import get_logger
 logger = get_logger()
 
 
-@click.command(name="check-health",
-               help="Checks the integrity of transforms and auto-views in a Hydrolix cluster. "
-                    "If no arguments are provided, all projects and tables will be checked. "
-                    "You can optionally specify a PROJECT_NAME to check only that project,"
-                    "or both PROJECT_NAME and TABLE_NAME to narrow it down to a specific table.")
+@click.command(
+    name="check-health",
+    help="Checks the integrity of transforms and auto-views in a Hydrolix cluster. "
+    "If no arguments are provided, all projects and tables will be checked. "
+    "You can optionally specify a PROJECT_NAME to check only that project,"
+    "or both PROJECT_NAME and TABLE_NAME to narrow it down to a specific table.",
+)
 @click.argument("project_name", metavar="PROJECT_NAME", required=False, default=None, type=str)
 @click.argument("table_name", metavar="TABLE_NAME", required=False, default=None, type=str)
 @click.pass_context
@@ -29,7 +31,9 @@ def check_health(ctx: click.Context, project_name: str, table_name: str):
     """
     profile = ctx.parent.obj["usercontext"]
     if project_name and table_name:
-        click.echo(f"Checking health of transforms in project '{project_name}' and table '{table_name}'...")
+        click.echo(
+            f"Checking health of transforms in project '{project_name}' and table '{table_name}'..."
+        )
     elif project_name:
         click.echo(f"Checking health of transforms in project '{project_name}'...")
     else:
@@ -39,7 +43,8 @@ def check_health(ctx: click.Context, project_name: str, table_name: str):
 
 
 class ConflictReporter:
-    """ Load with an auto-view and then run transforms through it to find issues """
+    """Load with an auto-view and then run transforms through it to find issues"""
+
     MAP_TYPES = ("array", "map")
 
     RESOLUTION_MAP = {
@@ -81,7 +86,7 @@ class ConflictReporter:
 
     @staticmethod
     def get_view_datatype(type: str, resolution: str = None) -> str:
-        """ Normalize type on transform column to match view types """
+        """Normalize type on transform column to match view types"""
         if type in ("bool", "boolean"):
             return "uint8"
         if type in ("datetime", "epoch"):
@@ -92,7 +97,7 @@ class ConflictReporter:
         return type
 
     def _check_transform_column(self, transform_column: dict) -> list[str]:
-        """ Check a single column for all problems """
+        """Check a single column for all problems"""
         messages = []
         transform_column_name = transform_column.get("name")
         transform_column_datatype = transform_column.get("datatype", {})
@@ -103,7 +108,9 @@ class ConflictReporter:
         ignore = transform_column_datatype.get("ignore", False)
         if suppress or ignore:
             if view_column:
-                messages.append(f"[WARN] '{transform_column_name}' - in auto-view while suppressed/ignored")
+                messages.append(
+                    f"[WARN] '{transform_column_name}' - in auto-view while suppressed/ignored"
+                )
             return messages
 
         # Track which columns have appeared in transforms to see if any extraneous ones are in the view
@@ -131,14 +138,12 @@ class ConflictReporter:
             )
 
         # transform column resolution does not match view column resolution
-        view_column_resolution = self.RESOLUTION_MAP.get(
-            view_column.get("resolution", "seconds")
-        )
+        view_column_resolution = self.RESOLUTION_MAP.get(view_column.get("resolution", "seconds"))
         if view_column_resolution != transform_column_resolution:
             messages.append(
                 f"[CONFLICT] '{transform_column_name}' - transform_resolution: {transform_column_resolution}, view_resolution: {view_column_resolution}"
             )
-        
+
         # transform column primary does not match view column primary
         transform_column_primary = transform_column_datatype.get("primary", False)
         view_column_primary = view_column.get("primary", False)
@@ -146,7 +151,7 @@ class ConflictReporter:
             messages.append(
                 f"[CONFLICT] '{transform_column_name}' - transform_primary: {transform_column_primary}, view_primary: {view_column_primary}"
             )
-        
+
         # If field is primary, track it for later
         if transform_column_primary:
             self.transform_primary_columns.add(transform_column_name)
@@ -166,12 +171,11 @@ class ConflictReporter:
         return messages
 
     def normalize_elements(self, elements: list) -> list:
-        """ recursively normalize the types of elements """
+        """recursively normalize the types of elements"""
         normalized_elements = []
         for element in elements:
             normalized_type = self.get_view_datatype(
-                element.get("type", None),
-                element.get("resolution", None)
+                element.get("type", None), element.get("resolution", None)
             )
             element["type"] = normalized_type
             sub_elements = element.get("elements", [])
@@ -181,7 +185,7 @@ class ConflictReporter:
         return normalized_elements
 
     def transform_report(self, transform: dict) -> dict:
-        """ Check all columns for problems """
+        """Check all columns for problems"""
         report = {}
         columns = transform.get("settings", {}).get("output_columns", [])
         for column in columns:
@@ -192,10 +196,10 @@ class ConflictReporter:
         return report
 
     def unused_columns(self) -> set[str]:
-        """ Which view columns have not appeared in a checked transform yet? """
+        """Which view columns have not appeared in a checked transform yet?"""
         view_columns = set(self.columns.keys())
         return view_columns - self.used_columns
-    
+
     def primary_column_report(self):
         messages = []
         view_primary_column_count = len(self.view_primary_columns)
@@ -209,7 +213,7 @@ class ConflictReporter:
         return messages
 
 def _check_health(profile: ProfileUserContext, target_project_name: str, target_table_name: str):
-    """ Check the integrity of transforms and auto-views in a Hydrolix cluster """
+    """Check the integrity of transforms and auto-views in a Hydrolix cluster"""
     projects, _ = access_resource_detailed(profile, [("projects", target_project_name)])
     # If 'target_project_name' is not provided, projects will contain a list of all projects in the org
     # If 'target_project_name' is provided, projects will contain a simple dict with the project details
@@ -229,17 +233,12 @@ def _check_health(profile: ProfileUserContext, target_project_name: str, target_
             table_name = table.get("name")
 
             transforms, _ = access_resource_detailed(
-                profile, [
-                    ("projects", project_name),
-                    ("tables", table_name),
-                    ("transforms", None)]
+                profile, [("projects", project_name), ("tables", table_name), ("transforms", None)]
             )
             try:
                 auto_view, _ = access_resource_detailed(
-                    profile, [
-                        ("projects", project_name),
-                        ("tables", table_name),
-                        ("views", "auto_view")]
+                    profile,
+                    [("projects", project_name), ("tables", table_name), ("views", "auto_view")],
                 )
             except ResourceNotFoundException:
                 logger.debug(f"Auto-view not found for {project_name}.{table_name}")
@@ -249,11 +248,11 @@ def _check_health(profile: ProfileUserContext, target_project_name: str, target_
             if not auto_view or not transforms:
                 logger.info(f"# {project_name}.{table_name}")
                 if transforms:
-                        logger.info(f"- [ERROR] Table has transforms, but no auto-view")
+                    logger.info("- [ERROR] Table has transforms, but no auto-view")
                 elif auto_view:
-                        logger.info(f"- [ERROR] Table has auto-view, but no transforms")
+                    logger.info("- [ERROR] Table has auto-view, but no transforms")
                 else:
-                    logger.info(f"- [WARN] Empty table, no transforms or auto-view")
+                    logger.info("- [WARN] Empty table, no transforms or auto-view")
                 logger.info("")
                 continue
 

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from ..userdata.token import AuthInfo
 from ..common.exceptions import ProfileNotFoundException
+from ..userdata.token import AuthInfo
 
 
 @dataclass
@@ -12,9 +12,7 @@ class ProfileLoadContext:
     profile_config_file: Optional[Path] = None
 
 
-_PROFILE_USER_CONTEXT_SAVE_FIELDS = ['username', 'hostname',
-                                     'projectname', 'tablename',
-                                     'scheme']
+_PROFILE_USER_CONTEXT_SAVE_FIELDS = ["username", "hostname", "projectname", "tablename", "scheme"]
 
 DEFAULT_TIMEOUT = 30
 
@@ -24,6 +22,7 @@ class ProfileUserContext:
     """Represents the current user context where a user performs operations.
     A context is populated from a LoadContext.
     """
+
     username: str
     hostname: str
     profilename: str
@@ -36,7 +35,7 @@ class ProfileUserContext:
     batchname: Optional[str] = None
     altername: Optional[str] = None
     functionname: Optional[str] = None
-    dictionaryname : Optional[str] = None
+    dictionaryname: Optional[str] = None
     storagename: Optional[str] = None
     kafkaname: Optional[str] = None
     kinesisname: Optional[str] = None
@@ -45,7 +44,7 @@ class ProfileUserContext:
     useremail: Optional[str] = None
     rolename: Optional[str] = None
     credentialname: Optional[str] = None
-    scheme: str = 'https'
+    scheme: str = "https"
     timeout: int = DEFAULT_TIMEOUT
 
     def as_dict_for_config(self):
@@ -58,10 +57,10 @@ class ProfileUserContext:
     @staticmethod
     def update_context(user_profile, **kwargs):
         """
-            Method used to update variables within the user context
+        Method used to update variables within the user context
         """
         if not user_profile:
-            raise ProfileNotFoundException('Profile not found')
+            raise ProfileNotFoundException("Profile not found")
 
         for key, value in kwargs.items():
             if hasattr(user_profile, key) and value is not None:

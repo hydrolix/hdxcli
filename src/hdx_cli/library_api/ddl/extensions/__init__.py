@@ -1,4 +1,6 @@
-from .sql import SqlSourceToTableInfoProcessor, SqlComposedTypeParser
-from .elastic import (ElasticSourceToTableInfoProcessor,
-                      ElasticComposedTypeParser,
-                      ElasticPostProcessingHook)
+from .elastic import (
+    ElasticComposedTypeParser,
+    ElasticPostProcessingHook,
+    ElasticSourceToTableInfoProcessor,
+)
+from .sql import SqlComposedTypeParser, SqlSourceToTableInfoProcessor
