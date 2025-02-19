@@ -3,13 +3,14 @@ import threading
 import time
 from dataclasses import dataclass, field
 from queue import Queue
-from typing import Optional, Dict, List
+from typing import Dict, List, Optional
 
 from tqdm import tqdm
 
-from .catalog_operations import Catalog
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.logging import get_logger
+
+from .catalog_operations import Catalog
 
 logger = get_logger()
 
@@ -26,44 +27,37 @@ class MigrationData:
     def get_project_id(self) -> Optional[str]:
         if self.project is None:
             return None
-        return self.project.get('uuid')
+        return self.project.get("uuid")
 
     def get_table_id(self) -> Optional[str]:
         if self.table is None:
             return None
-        return self.table.get('uuid')
+        return self.table.get("uuid")
 
 
-def get_catalog(profile: ProfileUserContext,
-                data: MigrationData,
-                temp_catalog: bool
-                ) -> Catalog:
-    project_table_name = f'{profile.projectname}.{profile.tablename}'
+def get_catalog(profile: ProfileUserContext, data: MigrationData, temp_catalog: bool) -> Catalog:
+    project_table_name = f"{profile.projectname}.{profile.tablename}"
     logger.info(f"{f'  Catalog: {project_table_name[:31]}':<42} -> [!n]")
     catalog = Catalog()
-    catalog.download(
-        profile,
-        data.get_project_id(),
-        data.get_table_id(),
-        temp_catalog=temp_catalog
-    )
-    logger.info('Done')
+    catalog.download(profile, data.get_project_id(), data.get_table_id(), temp_catalog=temp_catalog)
+    logger.info("Done")
     return catalog
 
 
-def update_catalog_and_upload(profile: ProfileUserContext,
-                              catalog: Catalog,
-                              uploaded_count: Queue,
-                              exceptions: Queue,
-                              upload_done: threading.Event,
-                              target_data: MigrationData,
-                              target_storage_id: str,
-                              reuse_partitions
-                              ) -> None:
+def update_catalog_and_upload(
+    profile: ProfileUserContext,
+    catalog: Catalog,
+    uploaded_count: Queue,
+    exceptions: Queue,
+    upload_done: threading.Event,
+    target_data: MigrationData,
+    target_storage_id: str,
+    reuse_partitions,
+) -> None:
     try:
         if not reuse_partitions:
-            project_id = target_data.project.get('uuid')
-            table_id = target_data.table.get('uuid')
+            project_id = target_data.project.get("uuid")
+            table_id = target_data.table.get("uuid")
             catalog.update(project_id, table_id, target_storage_id)
 
         catalog.upload(profile, uploaded_count)
@@ -74,32 +68,33 @@ def update_catalog_and_upload(profile: ProfileUserContext,
 
 
 def bytes_to_human_readable(amount: int) -> str:
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
         if amount < 1024:
             return f"{amount:.2f} {unit}"
         amount /= 1024
     return f"{amount:.2f} PB"
 
 
-def confirm_action(prompt: str = 'Confirm this action?') -> bool:
+def confirm_action(prompt: str = "Confirm this action?") -> bool:
     while True:
-        logger.info(f'{prompt} (yes/no): [!i]')
+        logger.info(f"{prompt} (yes/no): [!i]")
         response = input().strip().lower()
-        if response in ['yes','y']:
+        if response in ["yes", "y"]:
             return True
-        elif response in ['no','n']:
+        elif response in ["no", "n"]:
             return False
         logger.info("Invalid input. Please enter 'yes' or 'no'.")
 
 
-def print_summary(source_hostname: str,
-                  source_table: str,
-                  target_hostname: str,
-                  target_table: str,
-                  rows: int,
-                  partitions: int,
-                  size: int
-                  ) -> None:
+def print_summary(
+    source_hostname: str,
+    source_table: str,
+    target_hostname: str,
+    target_table: str,
+    rows: int,
+    partitions: int,
+    size: int,
+) -> None:
     logger.info(f"{' MIGRATION SUMMARY ':=^50}")
     logger.info(f"- Source:")
     logger.info(f"    Hostname: {source_hostname}")
@@ -115,15 +110,16 @@ def print_summary(source_hostname: str,
     logger.info("")
 
 
-def monitor_progress(total_count: int,
-                     migrated_queue: Queue,
-                     exceptions_queue: Queue,
-                     event_done: threading.Event,
-                     unit: str = "B",
-                     unit_scale: bool = True,
-                     unit_divisor: int = 1024,
-                     desc: str = "Partitions"
-                     ):
+def monitor_progress(
+    total_count: int,
+    migrated_queue: Queue,
+    exceptions_queue: Queue,
+    event_done: threading.Event,
+    unit: str = "B",
+    unit_scale: bool = True,
+    unit_divisor: int = 1024,
+    desc: str = "Partitions",
+):
     total_bytes_processed = 0
     progress_bar = tqdm(
         total=total_count,
@@ -131,7 +127,7 @@ def monitor_progress(total_count: int,
         unit_scale=unit_scale,
         unit_divisor=unit_divisor,
         desc=desc,
-        bar_format="{desc} {bar:10} {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+        bar_format="{desc} {bar:10} {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
     )
 
     while total_bytes_processed < total_count:

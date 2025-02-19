@@ -1,12 +1,12 @@
-import sys
 import logging
+import sys
 
-logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # key to have logging outputs without '\n' new line.
-SPECIAL_CODE = '[!n]'
+SPECIAL_CODE = "[!n]"
 # key to use for input cases
-INPUT_SPECIAL_CODE = '[!i]'
+INPUT_SPECIAL_CODE = "[!i]"
 
 
 class InfoStreamHandler(logging.StreamHandler):
@@ -18,10 +18,10 @@ class InfoStreamHandler(logging.StreamHandler):
 
     def emit(self, record):
         if SPECIAL_CODE in record.msg or INPUT_SPECIAL_CODE in record.msg:
-            record.msg = record.msg.replace(SPECIAL_CODE, '').replace(INPUT_SPECIAL_CODE, '')
-            self.terminator = ''
+            record.msg = record.msg.replace(SPECIAL_CODE, "").replace(INPUT_SPECIAL_CODE, "")
+            self.terminator = ""
         else:
-            self.terminator = '\n'
+            self.terminator = "\n"
 
         return super().emit(record)
 
@@ -32,7 +32,7 @@ class DebugStreamHandler(logging.StreamHandler):
         self.last_message_no_newline = False
 
     def format(self, record):
-        formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
+        formatter = logging.Formatter("%(asctime)s :: %(levelname)s :: %(message)s")
         return formatter.format(record)
 
     def emit(self, record):
@@ -50,9 +50,9 @@ class DebugStreamHandler(logging.StreamHandler):
             else:
                 if self.last_message_no_newline:
                     self.last_message_no_newline = False
-                    msg = f'{record.getMessage()}\n'
+                    msg = f"{record.getMessage()}\n"
                 else:
-                    msg = f'{msg}\n'
+                    msg = f"{msg}\n"
 
             stream.write(f"{msg}")
             self.flush()

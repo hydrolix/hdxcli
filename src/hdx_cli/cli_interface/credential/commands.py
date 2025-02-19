@@ -1,33 +1,39 @@
 import json
+
 import click
 
-from ..common.misc_operations import settings as command_settings
-from ..common.rest_operations import (
-    delete as command_delete,
-    list_ as command_list,
-    show as command_show
-)
-from ..common.undecorated_click_commands import basic_create_from_dict_body
-from ...library_api.common.generic_resource import access_resource
-from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.generic_resource import access_resource
 from ...library_api.common.logging import get_logger
+from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from ..common.misc_operations import settings as command_settings
+from ..common.rest_operations import delete as command_delete
+from ..common.rest_operations import list_ as command_list
+from ..common.rest_operations import show as command_show
+from ..common.undecorated_click_commands import basic_create_from_dict_body
 
 logger = get_logger()
 
 
 @click.group(help="Credential-related operations")
-@click.option("--credential", "credential_name", metavar="CREDENTIAL_NAME", default=None,
-              help="Perform operation on the passed credential.")
+@click.option(
+    "--credential",
+    "credential_name",
+    metavar="CREDENTIAL_NAME",
+    default=None,
+    help="Perform operation on the passed credential.",
+)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def credential(ctx: click.Context, credential_name: str):
-    user_profile = ctx.parent.obj['usercontext']
+    user_profile = ctx.parent.obj["usercontext"]
     ProfileUserContext.update_context(user_profile, credentialname=credential_name)
     org_id = user_profile.org_id
-    ctx.obj = {'resource_path': f'/config/v1/orgs/{org_id}/credentials/',
-               'usercontext': user_profile}
+    ctx.obj = {
+        "resource_path": f"/config/v1/orgs/{org_id}/credentials/",
+        "usercontext": user_profile,
+    }
 
 
 @click.command(help="Create a new credential.")
@@ -38,16 +44,13 @@ def credential(ctx: click.Context, credential_name: str):
     "--details",
     required=False,
     default=None,
-    help="Credential details as a JSON string (e.g., '{\"key1\": \"value1\", \"key2\": \"value2\"}')."
+    help='Credential details as a JSON string (e.g., \'{"key1": "value1", "key2": "value2"}\').',
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create(ctx: click.Context,
-           credential_name: str,
-           credential_type: str,
-           description: str,
-           details: str
-           ):
+def create(
+    ctx: click.Context, credential_name: str, credential_type: str, description: str, details: str
+):
     """
     Create a new credential by providing all parameters in a single command
     or by providing them interactively.
@@ -103,15 +106,22 @@ def create(ctx: click.Context,
         "name": credential_name,
         "description": description,
         "type": credential_type,
-        "details": details
+        "details": details,
     }
     basic_create_from_dict_body(profile, resource_path, payload)
     logger.info(f"Created credential {credential_name}")
 
 
 @click.command(help="List credential types.")
-@click.option("--cloud", "-c", "cloud", metavar="CLOUD", required=False, default=None,
-              help="Filter the credential types by a specific cloud.")
+@click.option(
+    "--cloud",
+    "-c",
+    "cloud",
+    metavar="CLOUD",
+    required=False,
+    default=None,
+    help="Filter the credential types by a specific cloud.",
+)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def list_types(ctx: click.Context, cloud: str):
@@ -129,7 +139,9 @@ def list_types(ctx: click.Context, cloud: str):
         parameters = info_cred.get("fields", {})
         param_lines = [
             f"  - {name} ({'required' if details.get('required') else 'optional'})"
-            for name, details in sorted(parameters.items(), key=lambda x: not x[1].get("required", False))
+            for name, details in sorted(
+                parameters.items(), key=lambda x: not x[1].get("required", False)
+            )
         ]
 
         if param_lines:

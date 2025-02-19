@@ -7,4 +7,4 @@ class AuthInfo:
     token: str
     expires_at: datetime
     org_id: str
-    token_type: str = 'Bearer'
+    token_type: str = "Bearer"

@@ -1,43 +1,42 @@
 import io
 import json
-
 from urllib.parse import urlparse
 
-from .logs import log_message, LogType, log_migration_status
-from .resource_adapters import (
-    normalize_project,
-    normalize_transform,
-    normalize_table,
-    normalize_dictionary,
-    normalize_function
-)
-from .migration_rollback import (
-    MigrationRollbackManager,
-    DoNothingMigrationRollbackManager,
-    ResourceKind,
-    MigrateStatus
-)
-from ...common.undecorated_click_commands import basic_create_from_dict_body, basic_show
+from ....library_api.common import rest_operations as lro
 from ....library_api.common.auth_utils import get_profile
 from ....library_api.common.context import ProfileUserContext
-from ....library_api.common.exceptions import HttpException, HdxCliException
-from ....library_api.common import rest_operations as lro
+from ....library_api.common.exceptions import HdxCliException, HttpException
 from ....library_api.common.generic_resource import access_resource_detailed
 from ....library_api.common.logging import get_logger
+from ...common.undecorated_click_commands import basic_create_from_dict_body, basic_show
+from .logs import LogType, log_message, log_migration_status
+from .migration_rollback import (
+    DoNothingMigrationRollbackManager,
+    MigrateStatus,
+    MigrationRollbackManager,
+    ResourceKind,
+)
+from .resource_adapters import (
+    normalize_dictionary,
+    normalize_function,
+    normalize_project,
+    normalize_table,
+    normalize_transform,
+)
 
 logger = get_logger()
 
 
 def migrate_resource_config(
-        resource_type: str,
-        source_profile: ProfileUserContext,
-        target_profile_name: str,
-        target_cluster_hostname: str,
-        target_cluster_username: str,
-        target_cluster_password: str,
-        target_cluster_uri_scheme: str,
-        no_rollback: bool,
-        **kwargs
+    resource_type: str,
+    source_profile: ProfileUserContext,
+    target_profile_name: str,
+    target_cluster_hostname: str,
+    target_cluster_username: str,
+    target_cluster_password: str,
+    target_cluster_uri_scheme: str,
+    no_rollback: bool,
+    **kwargs,
 ):
     """
     Main method to migrate different types of resources.
@@ -70,7 +69,7 @@ def migrate_resource_config(
         "table": migrate_tables,
         "transform": migrate_transforms,
         "dictionary": migrate_dictionaries,
-        "function": migrate_functions
+        "function": migrate_functions,
     }
     migration_method = resource_migration_methods.get(resource_type)
 
@@ -83,7 +82,7 @@ def migrate_resource_config(
         target_cluster_username,
         target_cluster_password,
         target_cluster_uri_scheme,
-        source_profile.timeout
+        source_profile.timeout,
     )
 
     mrm = MigrationRollbackManager
@@ -95,19 +94,19 @@ def migrate_resource_config(
             source_profile=source_profile,
             target_profile=target_profile,
             rollback_manager=migration_rollback_manager,
-            **kwargs
+            **kwargs,
         )
 
 
 def migrate_projects(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
-        source_project: str,
-        target_project: str,
-        only: bool = False,
-        dicts: bool = False,
-        functs: bool = False
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
+    source_project: str,
+    target_project: str,
+    only: bool = False,
+    dicts: bool = False,
+    functs: bool = False,
 ):
     _, source_projects_url = access_resource_detailed(source_profile, [("projects", None)])
     _, target_projects_url = access_resource_detailed(target_profile, [("projects", None)])
@@ -120,47 +119,34 @@ def migrate_projects(
         source_projects_path,
         target_projects_path,
         source_project,
-        target_project
+        target_project,
     )
     log_migration_status("Project", project_name, status, rollback_manager, ResourceKind.PROJECT)
 
     if dicts:
         migrate_dictionaries(
-            source_profile,
-            target_profile,
-            rollback_manager,
-            source_project,
-            target_project
+            source_profile, target_profile, rollback_manager, source_project, target_project
         )
     if functs:
         migrate_functions(
-            source_profile,
-            target_profile,
-            rollback_manager,
-            source_project,
-            target_project
+            source_profile, target_profile, rollback_manager, source_project, target_project
         )
 
     if only:
         return
 
     migrate_tables(
-        source_profile,
-        target_profile,
-        rollback_manager,
-        source_project,
-        target_project,
-        only=only
+        source_profile, target_profile, rollback_manager, source_project, target_project, only=only
     )
 
 
 def migrate_project(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        source_projects_path: str,
-        target_projects_path: str,
-        source_project: str,
-        target_project: str
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    source_projects_path: str,
+    target_projects_path: str,
+    source_project: str,
+    target_project: str,
 ):
     """Migrates a single project."""
     log_message(LogType.INFO, f"Migrating project '{target_project}'...", indent=0)
@@ -182,15 +168,15 @@ def migrate_project(
 
 
 def migrate_tables(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
-        source_project: str,
-        target_project: str,
-        *,
-        source_table: str = None,
-        target_table: str = None,
-        only: bool = False
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
+    source_project: str,
+    target_project: str,
+    *,
+    source_table: str = None,
+    target_table: str = None,
+    only: bool = False,
 ):
     tables, source_tables_url = access_resource_detailed(
         source_profile, [("projects", source_project), ("tables", None)]
@@ -216,7 +202,7 @@ def migrate_tables(
             target_project,
             source_table,
             target_table,
-            only or summary
+            only or summary,
         )
         return
 
@@ -237,21 +223,21 @@ def migrate_tables(
             target_project,
             table_name,
             table_name,
-            only or summary
+            only or summary,
         )
 
 
 def _migrate_single_table_with_optionals(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
-        source_tables_path: str,
-        target_tables_path: str,
-        source_project: str,
-        target_project: str,
-        source_table: str,
-        target_table: str,
-        only: bool
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
+    source_tables_path: str,
+    target_tables_path: str,
+    source_project: str,
+    target_project: str,
+    source_table: str,
+    target_table: str,
+    only: bool,
 ):
     _, status = migrate_table(
         source_profile,
@@ -259,15 +245,10 @@ def _migrate_single_table_with_optionals(
         source_tables_path,
         target_tables_path,
         source_table,
-        target_table
+        target_table,
     )
     log_migration_status(
-        "Table",
-        target_table,
-        status,
-        rollback_manager,
-        ResourceKind.TABLE,
-        [target_project]
+        "Table", target_table, status, rollback_manager, ResourceKind.TABLE, [target_project]
     )
 
     if only:
@@ -280,17 +261,17 @@ def _migrate_single_table_with_optionals(
         source_project,
         target_project,
         source_table,
-        target_table
+        target_table,
     )
 
 
 def migrate_table(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        source_tables_path: str,
-        target_tables_path: str,
-        source_table: str,
-        target_table: str
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    source_tables_path: str,
+    target_tables_path: str,
+    source_table: str,
+    target_table: str,
 ):
     """Migrates a single table."""
     log_message(LogType.INFO, f"Migrating table '{target_table}'...", indent=0)
@@ -312,30 +293,24 @@ def migrate_table(
 
 
 def migrate_transforms(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
-        source_project: str,
-        target_project: str,
-        source_table: str,
-        target_table: str,
-        *,
-        source_transform: str = None,
-        target_transform: str = None
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
+    source_project: str,
+    target_project: str,
+    source_table: str,
+    target_table: str,
+    *,
+    source_transform: str = None,
+    target_transform: str = None,
 ):
     transforms, source_transforms_url = access_resource_detailed(
-        source_profile, [
-            ("projects", source_project),
-            ("tables", source_table),
-            ("transforms", None)
-        ]
+        source_profile,
+        [("projects", source_project), ("tables", source_table), ("transforms", None)],
     )
     _, target_transforms_url = access_resource_detailed(
-        target_profile, [
-            ("projects", target_project),
-            ("tables", target_table),
-            ("transforms", None)
-        ]
+        target_profile,
+        [("projects", target_project), ("tables", target_table), ("transforms", None)],
     )
     source_transforms_path = urlparse(source_transforms_url).path
     target_transforms_path = urlparse(target_transforms_url).path
@@ -347,7 +322,7 @@ def migrate_transforms(
             source_transforms_path,
             target_transforms_path,
             source_transform,
-            target_transform
+            target_transform,
         )
         log_migration_status(
             "Transform",
@@ -355,7 +330,7 @@ def migrate_transforms(
             status,
             rollback_manager,
             ResourceKind.TRANSFORM,
-            [target_project, target_table]
+            [target_project, target_table],
         )
         return
 
@@ -367,7 +342,7 @@ def migrate_transforms(
             source_transforms_path,
             target_transforms_path,
             transform_name,
-            transform_name
+            transform_name,
         )
         log_migration_status(
             "Transform",
@@ -375,17 +350,17 @@ def migrate_transforms(
             status,
             rollback_manager,
             ResourceKind.TRANSFORM,
-            [target_project, target_table]
+            [target_project, target_table],
         )
 
 
 def migrate_transform(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        source_transforms_path: str,
-        target_transforms_path: str,
-        source_transform: str,
-        target_transform: str
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    source_transforms_path: str,
+    target_transforms_path: str,
+    source_transform: str,
+    target_transform: str,
 ):
     """Migrates a single transform."""
     log_message(LogType.INFO, f"Migrating transform '{target_transform}'...", indent=0)
@@ -409,14 +384,14 @@ def migrate_transform(
 
 
 def migrate_dictionaries(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
-        source_project: str,
-        target_project: str,
-        *,
-        source_dictionary: str = None,
-        target_dictionary: str = None
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
+    source_project: str,
+    target_project: str,
+    *,
+    source_dictionary: str = None,
+    target_dictionary: str = None,
 ):
     dicts, source_dicts_url = access_resource_detailed(
         source_profile, [("projects", source_project), ("dictionaries", None)]
@@ -436,7 +411,7 @@ def migrate_dictionaries(
             source_project,
             target_project,
             source_dictionary,
-            target_dictionary
+            target_dictionary,
         )
         log_migration_status(
             "Dictionary",
@@ -444,7 +419,7 @@ def migrate_dictionaries(
             status,
             rollback_manager,
             ResourceKind.DICTIONARY,
-            [target_project]
+            [target_project],
         )
         return
 
@@ -458,7 +433,7 @@ def migrate_dictionaries(
             source_project,
             target_project,
             dictionary_name,
-            dictionary_name
+            dictionary_name,
         )
         log_migration_status(
             "Dictionary",
@@ -466,19 +441,19 @@ def migrate_dictionaries(
             status,
             rollback_manager,
             ResourceKind.DICTIONARY,
-            [target_project]
+            [target_project],
         )
 
 
 def migrate_dictionary(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        source_dicts_path: str,
-        target_dicts_path: str,
-        source_project: str,
-        target_project: str,
-        source_dict: str,
-        target_dict: str
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    source_dicts_path: str,
+    target_dicts_path: str,
+    source_project: str,
+    target_project: str,
+    source_dict: str,
+    target_dict: str,
 ):
     """Migrates a single dictionary."""
     log_message(LogType.INFO, f"Migrating dictionary '{target_dict}'...", indent=0)
@@ -495,17 +470,14 @@ def migrate_dictionary(
     )
     headers = {
         "Authorization": f"{source_profile.auth.token_type} {source_profile.auth.token}",
-        "Accept": "*/*"
+        "Accept": "*/*",
     }
     timeout = source_profile.timeout
     dict_file_contents = lro.get(query_endpoint, headers=headers, timeout=timeout, fmt="verbatim")
 
     try:
         _create_dictionary_file_for_project(
-            target_profile,
-            target_project,
-            d_file,
-            dict_file_contents
+            target_profile, target_project, d_file, dict_file_contents
         )
     except HttpException as exc:
         if exc.error_code != 400:
@@ -530,19 +502,13 @@ def migrate_dictionary(
 
 
 def _create_dictionary_file_for_project(
-        profile: ProfileUserContext,
-        project: str,
-        dict_file: str,
-        dict_file_contents: bytes
+    profile: ProfileUserContext, project: str, dict_file: str, dict_file_contents: bytes
 ):
     """Migrates a single dictionary file."""
     _, project_url = access_resource_detailed(profile, [("projects", project)])
 
-    headers = {
-        "Authorization": f"{profile.auth.token_type} {profile.auth.token}",
-        "Accept": "*/*"
-    }
-    file_url = f'{project_url}dictionaries/files/'
+    headers = {"Authorization": f"{profile.auth.token_type} {profile.auth.token}", "Accept": "*/*"}
+    file_url = f"{project_url}dictionaries/files/"
     timeout = profile.timeout
 
     lro.create_file(
@@ -550,19 +516,19 @@ def _create_dictionary_file_for_project(
         headers=headers,
         file_stream=io.BytesIO(dict_file_contents),
         remote_filename=dict_file,
-        timeout=timeout
+        timeout=timeout,
     )
 
 
 def migrate_functions(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
-        source_project: str,
-        target_project: str,
-        *,
-        source_function: str = None,
-        target_function: str = None
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    rollback_manager: MigrationRollbackManager | DoNothingMigrationRollbackManager,
+    source_project: str,
+    target_project: str,
+    *,
+    source_function: str = None,
+    target_function: str = None,
 ):
     functs, source_functs_url = access_resource_detailed(
         source_profile, [("projects", source_project), ("functions", None)]
@@ -580,7 +546,7 @@ def migrate_functions(
             source_functs_path,
             target_functs_path,
             source_function,
-            target_function
+            target_function,
         )
         log_migration_status(
             "Function",
@@ -588,7 +554,7 @@ def migrate_functions(
             status,
             rollback_manager,
             ResourceKind.FUNCTION,
-            [target_project]
+            [target_project],
         )
         return
 
@@ -600,7 +566,7 @@ def migrate_functions(
             source_functs_path,
             target_functs_path,
             funct_name,
-            funct_name
+            funct_name,
         )
         log_migration_status(
             "Function",
@@ -608,17 +574,17 @@ def migrate_functions(
             status,
             rollback_manager,
             ResourceKind.FUNCTION,
-            [target_project]
+            [target_project],
         )
 
 
 def migrate_function(
-        source_profile: ProfileUserContext,
-        target_profile: ProfileUserContext,
-        source_functs_path: str,
-        target_functs_path: str,
-        source_function: str,
-        target_function: str
+    source_profile: ProfileUserContext,
+    target_profile: ProfileUserContext,
+    source_functs_path: str,
+    target_functs_path: str,
+    source_function: str,
+    target_function: str,
 ):
     """Migrates a single function."""
     log_message(LogType.INFO, f"Migrating function '{target_function}'...", indent=0)

@@ -14,7 +14,7 @@ def heuristically_get_resource_kind(resource_path) -> Tuple[str, str]:
     plural = split_path[-2]
     if plural == "dictionaries":
         return "dictionaries", "dictionary"
-    if plural == 'kinesis':
-        return 'kinesis', 'kinesis'
-    singular = plural if not plural.endswith('s') else plural[0:-1]
+    if plural == "kinesis":
+        return "kinesis", "kinesis"
+    singular = plural if not plural.endswith("s") else plural[0:-1]
     return plural, singular

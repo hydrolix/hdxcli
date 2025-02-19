@@ -4,17 +4,18 @@ import random
 import string
 
 from hdx_cli.library_api.common.exceptions import (
-    RCloneRemoteException,
     RCloneRemoteCheckException,
-    RCloneRemoteCreationException
+    RCloneRemoteCreationException,
+    RCloneRemoteException,
 )
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.common.rest_operations import post_with_retries
 
 logger = get_logger()
 
+
 def generate_random_string(length=5):
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+    return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
 def _get_azure_config():
@@ -89,10 +90,7 @@ def get_check_remote_body(bucket_name: str, bucket_path: str, remote_name: str) 
     return {
         "fs": f"{remote_name}:",
         "remote": remote_dir,
-        "opt": {
-            "recurse": False,
-            "dirsOnly": True
-        }
+        "opt": {"recurse": False, "dirsOnly": True},
     }
 
 
@@ -132,7 +130,7 @@ class RCloneRemote:
             f"{base_url}/config/create",
             self.remote_config,
             user=self.rc_config.user,
-            password=self.rc_config.password
+            password=self.rc_config.password,
         )
 
         if not response or response.status_code != 200:
@@ -146,7 +144,7 @@ class RCloneRemote:
             f"{base_url}/operations/list",
             payload,
             user=self.rc_config.user,
-            password=self.rc_config.password
+            password=self.rc_config.password,
         )
 
         if not response or response.status_code != 200:
@@ -159,7 +157,7 @@ class RCloneRemote:
             f"{base_url}/config/delete",
             data,
             user=self.rc_config.user,
-            password=self.rc_config.password
+            password=self.rc_config.password,
         )
 
         if response and response.status_code != 200:

@@ -3,11 +3,10 @@ from enum import Enum
 from typing import List
 from urllib.parse import urlparse
 
-
-from ...common.undecorated_click_commands import basic_delete
-from ....library_api.common.logging import get_logger
-from ....library_api.common.generic_resource import access_resource_detailed
 from ....library_api.common.context import ProfileUserContext
+from ....library_api.common.generic_resource import access_resource_detailed
+from ....library_api.common.logging import get_logger
+from ...common.undecorated_click_commands import basic_delete
 
 logger = get_logger()
 
@@ -48,52 +47,55 @@ class MigrationRollbackManager:
     def _rollback_entry(self, entry: MigrationEntry):
         """Rollback entry. Does not check for migrate_status and does it unconditionally"""
         if entry.resource_kind == ResourceKind.PROJECT:
-            _, project_url = access_resource_detailed(self._profile,
-                                     [('projects', entry.name)])
-            split_path = urlparse(project_url).path.split('/')
-            resource_path = '/'.join(split_path[:-2])
+            _, project_url = access_resource_detailed(self._profile, [("projects", entry.name)])
+            split_path = urlparse(project_url).path.split("/")
+            resource_path = "/".join(split_path[:-2])
             if basic_delete(self._profile, resource_path, entry.name):
-                logger.info(f'Rolled back project {entry.name}')
+                logger.info(f"Rolled back project {entry.name}")
         elif entry.resource_kind == ResourceKind.FUNCTION:
-            _, function_url = access_resource_detailed(self._profile,
-                                                    [('projects', entry.parents[0]),
-                                                     ('functions', entry.name)])
-            split_path = urlparse(function_url).path.split('/')
-            resource_path = '/'.join(split_path[:-2])
+            _, function_url = access_resource_detailed(
+                self._profile, [("projects", entry.parents[0]), ("functions", entry.name)]
+            )
+            split_path = urlparse(function_url).path.split("/")
+            resource_path = "/".join(split_path[:-2])
             if basic_delete(self._profile, resource_path, entry.name):
-                logger.info(f'Rolled back function {entry.name}')
+                logger.info(f"Rolled back function {entry.name}")
 
         elif entry.resource_kind == ResourceKind.DICTIONARY:
-            _, dict_url = access_resource_detailed(self._profile,
-                                                    [('projects', entry.parents[0]),
-                                                     ('dictionaries', entry.name)])
-            split_path = urlparse(dict_url).path.split('/')
-            resource_path = '/'.join(split_path[:-2])
+            _, dict_url = access_resource_detailed(
+                self._profile, [("projects", entry.parents[0]), ("dictionaries", entry.name)]
+            )
+            split_path = urlparse(dict_url).path.split("/")
+            resource_path = "/".join(split_path[:-2])
             if basic_delete(self._profile, resource_path, entry.name):
-                logger.info(f'Rolled back dictionary {entry.name}')
+                logger.info(f"Rolled back dictionary {entry.name}")
         elif entry.resource_kind == ResourceKind.TABLE:
-            _, table_url = access_resource_detailed(self._profile,
-                                                    [('projects', entry.parents[0]),
-                                                     ('tables', entry.name)])
-            split_path = urlparse(table_url).path.split('/')
-            resource_path = '/'.join(split_path[:-2])
+            _, table_url = access_resource_detailed(
+                self._profile, [("projects", entry.parents[0]), ("tables", entry.name)]
+            )
+            split_path = urlparse(table_url).path.split("/")
+            resource_path = "/".join(split_path[:-2])
             if basic_delete(self._profile, resource_path, entry.name):
-                logger.info(f'Rolled back table {entry.name}')
+                logger.info(f"Rolled back table {entry.name}")
         elif entry.resource_kind == ResourceKind.TRANSFORM:
-            _, transform_url = access_resource_detailed(self._profile,
-                                                        [('projects', entry.parents[0]),
-                                                         ('tables', entry.parents[1]),
-                                                         ('transforms', entry.name)])
-            split_path = urlparse(transform_url).path.split('/')
-            resource_path = '/'.join(split_path[:-2])
+            _, transform_url = access_resource_detailed(
+                self._profile,
+                [
+                    ("projects", entry.parents[0]),
+                    ("tables", entry.parents[1]),
+                    ("transforms", entry.name),
+                ],
+            )
+            split_path = urlparse(transform_url).path.split("/")
+            resource_path = "/".join(split_path[:-2])
             if basic_delete(self._profile, resource_path, entry.name):
-                logger.info(f'Rolled back transform {entry.name}')
+                logger.info(f"Rolled back transform {entry.name}")
 
     def _rollback(self):
         current_entry = self.pop_entry()
         if not current_entry:
             return
-        logger.info('Rolling back migration changes...')
+        logger.info("Rolling back migration changes...")
         while current_entry:
             self._rollback_entry(current_entry)
             current_entry = self.pop_entry()
@@ -105,17 +107,19 @@ class MigrationRollbackManager:
 
         if not traceback:
             return
-        #logger.info('Rolling back migration changes...')
+        # logger.info('Rolling back migration changes...')
         done = False
         while not done:
             try:
                 self._rollback()
                 done = True
             except KeyboardInterrupt:
-                logger.info('A rollback was in progress, '
-                            'are you sure you want to abort without rolling back? [Y/n]: [!n]')
-                result = input('')
-                done = result.lower() == 'y'
+                logger.info(
+                    "A rollback was in progress, "
+                    "are you sure you want to abort without rolling back? [Y/n]: [!n]"
+                )
+                result = input("")
+                done = result.lower() == "y"
 
 
 class DoNothingMigrationRollbackManager:

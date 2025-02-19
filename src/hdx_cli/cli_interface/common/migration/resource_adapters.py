@@ -1,7 +1,7 @@
 import re
 
-from .logs import log_message, LogType, log_without_type
 from ....library_api.common.logging import get_logger
+from .logs import LogType, log_message, log_without_type
 
 logger = get_logger()
 
@@ -94,7 +94,7 @@ def _update_parent_in_summary_sql(table_name: str, summary_settings: dict) -> di
     log_message(
         LogType.PROMPT,
         "Please enter a new project and table in 'project.table' format "
-        "(leave blank to keep current)"
+        "(leave blank to keep current)",
     )
     attempts = 3
     while attempts > 0:
@@ -118,15 +118,11 @@ def _update_parent_in_summary_sql(table_name: str, summary_settings: dict) -> di
         log_without_type("Maximum attempts reached. Keeping current project.table")
         new_project, new_table = current_project, current_table
 
-    summary_settings["sql"] = sql.replace(
-        current_project, new_project
-    ).replace(
+    summary_settings["sql"] = sql.replace(current_project, new_project).replace(
         current_table, new_table
     )
     if summary_sql:
-        summary_settings["summary_sql"] = summary_sql.replace(
-            current_project, new_project
-        ).replace(
+        summary_settings["summary_sql"] = summary_sql.replace(current_project, new_project).replace(
             current_table, new_table
         )
 
@@ -140,25 +136,33 @@ def _extract_table_name_from_sql(sql):
     if not match:
         return None, None
 
-    table_name = match.group(1).replace('`', '').replace('"', '').replace("'", "")
+    table_name = match.group(1).replace("`", "").replace('"', "").replace("'", "")
     project, table = table_name.split(".")
     return project, table
 
 
-def _adapt_table_storage_map(table_name:str, storage_map: dict) -> dict | None:
+def _adapt_table_storage_map(table_name: str, storage_map: dict) -> dict | None:
     default_storage_id = storage_map.get("default_storage_id")
     column_name = storage_map.get("column_name", "-")
     column_value_mapping = storage_map.get("column_value_mapping", "-")
 
     log_message(LogType.WARNING, f"Storage settings found in the table '{table_name}'")
-    log_without_type([f"Default Storage ID: {default_storage_id}",
-                      f"Column Name: {column_name}",
-                      f"Column Value Mapping: {column_value_mapping}",
-                      ""])
+    log_without_type(
+        [
+            f"Default Storage ID: {default_storage_id}",
+            f"Column Name: {column_name}",
+            f"Column Value Mapping: {column_value_mapping}",
+            "",
+        ]
+    )
     log_message(LogType.PROMPT, f"How would you like to proceed?")
-    log_without_type(["1) Preserve all existing settings without any changes",
-                      "2) Specify a new default storage ID",
-                      "3) Remove the storage settings (use cluster default)"])
+    log_without_type(
+        [
+            "1) Preserve all existing settings without any changes",
+            "2) Specify a new default storage ID",
+            "3) Remove the storage settings (use cluster default)",
+        ]
+    )
 
     user_input = 4
     while user_input not in ["1", "2", "3"]:
@@ -171,7 +175,7 @@ def _adapt_table_storage_map(table_name:str, storage_map: dict) -> dict | None:
         new_default_storage_id = prompt_user_for_value(
             "default_storage_id",
             message="Please enter the new default storage ID",
-            default=default_storage_id
+            default=default_storage_id,
         )
         storage_map = {"default_storage_id": new_default_storage_id}
     elif user_input == "3":
@@ -188,9 +192,13 @@ def _adapt_table_merge_pools(table_name: str, pools: dict) -> dict | None:
     logger.info("")
 
     log_message(LogType.PROMPT, f"How would you like to proceed?")
-    log_without_type(["1) Preserve all existing settings without any changes",
-                      "2) Specify a new merge pools settings",
-                      "3) Remove the merge pools settings"])
+    log_without_type(
+        [
+            "1) Preserve all existing settings without any changes",
+            "2) Specify a new merge pools settings",
+            "3) Remove the merge pools settings",
+        ]
+    )
     user_input = 4
     while user_input not in ["1", "2", "3"]:
         log_without_type("Please enter your choice (1/2/3): [!i]")
@@ -212,15 +220,19 @@ def _adapt_table_merge_pools(table_name: str, pools: dict) -> dict | None:
     return updated_pools
 
 
-def _adapt_table_autoingest(table_name:str, autoingest: dict) -> dict | None:
+def _adapt_table_autoingest(table_name: str, autoingest: dict) -> dict | None:
     log_message(LogType.WARNING, f"Autoingest settings found in the table '{table_name}'")
     for key, value in autoingest.items():
         log_without_type(f"{key}: {value}")
 
     log_message(LogType.PROMPT, f"How would you like to proceed?")
-    log_without_type(["1) Preserve all existing settings without any changes",
-                      "2) Specify a new autoingest settings",
-                      "3) Remove the autoingest settings"])
+    log_without_type(
+        [
+            "1) Preserve all existing settings without any changes",
+            "2) Specify a new autoingest settings",
+            "3) Remove the autoingest settings",
+        ]
+    )
 
     user_input = 4
     while user_input not in ["1", "2", "3"]:
@@ -270,10 +282,7 @@ def normalize_dictionary(dictionary: dict) -> dict:
 
 def get_user_value_input(field_name: str, field_type: str):
     while True:
-        user_input = prompt_user_for_value(
-            field_name,
-            message=f"* {field_name} ({field_type})"
-        )
+        user_input = prompt_user_for_value(field_name, message=f"* {field_name} ({field_type})")
 
         if not user_input:
             log_without_type(f"Invalid value. Please, try again")
@@ -287,9 +296,9 @@ def get_user_value_input(field_name: str, field_type: str):
         elif "list" in field_type:
             return [item.strip() for item in user_input.split(",") if item.strip()]
         elif "boolean" in field_type:
-            if user_input.lower() in ('1', 'true', 't', 'yes', 'y'):
+            if user_input.lower() in ("1", "true", "t", "yes", "y"):
                 return True
-            elif user_input.lower() in ('0', 'false', 'f', 'no', 'n'):
+            elif user_input.lower() in ("0", "false", "f", "no", "n"):
                 return False
             else:
                 log_without_type("Invalid value. Please enter 'true' or 'false'")
