@@ -107,7 +107,6 @@ class MigrationRollbackManager:
 
         if not traceback:
             return
-        # logger.info('Rolling back migration changes...')
         done = False
         while not done:
             try:

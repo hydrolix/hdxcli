@@ -82,7 +82,8 @@ def migrate_partitions_threaded(
         if stop_migration.is_set():
             return
 
-        # If the migration process has failed more than 10% (MAX_FAILURE_RATIO) of the total items, stop the migration process
+        # If the migration process has failed more than 10% (MAX_FAILURE_RATIO) of the total items,
+        # stop the migration process
         failed_count_ = failed_items.qsize()
         if failed_count_ > max_failures:
             stop_migration.set()

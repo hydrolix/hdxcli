@@ -85,16 +85,15 @@ class ConflictReporter:
         return column_reference
 
     @staticmethod
-    def get_view_datatype(type: str, resolution: str = None) -> str:
+    def get_view_datatype(type_: str, resolution: str = None) -> str:
         """Normalize type on transform column to match view types"""
-        if type in ("bool", "boolean"):
+        if type_ in ("bool", "boolean"):
             return "uint8"
-        if type in ("datetime", "epoch"):
+        if type_ in ("datetime", "epoch"):
             if resolution == "ms":
                 return "datetime64"
-            else:
-                return "datetime"
-        return type
+            return "datetime"
+        return type_
 
     def _check_transform_column(self, transform_column: dict) -> list[str]:
         """Check a single column for all problems"""

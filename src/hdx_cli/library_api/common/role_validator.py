@@ -81,7 +81,7 @@ def get_permissions_by_scope_type(profile, resource_path, scope_type=None) -> li
         if scope_type and item.get("scope_type") == scope_type:
             return item.get("permissions")
 
-        elif not scope_type:
+        if not scope_type:
             response += item.get("permissions")
 
     # Represent all possible permissions without duplication.
@@ -144,7 +144,7 @@ def modify_role_data_from_standard_input(profile, resource_path, role: Role) -> 
         logger.info("Please select an option: [!n]")
         selected_option = input("").strip()
 
-        if selected_option not in function_mapping.keys():
+        if selected_option not in function_mapping:
             logger.info("Invalid option, please try again")
             selected_option = None
 

@@ -75,7 +75,7 @@ def ingest(ctx: click.Context, stream_data_file: str):
             ][0]
     except IndexError as exc:
         raise ResourceNotFoundException(
-            "No default transform found to apply ingest command and " "no --transform passed"
+            "No default transform found to apply ingest command and no --transform passed"
         ) from exc
 
     with open(stream_data_file, "rb") as data_file:

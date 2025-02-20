@@ -163,8 +163,8 @@ def migrate_project(
 
         logger.debug(f"Project already exists: {exc}")
         return target_project, MigrateStatus.SKIPPED
-    else:
-        return target_project, MigrateStatus.CREATED
+
+    return target_project, MigrateStatus.CREATED
 
 
 def migrate_tables(
@@ -288,8 +288,8 @@ def migrate_table(
 
         logger.debug(f"Table already exists: {exc}")
         return target_table, MigrateStatus.SKIPPED
-    else:
-        return target_table, MigrateStatus.CREATED
+
+    return target_table, MigrateStatus.CREATED
 
 
 def migrate_transforms(
@@ -379,8 +379,8 @@ def migrate_transform(
 
         logger.debug(f"Transform already exists: {exc}")
         return target_transform, MigrateStatus.SKIPPED
-    else:
-        return target_transform, MigrateStatus.CREATED
+
+    return target_transform, MigrateStatus.CREATED
 
 
 def migrate_dictionaries(
@@ -425,7 +425,7 @@ def migrate_dictionaries(
 
     for dictionary in dicts:
         dictionary_name = dictionary.get("name")
-        dict_name, status = migrate_dictionary(
+        _, status = migrate_dictionary(
             source_profile,
             target_profile,
             source_dicts_path,
@@ -484,21 +484,20 @@ def migrate_dictionary(
             logger.debug(f"Error migrating dictionary file for project: {exc}")
             raise
         logger.debug(f"Dictionary file {d_file} already exists ({exc}). Skipping.")
-    finally:
-        try:
-            dictionary["name"] = target_dict
-            dictionary = normalize_dictionary(dictionary)
 
-            basic_create_from_dict_body(target_profile, target_dicts_path, dictionary)
-        except HttpException as exc:
-            if exc.error_code != 400 or "already exists" not in str(exc.message):
-                logger.debug(f"Error migrating dictionary: {exc}")
-                raise exc
+    try:
+        dictionary["name"] = target_dict
+        dictionary = normalize_dictionary(dictionary)
+        basic_create_from_dict_body(target_profile, target_dicts_path, dictionary)
+    except HttpException as exc:
+        if exc.error_code != 400 or "already exists" not in str(exc.message):
+            logger.debug(f"Error migrating dictionary: {exc}")
+            raise exc
 
-            logger.debug(f"Dictionary already exists: {exc}")
-            return target_dict, MigrateStatus.SKIPPED
-        else:
-            return target_dict, MigrateStatus.CREATED
+        logger.debug(f"Dictionary already exists: {exc}")
+        return target_dict, MigrateStatus.SKIPPED
+
+    return target_dict, MigrateStatus.CREATED
 
 
 def _create_dictionary_file_for_project(
@@ -601,5 +600,5 @@ def migrate_function(
 
         logger.debug(f"Function already exists: {exc}")
         return target_function, MigrateStatus.SKIPPED
-    else:
-        return target_function, MigrateStatus.CREATED
+
+    return target_function, MigrateStatus.CREATED

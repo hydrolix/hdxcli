@@ -1,11 +1,8 @@
 import json
 from enum import Enum
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Tuple, Union
 
-from ....library_api.common.interactive_helpers import (
-    choose_from_elements_interactively,
-    choose_interactively,
-)
+from ....library_api.common.interactive_helpers import choose_from_elements_interactively
 from ...common.exceptions import NotSupportedException
 from ...common.logging import get_logger
 from ..common_intermediate_representation import ColumnDefinition, DdlCreateTableInfo

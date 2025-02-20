@@ -35,7 +35,7 @@ def _get_gcp_config(remote):
     if not os.path.isfile(json_path):
         raise ValueError("Invalid path for Google Service Account JSON file.")
 
-    with open(json_path, "r") as file:
+    with open(json_path, "r", encoding="utf-8") as file:
         google_service_account = json.load(file)
     credentials_string = json.dumps(google_service_account, separators=(",", ":"))
 
@@ -97,16 +97,13 @@ def get_check_remote_body(bucket_name: str, bucket_path: str, remote_name: str) 
 def get_remote_config(remote):
     if remote.cloud == "azure":
         return _get_azure_config()
-    elif remote.cloud == "gcp":
+    if remote.cloud == "gcp":
         return _get_gcp_config(remote)
-    elif remote.cloud in ["aws", "linode"]:
+    if remote.cloud in ["aws", "linode"]:
         if remote.endpoint or remote.cloud == "linode":
             return _get_linode_config(remote)
         return _get_aws_config(remote)
-    else:
-        raise ValueError(
-            "Unsupported cloud provider. Supported providers: azure, gcp, aws, linode."
-        )
+    raise ValueError("Unsupported cloud provider. Supported providers: azure, gcp, aws, linode.")
 
 
 class RCloneRemote:

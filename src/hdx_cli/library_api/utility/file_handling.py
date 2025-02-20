@@ -7,7 +7,7 @@ def load_json_settings_file(ctx, param, value):
     if value is None:
         return None
     try:
-        with open(value, "r") as json_file:
+        with open(value, "r", encoding="utf-8") as json_file:
             return json.load(json_file)
     except FileNotFoundError as e:
         raise click.BadParameter(f"File '{value}' not found.") from e
@@ -19,7 +19,7 @@ def load_plain_file(ctx, param, value):
     if value is None:
         return None
     try:
-        return open(value, "r").read()
+        return open(value, "r", encoding="utf-8").read()
     except FileNotFoundError as e:
         raise click.BadParameter(f"File '{value}' not found.") from e
     except IOError as e:

@@ -72,10 +72,10 @@ def get_profile_data_from_standard_input(
         assert input_http_scheme
     except KeyboardInterrupt:
         return None
-    else:
-        return ProfileWizardInfo(
-            hostname=input_hostname, username=input_username, scheme=input_http_scheme
-        )
+
+    return ProfileWizardInfo(
+        hostname=input_hostname, username=input_username, scheme=input_http_scheme
+    )
 
 
 def save_profile(
@@ -85,8 +85,11 @@ def save_profile(
     *,
     profile_config_file: Path = PROFILE_CONFIG_FILE,
     scheme="https",
-    initial_profile={},
+    initial_profile=None,
 ):
+    if initial_profile is None:
+        initial_profile = {}
+
     profile_to_save = ProfileUserContext(
         username=username,
         hostname=hostname,

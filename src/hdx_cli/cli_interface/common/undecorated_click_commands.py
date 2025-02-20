@@ -8,6 +8,7 @@ from ...library_api.common.exceptions import (
     ActionNotAvailableException,
     HdxCliException,
     LogicException,
+    ResourceNotFoundException,
     TransformNotFoundException,
 )
 from ...library_api.common.logging import get_logger
@@ -83,7 +84,7 @@ def basic_create_with_body_from_string(
         headers = {
             "Authorization": f"{token.token_type} {token.token}",
             # This is basically hardcoding. Could be better
-            "Content-Type": f"application/CSV",
+            "Content-Type": "application/CSV",
             "Accept": "*/*",
         }
         body = body_from_string
@@ -368,18 +369,20 @@ def basic_settings(profile, resource_path, key, value, *, params=None):
         except KeyError:
             logger.info(f"Key '{key}' not found in {resource['name']}.")
     else:
-        this_resource_url = f'{settings_url}{resource["uuid"]}'
+        this_resource_url = f"{settings_url}{resource['uuid']}"
         try:
             resource = _settings_update(resource, key, value)
             rest_ops.update_with_put(
                 this_resource_url, headers=headers, timeout=timeout, body=resource, params=params
             )
-        except:
+        except Exception as exc:
+            logger.debug(f"Error updating resource settings using PUT: {exc}")
+            logger.debug("Trying to update using PATCH")
             patch_data = _create_dict_from_dotted_key_and_value(key, value)
             rest_ops.update_with_patch(
                 this_resource_url, headers=headers, timeout=timeout, body=patch_data, params=params
             )
-        logger.info(f'Updated {resource["name"]} {key}')
+        logger.info(f"Updated {resource['name']} {key}")
 
 
 def basic_delete(profile, resource_path, resource_name: str, *, params=None, filter_field="name"):

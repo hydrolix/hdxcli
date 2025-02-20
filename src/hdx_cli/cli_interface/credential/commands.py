@@ -73,10 +73,10 @@ def create(
     if details:
         try:
             details = json.loads(details)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as exc:
             raise click.BadParameter(
                 "Invalid format for --details. It should be a valid JSON string."
-            )
+            ) from exc
     else:
         details = {}
 

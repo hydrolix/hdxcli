@@ -7,9 +7,7 @@ from hdx_cli.cli_interface.dictionary import commands as dictionary_
 from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.integration import commands as integration_
 from hdx_cli.cli_interface.job import commands as job_
-
-# from hdx_cli.cli_interface.migrate import commands as migrate_
-from hdx_cli.cli_interface.migrate import commands_v2 as migrate_
+from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.pool import commands as pool_
 from hdx_cli.cli_interface.profile import commands as profile_
 from hdx_cli.cli_interface.project import commands as project_
@@ -81,8 +79,8 @@ def configure_logger(debug=False):
     hidden=True,
     is_flag=True,
     default=False,
-    help=f"Enable debug mode, which displays additional information and "
-    f"debug messages for troubleshooting purposes.",
+    help="Enable debug mode, which displays additional information and "
+    "debug messages for troubleshooting purposes.",
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -92,7 +90,7 @@ def hdx_cli(ctx, profile, password, profile_config_file, uri_scheme, timeout, de
     Command-line entry point for hdx cli interface
     """
     configure_logger(debug)
-    if ctx.invoked_subcommand == "version" or ctx.invoked_subcommand == "init":
+    if ctx.invoked_subcommand in ("version", "init"):
         return
 
     profile_config_file = profile_config_file if profile_config_file else PROFILE_CONFIG_FILE

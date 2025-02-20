@@ -49,7 +49,7 @@ def create_remote(
         remotes, bucket_name, bucket_path, cloud, region
     )
     if new_remote and reused_remote:
-        logger.info(f"Access granted using a previous connection")
+        logger.info("Access granted using a previous connection")
         logger.info(f"for bucket name: {reused_remote.bucket_name}{reused_remote.bucket_path}")
         logger.info("Reusing this connection may improve transfer speed.")
         logger.info("If you choose not to reuse it, credentials will be requested.")

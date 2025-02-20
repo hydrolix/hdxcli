@@ -132,8 +132,6 @@ class MigrationException(HdxCliException):
     Base exception class for Migration errors.
     """
 
-    pass
-
 
 class MigrationFailureException(MigrationException):
     def __init__(self, message):

@@ -83,7 +83,7 @@ def _set(profile, resource_path, query_option_name=None, query_option_value=None
         return
 
     result = rest_ops.list(url, headers=headers, timeout=timeout)
-    if not result.get("settings") or not ("default_query_options" in result.get("settings")):
+    if not result.get("settings") or "default_query_options" not in result.get("settings"):
         raise HdxCliException("An error occurred while trying to get the query options.")
 
     if query_option_name:
@@ -93,15 +93,15 @@ def _set(profile, resource_path, query_option_name=None, query_option_value=None
         result["settings"]["default_query_options"][query_option_name] = query_option_value
     else:
         try:
-            with open(from_file, "r") as file:
+            with open(from_file, "r", encoding="utf-8") as file:
                 query_options_from_file = json.load(file)
-        except FileNotFoundError:
-            raise HdxCliException("The specified file does not exist.")
-        except json.JSONDecodeError:
-            raise HdxCliException("The file does not contain valid JSON.")
+        except FileNotFoundError as exc:
+            raise HdxCliException("The specified file does not exist.") from exc
+        except json.JSONDecodeError as exc:
+            raise HdxCliException("The file does not contain valid JSON.") from exc
 
         if not all(key in available_options for key in query_options_from_file.keys()):
-            raise QueryOptionNotFound(f"There are invalid query options in the file.")
+            raise QueryOptionNotFound("There are invalid query options in the file.")
 
         result["settings"]["default_query_options"].update(query_options_from_file)
 
@@ -123,7 +123,7 @@ def _unset(profile, resource_path, query_option_name=None):
 
     result = rest_ops.list(url, headers=headers, timeout=timeout)
 
-    if not result.get("settings") or not ("default_query_options" in result.get("settings")):
+    if not result.get("settings") or "default_query_options" not in result.get("settings"):
         raise HdxCliException("An error occurred while trying to get the query options.")
 
     data = result["settings"]
