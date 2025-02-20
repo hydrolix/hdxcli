@@ -81,7 +81,7 @@ def confirm_action(prompt: str = "Confirm this action?") -> bool:
         response = input().strip().lower()
         if response in ["yes", "y"]:
             return True
-        elif response in ["no", "n"]:
+        if response in ["no", "n"]:
             return False
         logger.info("Invalid input. Please enter 'yes' or 'no'.")
 
@@ -96,13 +96,13 @@ def print_summary(
     size: int,
 ) -> None:
     logger.info(f"{' MIGRATION SUMMARY ':=^50}")
-    logger.info(f"- Source:")
+    logger.info("- Source:")
     logger.info(f"    Hostname: {source_hostname}")
     logger.info(f"    Table: {source_table}")
-    logger.info(f"- Target:")
+    logger.info("- Target:")
     logger.info(f"    Hostname: {target_hostname}")
     logger.info(f"    Table: {target_table}")
-    logger.info(f"- Data:")
+    logger.info("- Data:")
     logger.info(f"    Rows: {rows}")
     logger.info(f"    Partitions: {partitions}")
     logger.info(f"    Size: {bytes_to_human_readable(size)}")
@@ -141,12 +141,10 @@ def monitor_progress(
             progress_bar.set_description(desc="Error, finishing")
             event_done.wait()
             break
-            # progress_bar.close()
-            # return
     progress_bar.close()
 
 
 def cancel_migration():
     logger.info("")
-    logger.info(f'{" Migration Cancelled ":=^50}')
+    logger.info(f"{' Migration Cancelled ':=^50}")
     sys.exit(0)

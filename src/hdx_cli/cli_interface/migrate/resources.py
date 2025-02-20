@@ -344,7 +344,7 @@ def update_equivalent_multi_storage_settings(
 
     if mapping := storage_map.get("column_value_mapping"):
         new_mapping = {}
-        for storage, values in mapping.items():
+        for _, values in mapping.items():
             if not (new_storage := storage_equivalences.get(default_storage_id)):
                 raise HdxCliException(
                     f"Storage ID '{default_storage_id}' not found in the target storages."
@@ -365,6 +365,7 @@ def interactive_set_default_storage(table_body: dict, target_storages: list[dict
     logger.info("*")
 
     for attempt in range(3):
+        remaining_attempts = 2 - attempt
         logger.info(f"* Default storage UUID ({default_storage_id}): [!i]")
         user_input = input().strip().lower()
 
@@ -382,7 +383,9 @@ def interactive_set_default_storage(table_body: dict, target_storages: list[dict
                 if confirm_action(prompt="* Set this as the default storage for the table?"):
                     break
         else:
-            logger.info("* Invalid storage UUID. Please try again.")
+            logger.info(
+                f"* Invalid storage UUID. Please try again. Attempts left: {remaining_attempts}"
+            )
     else:
         raise StorageNotFoundError(
             "Attempt limit reached. Storage UUID not found in the target cluster."

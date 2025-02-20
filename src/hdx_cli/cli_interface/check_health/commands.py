@@ -80,16 +80,15 @@ class ConflictReporter:
         return column_reference
 
     @staticmethod
-    def get_view_datatype(type: str, resolution: str = None) -> str:
+    def get_view_datatype(type_: str, resolution: str = None) -> str:
         """Normalize type on transform column to match view types"""
-        if type in ("bool", "boolean"):
+        if type_ in ("bool", "boolean"):
             return "uint8"
-        if type in ("datetime", "epoch"):
+        if type_ in ("datetime", "epoch"):
             if resolution == "ms":
                 return "datetime64"
-            else:
-                return "datetime"
-        return type
+            return "datetime"
+        return type_
 
     def _check_transform_column(self, transform_column: dict) -> list[str]:
         """Check a single column for all problems"""
@@ -228,11 +227,11 @@ def _check_health(profile: ProfileUserContext, target_project_name: str, target_
             if not auto_view or not transforms:
                 logger.info(f"# {project_name}.{table_name}")
                 if transforms:
-                    logger.info(f"- [ERROR] Table has transforms, but no auto-view")
+                    logger.info("- [ERROR] Table has transforms, but no auto-view")
                 elif auto_view:
-                    logger.info(f"- [ERROR] Table has auto-view, but no transforms")
+                    logger.info("- [ERROR] Table has auto-view, but no transforms")
                 else:
-                    logger.info(f"- [WARN] Empty table, no transforms or auto-view")
+                    logger.info("- [WARN] Empty table, no transforms or auto-view")
                 logger.info("")
                 continue
 

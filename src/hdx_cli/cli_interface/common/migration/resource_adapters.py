@@ -155,7 +155,7 @@ def _adapt_table_storage_map(table_name: str, storage_map: dict) -> dict | None:
             "",
         ]
     )
-    log_message(LogType.PROMPT, f"How would you like to proceed?")
+    log_message(LogType.PROMPT, "How would you like to proceed?")
     log_without_type(
         [
             "1) Preserve all existing settings without any changes",
@@ -191,7 +191,7 @@ def _adapt_table_merge_pools(table_name: str, pools: dict) -> dict | None:
         log_without_type(f"{key}: {value}")
     logger.info("")
 
-    log_message(LogType.PROMPT, f"How would you like to proceed?")
+    log_message(LogType.PROMPT, "How would you like to proceed?")
     log_without_type(
         [
             "1) Preserve all existing settings without any changes",
@@ -225,7 +225,7 @@ def _adapt_table_autoingest(table_name: str, autoingest: dict) -> dict | None:
     for key, value in autoingest.items():
         log_without_type(f"{key}: {value}")
 
-    log_message(LogType.PROMPT, f"How would you like to proceed?")
+    log_message(LogType.PROMPT, "How would you like to proceed?")
     log_without_type(
         [
             "1) Preserve all existing settings without any changes",
@@ -285,27 +285,26 @@ def get_user_value_input(field_name: str, field_type: str):
         user_input = prompt_user_for_value(field_name, message=f"* {field_name} ({field_type})")
 
         if not user_input:
-            log_without_type(f"Invalid value. Please, try again")
+            log_without_type("Invalid value. Please, try again")
             continue
 
         if "integer" in field_type:
             try:
                 return int(user_input)
-            except ValueError or TypeError:
+            except (ValueError, TypeError):
                 log_without_type("Invalid integer. Please enter a valid number")
         elif "list" in field_type:
             return [item.strip() for item in user_input.split(",") if item.strip()]
         elif "boolean" in field_type:
             if user_input.lower() in ("1", "true", "t", "yes", "y"):
                 return True
-            elif user_input.lower() in ("0", "false", "f", "no", "n"):
+            if user_input.lower() in ("0", "false", "f", "no", "n"):
                 return False
-            else:
-                log_without_type("Invalid value. Please enter 'true' or 'false'")
+            log_without_type("Invalid value. Please enter 'true' or 'false'")
         elif "decimal" in field_type:
             try:
                 return float(user_input)
-            except ValueError or TypeError:
+            except (ValueError, TypeError):
                 log_without_type("Invalid value. Please enter a valid decimal number")
         else:
             return user_input

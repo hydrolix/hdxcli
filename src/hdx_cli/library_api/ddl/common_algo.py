@@ -1,10 +1,7 @@
 import json
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from ...library_api.common.interactive_helpers import (
-    choose_from_elements_interactively,
-    choose_interactively,
-)
+from ...library_api.common.interactive_helpers import choose_interactively
 from ..common.logging import get_logger
 from .common_intermediate_representation import (
     ColumnDefinition,
@@ -12,11 +9,11 @@ from .common_intermediate_representation import (
     DdlTypeToHdxTypeMappingFunc,
     NoDdlMappingFoundError,
 )
+from .exceptions import IngestIndexError, NoPrimaryKeyFoundException
 from .interfaces import ComposedTypeParser, PostProcessingHook, SourceToTableInfoProcessor
 
 logger = get_logger()
 
-from .exceptions import IngestIndexError, NoPrimaryKeyFoundException
 
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
@@ -54,8 +51,8 @@ def ddl_datatype_to_hdx_datatype(data_mapping_file, ddl_name: str) -> DdlTypeToH
             for d in dt:
                 if d.endswith("_optimal"):
                     return d.removesuffix("_optimal")
-            else:
-                raise RuntimeError(f"No optimal data type mapping found for {ddl_datatype}")
+            raise RuntimeError(f"No optimal data type mapping found for {ddl_datatype}")
+
         if dt is not None:
             return dt
         try:
@@ -152,7 +149,6 @@ def _select_potential_primary_key_candidates_maybe_interactive(
             default=cti.default_primary_key,
             valid_choices=sorted(cti.candidate_primary_keys),
         )
-        return result
     elif cti.default_primary_key and cti.candidate_primary_keys == 1:
         if cti.default_primary_key != next(iter(cti.candidate_primary_keys)):
             return cti.default_primary_key

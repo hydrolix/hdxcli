@@ -26,8 +26,7 @@ def http_error_pretty_format(error):
     error_message = _find_error_messages(error_data)
     if error_message:
         return f"{error_message}"
-    else:
-        return f"{status_code} {error_data}"
+    return f"{status_code} {error_data}"
 
 
 def _find_error_messages(data, error_messages=None):

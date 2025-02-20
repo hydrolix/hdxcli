@@ -37,8 +37,8 @@ def any_source_impl(ctx: click.Context, source_name: str):
         sources_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/sources/"
     except IndexError as idx_err:
         raise LogicException("Cannot find resource.") from idx_err
-    else:
-        ctx.obj = {"resource_path": f"{sources_path}{source_name}/", "usercontext": user_profile}
+
+    ctx.obj = {"resource_path": f"{sources_path}{source_name}/", "usercontext": user_profile}
 
 
 @click.command(

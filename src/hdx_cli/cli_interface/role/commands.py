@@ -70,8 +70,8 @@ def validate_uuid(ctx, param, value):
     try:
         uuid_obj = uuid.UUID(value, version=4)
         return str(uuid_obj)
-    except ValueError:
-        raise click.BadParameter(f"'{value}' is not a valid UUID.")
+    except ValueError as exc:
+        raise click.BadParameter(f"'{value}' is not a valid UUID.") from exc
 
 
 @click.command(

@@ -95,7 +95,8 @@ def _update_parent_in_summary_sql(summary_settings: dict) -> dict:
     attempts = 3
     while attempts > 0:
         logger.info(
-            "*  Enter new project and table in 'project.table' format (leave blank to keep current): [!i]"
+            "*  Enter new project and table in 'project.table' format "
+            "(leave blank to keep current): [!i]"
         )
         new_project_table = input().strip()
 
@@ -207,27 +208,26 @@ def get_user_value_input(field_name: str, field_type: str):
         user_input = prompt_user_for_value(field_name, message=f"*  {field_name} ({field_type})")
 
         if not user_input:
-            logger.info(f"*  Invalid value. Please, try again.")
+            logger.info("*  Invalid value. Please, try again.")
             continue
 
         if "integer" in field_type:
             try:
                 return int(user_input)
-            except ValueError or TypeError:
+            except (ValueError, TypeError):
                 logger.info("*  Invalid integer. Please enter a valid number.")
         elif "list" in field_type:
             return [item.strip() for item in user_input.split(",") if item.strip()]
         elif "boolean" in field_type:
             if user_input.lower() in ("1", "true", "t", "yes", "y"):
                 return True
-            elif user_input.lower() in ("0", "false", "f", "no", "n"):
+            if user_input.lower() in ("0", "false", "f", "no", "n"):
                 return False
-            else:
-                logger.info("*  Invalid value. Please enter 'true' or 'false'.")
+            logger.info("*  Invalid value. Please enter 'true' or 'false'.")
         elif "decimal" in field_type:
             try:
                 return float(user_input)
-            except ValueError or TypeError:
+            except (ValueError, TypeError):
                 logger.info("*  Invalid value. Please enter a valid decimal number.")
         else:
             return user_input
@@ -239,11 +239,13 @@ def _adapt_resource_to_api_structure(
     def is_empty(value):
         return value in (None, {}, [], "")
 
-    adapted_resource_settings = {}
-    for field_name, field_props in resource_structure.items():
-        if field_props.get("read_only", False):
-            continue
+    # Filter out read-only fields
+    filtered_structure = {
+        k: v for k, v in resource_structure.items() if not v.get("read_only", False)
+    }
 
+    adapted_resource_settings = {}
+    for field_name, field_props in filtered_structure.items():
         is_required = field_props.get("required", False)
         field_type = field_props.get("type", "")
         resource_settings_value = resource_settings.get(field_name) if resource_settings else None
@@ -279,7 +281,7 @@ def _adapt_resource_to_api_structure(
                 if first_time_input:
                     logger.info("In progress")
                     logger.info(f"{' Required Fields ':*^40}")
-                    logger.info(f"* The following fields are required to proceed:")
+                    logger.info("* The following fields are required to proceed:")
                     first_time_input = False
 
                 new_value = get_user_value_input(current_path, field_type)

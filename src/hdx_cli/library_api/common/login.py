@@ -24,23 +24,22 @@ def _do_login(username, hostname, password, *, use_ssl=True):
         raise LogicException(
             f"Connection error: could not stablish connection with host {hostname} (using {scheme})."
         ) from exc
-    else:
-        if result.status_code != 200:
-            raise LoginException(
-                f"Error {result.status_code}. "
-                f'Message: {json.loads(str(result.content, encoding="utf-8"))["detail"]}.'
-            )
-        content = json.loads(result.content)
-        token_expiration_time = datetime.now() + timedelta(
-            seconds=content["auth_token"]["expires_in"]
-            - (content["auth_token"]["expires_in"] * 0.05)
+
+    if result.status_code != 200:
+        raise LoginException(
+            f"Error {result.status_code}. "
+            f'Message: {json.loads(str(result.content, encoding="utf-8"))["detail"]}.'
         )
-        return AuthInfo(
-            token=content["auth_token"]["access_token"],
-            expires_at=token_expiration_time,
-            token_type=content["auth_token"]["token_type"],
-            org_id=content["orgs"][0]["uuid"],
-        )
+    content = json.loads(result.content)
+    token_expiration_time = datetime.now() + timedelta(
+        seconds=content["auth_token"]["expires_in"] - (content["auth_token"]["expires_in"] * 0.05)
+    )
+    return AuthInfo(
+        token=content["auth_token"]["access_token"],
+        expires_at=token_expiration_time,
+        token_type=content["auth_token"]["token_type"],
+        org_id=content["orgs"][0]["uuid"],
+    )
 
 
 def _do_interactive_login(username, hostname, *, use_ssl):

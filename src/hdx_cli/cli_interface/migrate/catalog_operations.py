@@ -110,7 +110,6 @@ def save_catalog_to_temporal_file(catalog: bytes, project_id: str, table_id: str
             file.write(catalog)
     except Exception as exc:
         logger.debug(f"An error occurred while saving the catalog to a temporal file: {exc}")
-        pass
 
 
 def get_catalog_from_temporal_file(project_id: str, table_id: str) -> list[Partition]:
@@ -159,7 +158,9 @@ class Catalog:
             self.partitions = _get_catalog_from_bytes(catalog)
             save_catalog_to_temporal_file(catalog, project_id, table_id)
         except HttpException as exc:
-            raise HdxCliException(f"Some error occurred while downloading the catalog: {exc}")
+            raise HdxCliException(
+                f"Some error occurred while downloading the catalog: {exc}"
+            ) from exc
 
     def upload(
         self, profile: ProfileUserContext, uploaded_count: Queue, chunk_size: int = 250
@@ -199,13 +200,13 @@ class Catalog:
                         uploaded_count.put(len(chunk))
                         time.sleep(1)
                         break
+
+                    if attempt < retries - 1:
+                        sleep_time = 2**attempt
+                        time.sleep(sleep_time)
                     else:
-                        if attempt < retries - 1:
-                            sleep_time = 2**attempt
-                            time.sleep(sleep_time)
-                        else:
-                            message_error = f"An error occurred while uploading the catalog: {exc}."
-                            raise HdxCliException(message_error) from exc
+                        message_error = f"An error occurred while uploading the catalog: {exc}."
+                        raise HdxCliException(message_error) from exc
 
     def update(self, project_uuid: str, table_uuid: str, target_storage_uuid: str) -> None:
         for partition in self.partitions:
