@@ -56,8 +56,10 @@ class ConflictReporter:
     }
 
     def __init__(self, auto_view: dict) -> None:
-        self.columns = self._build_auto_view_reference(auto_view)
+        self.view_primary_columns = set()
+        self.transform_primary_columns = set()
         self.used_columns = set()
+        self.columns = self._build_auto_view_reference(auto_view)
 
     def _build_auto_view_reference(self, auto_view: dict) -> dict:
         column_reference = {}
@@ -66,12 +68,15 @@ class ConflictReporter:
         for column in column_data:
             name = column.get("name")
             datatype = column.get("datatype", {})
+            primary = datatype.get("primary", False)
             column_reference[name] = {
                 "type": datatype.get("type"),
-                "primary": datatype.get("primary", False),
+                "primary": primary,
                 "resolution": datatype.get("resolution", None),
                 "elements": datatype.get("elements", []),
             }
+            if primary:
+                self.view_primary_columns.add(name)
         return column_reference
 
     @staticmethod
@@ -133,7 +138,7 @@ class ConflictReporter:
             messages.append(
                 f"[CONFLICT] '{transform_column_name}' - transform_resolution: {transform_column_resolution}, view_resolution: {view_column_resolution}"
             )
-
+        
         # transform column primary does not match view column primary
         transform_column_primary = transform_column_datatype.get("primary", False)
         view_column_primary = view_column.get("primary", False)
@@ -141,6 +146,10 @@ class ConflictReporter:
             messages.append(
                 f"[CONFLICT] '{transform_column_name}' - transform_primary: {transform_column_primary}, view_primary: {view_column_primary}"
             )
+        
+        # If field is primary, track it for later
+        if transform_column_primary:
+            self.transform_primary_columns.add(transform_column_name)
 
         # array/map column must have elements matching between transform and view
         transform_column_is_map = transform_column_view_type in self.MAP_TYPES
@@ -186,7 +195,18 @@ class ConflictReporter:
         """ Which view columns have not appeared in a checked transform yet? """
         view_columns = set(self.columns.keys())
         return view_columns - self.used_columns
-
+    
+    def primary_column_report(self):
+        messages = []
+        view_primary_column_count = len(self.view_primary_columns)
+        if view_primary_column_count != 1:
+            messages.append(f"[ERROR] auto_view has {view_primary_column_count} primary columns and it should have exactly 1: {self.view_primary_columns}")
+        transform_primary_column_count = len(self.transform_primary_columns)
+        if transform_primary_column_count != 1:
+            messages.append(f"[ERROR] transform has {transform_primary_column_count} primary columns and it should have exactly 1: {self.transform_primary_columns}")
+        if self.view_primary_columns != self.transform_primary_columns:
+            messages.append(f"[CONFLICT] transform primary columns {self.transform_primary_columns} must match auto_view primary column {self.view_primary_columns}")
+        return messages
 
 def _check_health(profile: ProfileUserContext, target_project_name: str, target_table_name: str):
     """ Check the integrity of transforms and auto-views in a Hydrolix cluster """
@@ -263,3 +283,6 @@ def _check_health(profile: ProfileUserContext, target_project_name: str, target_
                     logger.info("- [OK] Transform is good")
                 logger.info("")
 
+            # print report if primary columns are incorrect
+            for message in reporter.primary_column_report():
+                logger.info(message)
