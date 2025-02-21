@@ -1,10 +1,10 @@
 import click
 
+from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import ResourceNotFoundException
 from ...library_api.common.generic_resource import access_resource_detailed
-from ...library_api.utility.decorators import report_error_and_exit, ensure_logged_in
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
+from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
 
 logger = get_logger()
 
@@ -203,13 +203,20 @@ class ConflictReporter:
         messages = []
         view_primary_column_count = len(self.view_primary_columns)
         if view_primary_column_count != 1:
-            messages.append(f"[ERROR] auto_view has {view_primary_column_count} primary columns and it should have exactly 1: {self.view_primary_columns}")
+            messages.append(
+                f"[ERROR] auto_view has {view_primary_column_count} primary columns and it should have exactly 1: {self.view_primary_columns}"
+            )
         transform_primary_column_count = len(self.transform_primary_columns)
         if transform_primary_column_count != 1:
-            messages.append(f"[ERROR] transform has {transform_primary_column_count} primary columns and it should have exactly 1: {self.transform_primary_columns}")
+            messages.append(
+                f"[ERROR] transform has {transform_primary_column_count} primary columns and it should have exactly 1: {self.transform_primary_columns}"
+            )
         if self.view_primary_columns != self.transform_primary_columns:
-            messages.append(f"[CONFLICT] transform primary columns {self.transform_primary_columns} must match auto_view primary column {self.view_primary_columns}")
+            messages.append(
+                f"[CONFLICT] transform primary columns {self.transform_primary_columns} must match auto_view primary column {self.view_primary_columns}"
+            )
         return messages
+
 
 def _check_health(profile: ProfileUserContext, target_project_name: str, target_table_name: str):
     """Check the integrity of transforms and auto-views in a Hydrolix cluster"""
