@@ -1,6 +1,7 @@
-from typing import List, Optional, Union
 import re
 import uuid
+from typing import List, Optional, Union
+
 from pydantic import BaseModel
 
 from ..common import rest_operations as rest_ops
@@ -31,7 +32,7 @@ def get_available_scope_type_list(profile, resource_path) -> list:
         return AVAILABLE_SCOPE_TYPE
 
     permissions_list = get_permissions_list(profile, resource_path)
-    AVAILABLE_SCOPE_TYPE = [item['scope_type'] for item in permissions_list]
+    AVAILABLE_SCOPE_TYPE = [item["scope_type"] for item in permissions_list]
     return AVAILABLE_SCOPE_TYPE
 
 
@@ -46,7 +47,7 @@ def is_valid_rolename(input_string) -> bool:
     """
     Validate if the string only contains letters, numbers, underscores, or hyphens.
     """
-    pattern = r'^[a-zA-Z0-9_-]+$'
+    pattern = r"^[a-zA-Z0-9_-]+$"
     return bool(re.match(pattern, input_string))
 
 
@@ -62,13 +63,13 @@ def get_permissions_list(profile, resource_path) -> list:
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
-    list_url = f'{scheme}://{hostname}{resource_path}permissions/'
+    list_url = f"{scheme}://{hostname}{resource_path}permissions/"
     auth_info: AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
-    permissions_list = rest_ops.list(list_url,
-                                     headers=headers,
-                                     timeout=timeout)
+    headers = {
+        "Authorization": f"{auth_info.token_type} {auth_info.token}",
+        "Accept": "application/json",
+    }
+    permissions_list = rest_ops.list(list_url, headers=headers, timeout=timeout)
     return permissions_list
 
 
@@ -77,11 +78,11 @@ def get_permissions_by_scope_type(profile, resource_path, scope_type=None) -> li
     response = []
 
     for item in permissions_list:
-        if scope_type and item.get('scope_type') == scope_type:
-            return item.get('permissions')
+        if scope_type and item.get("scope_type") == scope_type:
+            return item.get("permissions")
 
-        elif not scope_type:
-            response += item.get('permissions')
+        if not scope_type:
+            response += item.get("permissions")
 
     # Represent all possible permissions without duplication.
     return list(set(response))
@@ -96,7 +97,7 @@ def get_role_data_from_standard_input(profile, resource_path) -> Union[Role, Non
         logger.info("Enter the name for the new role: [!n]")
         input_role_name = input("").strip()
         if not input_role_name or not is_valid_rolename(input_role_name):
-            logger.info('Invalid role name, please try again')
+            logger.info("Invalid role name, please try again")
             input_role_name = None
 
     policies = []
@@ -108,14 +109,14 @@ def get_role_data_from_standard_input(profile, resource_path) -> Union[Role, Non
         policies.append(policy_details)
 
         logger.info("Do you want to add another Policy? [Y/n]: [!n]")
-        add_another_policy = input("").lower() == 'y'
+        add_another_policy = input("").lower() == "y"
 
     role_to_create = Role(name=input_role_name, policies=policies)
     _display_role_details(role_to_create)
 
     logger.info("Confirm the creation of the new role? [Y/n]: [!n]")
     confirm_creation = input("").lower()
-    if confirm_creation != 'y':
+    if confirm_creation != "y":
         role_to_create = None
 
     return role_to_create
@@ -143,35 +144,29 @@ def modify_role_data_from_standard_input(profile, resource_path, role: Role) -> 
         logger.info("Please select an option: [!n]")
         selected_option = input("").strip()
 
-        if selected_option not in function_mapping.keys():
+        if selected_option not in function_mapping:
             logger.info("Invalid option, please try again")
             selected_option = None
 
-    func_to_call = (globals()
-                    .get(function_mapping
-                         .get(selected_option)))
+    func_to_call = globals().get(function_mapping.get(selected_option))
     role_to_update = func_to_call(profile, resource_path, role)
 
     _display_role_details(role_to_update)
 
     logger.info("Confirm the update of the role? [Y/n]: [!n]")
     confirm_creation = input("").lower()
-    if confirm_creation != 'y':
+    if confirm_creation != "y":
         role_to_update = None
 
     return role_to_update
 
 
-function_mapping = {
-    '1': 'add_policy',
-    '2': 'modify_policy',
-    '3': 'delete_policy'
-}
+function_mapping = {"1": "add_policy", "2": "modify_policy", "3": "delete_policy"}
 
 
 def get_data_for_policy(profile, resource_path) -> Policy:
     logger.info("Adding a Policy, does it have a specific scope? [Y/n]: [!n]")
-    has_scope = input("").lower() == 'y'
+    has_scope = input("").lower() == "y"
 
     scope_type = None
     scope_id = None
@@ -181,8 +176,10 @@ def get_data_for_policy(profile, resource_path) -> Policy:
         scope_type = input("").lower()
 
         while not is_valid_scope_type(profile, resource_path, scope_type):
-            logger.info(f"Invalid scope type. Please choose from the available types: "
-                        f"{', '.join(get_available_scope_type_list(profile, resource_path))}.")
+            logger.info(
+                f"Invalid scope type. Please choose from the available types: "
+                f"{', '.join(get_available_scope_type_list(profile, resource_path))}."
+            )
 
             logger.info("Specify the scope type for the role: [!n]")
             scope_type = input("").lower()
@@ -197,9 +194,7 @@ def get_data_for_policy(profile, resource_path) -> Policy:
     # PERMISSIONS SECTION
     selected_permissions = _select_permissions_from_scope(profile, resource_path, scope_type)
 
-    return Policy(permissions=selected_permissions,
-                  scope_type=scope_type,
-                  scope_id=scope_id)
+    return Policy(permissions=selected_permissions, scope_type=scope_type, scope_id=scope_id)
 
 
 def _select_permissions_from_scope(profile, resource_path, scope_type) -> list:
@@ -214,18 +209,24 @@ def _select_permissions_from_scope(profile, resource_path, scope_type) -> list:
 
     selected_permissions = []
     while len(selected_permissions) < 1:
-        logger.info("Enter the numbers corresponding to the permissions "
-                    "you'd want to add (comma-separated): [!n]")
-        selected_indices = input("").split(',')
-        selected_indices_list = [int(index.strip()) for index in selected_indices
-                                 if index.strip().isdigit()]
+        logger.info(
+            "Enter the numbers corresponding to the permissions "
+            "you'd want to add (comma-separated): [!n]"
+        )
+        selected_indices = input("").split(",")
+        selected_indices_list = [
+            int(index.strip()) for index in selected_indices if index.strip().isdigit()
+        ]
 
         # Check if user selected 'all'
         if last_index is not None and last_index + 1 in selected_indices_list:
             selected_permissions = permission_list
         else:
-            selected_permissions = [permission_list[index - 1] for index in selected_indices_list if
-                                    0 < index <= len(permission_list)]
+            selected_permissions = [
+                permission_list[index - 1]
+                for index in selected_indices_list
+                if 0 < index <= len(permission_list)
+            ]
 
         if len(selected_permissions) < 1:
             logger.info("Invalid selection, please try again")
@@ -239,14 +240,20 @@ def _remove_permissions_from_policy(permission_list) -> list:
 
     selected_permissions = []
     while len(selected_permissions) < 1:
-        logger.info("Enter the numbers corresponding to the permissions "
-                    "you'd want to add (comma-separated): [!n]")
-        selected_indices = input("").split(',')
-        selected_indices_list = [int(index.strip()) for index in selected_indices
-                                 if index.strip().isdigit()]
+        logger.info(
+            "Enter the numbers corresponding to the permissions "
+            "you'd want to add (comma-separated): [!n]"
+        )
+        selected_indices = input("").split(",")
+        selected_indices_list = [
+            int(index.strip()) for index in selected_indices if index.strip().isdigit()
+        ]
 
-        selected_permissions = [permission_list[index - 1] for index in selected_indices_list if
-                                0 < index <= len(permission_list)]
+        selected_permissions = [
+            permission_list[index - 1]
+            for index in selected_indices_list
+            if 0 < index <= len(permission_list)
+        ]
         if len(selected_permissions) < 1:
             logger.info("Invalid selection, please try again")
 
@@ -275,13 +282,11 @@ def _display_policies(policies):
         logger.info(f"Permissions: {', '.join(policy.permissions)}")
 
 
-def _get_selection(list_size: int,
-                   input_text="Please select an option:"
-                   ) -> int:
+def _get_selection(list_size: int, input_text="Please select an option:") -> int:
     """
-        Prompt the user to select an option and validate the input.
-        Returns:adjusted index of the selected option in the list
-        (subtracting 1 for zero-based indexing).
+    Prompt the user to select an option and validate the input.
+    Returns:adjusted index of the selected option in the list
+    (subtracting 1 for zero-based indexing).
     """
     selected_option = None
     while not selected_option:
@@ -318,20 +323,24 @@ def modify_policy(profile, resource_path, role):
     selected_policy = _get_selection(len(role.policies), "Choose a policy to modify")
     policy = role.policies[selected_policy]
 
-    logger.info(f"Specify the scope type (currently: {policy.scope_type}, "
-                f"press enter to skip): [!n]")
+    logger.info(
+        f"Specify the scope type (currently: {policy.scope_type}, " f"press enter to skip): [!n]"
+    )
     scope_type = input("")
 
     while scope_type and not is_valid_scope_type(profile, resource_path, scope_type):
-        logger.info(f"Invalid scope type. Please choose from the available types: "
-                    f"{', '.join(get_available_scope_type_list(profile, resource_path))}.")
+        logger.info(
+            f"Invalid scope type. Please choose from the available types: "
+            f"{', '.join(get_available_scope_type_list(profile, resource_path))}."
+        )
 
         logger.info("Specify the scope type (press enter to skip): [!n]")
         scope_type = input("").lower()
 
     if scope_type:
-        logger.info("Provide the 'uuid' for the specified scope "
-                    f"(currently: {policy.scope_id}): [!n]")
+        logger.info(
+            "Provide the 'uuid' for the specified scope " f"(currently: {policy.scope_id}): [!n]"
+        )
         scope_id = input("")
         while not is_valid_uuid(scope_id):
             logger.info("Invalid UUID format, please try again")
@@ -342,7 +351,7 @@ def modify_policy(profile, resource_path, role):
         policy.scope_id = scope_id
 
     logger.info("Would you want to modify permissions? [Y/n]: [!n]")
-    modify_permissions = input("").lower() == 'y'
+    modify_permissions = input("").lower() == "y"
 
     if modify_permissions:
         logger.info("What would you want to do?")
@@ -354,7 +363,9 @@ def modify_policy(profile, resource_path, role):
 
         if selected_option == "1":
             # ADD PERMISSIONS
-            selected_permissions = set(_select_permissions_from_scope(profile, resource_path, scope_type))
+            selected_permissions = set(
+                _select_permissions_from_scope(profile, resource_path, scope_type)
+            )
             current_policy_permissions = set(policy.permissions)
             current_policy_permissions.update(selected_permissions)
             policy.permissions = list(current_policy_permissions)
@@ -362,7 +373,9 @@ def modify_policy(profile, resource_path, role):
         elif selected_option == "2":
             # REMOVE PERMISSIONS
             permissions_to_remove = _remove_permissions_from_policy(policy.permissions)
-            policy.permissions = [item for item in policy.permissions if item not in permissions_to_remove]
+            policy.permissions = [
+                item for item in policy.permissions if item not in permissions_to_remove
+            ]
 
         else:
             logger.info("Invalid option, please try again")
@@ -370,19 +383,17 @@ def modify_policy(profile, resource_path, role):
     return role
 
 
-def update_role_request(profile,
-                        resource_path,
-                        resource_body):
+def update_role_request(profile, resource_path, resource_body):
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
-    update_url = f'{scheme}://{hostname}{resource_path}'
+    update_url = f"{scheme}://{hostname}{resource_path}"
     auth_info: AuthInfo = profile.auth
-    headers = {'Authorization': f'{auth_info.token_type} {auth_info.token}',
-               'Accept': 'application/json'}
+    headers = {
+        "Authorization": f"{auth_info.token_type} {auth_info.token}",
+        "Accept": "application/json",
+    }
 
-    rest_ops.update_with_put(update_url,
-                             headers=headers,
-                             timeout=timeout,
-                             body=resource_body,
-                             params=None)
+    rest_ops.update_with_put(
+        update_url, headers=headers, timeout=timeout, body=resource_body, params=None
+    )

@@ -1,13 +1,13 @@
 from enum import Enum, auto
 from typing import Union
 
+from ....library_api.common.logging import get_logger
 from .migration_rollback import (
     MigrateStatus,
+    MigrationEntry,
     MigrationRollbackManager,
     ResourceKind,
-    MigrationEntry
 )
-from ....library_api.common.logging import get_logger
 
 logger = get_logger()
 
@@ -28,10 +28,10 @@ def log_message(log_type: LogType, message: str, indent: int = 2):
     :param indent: Number of spaces to indent the message.
     """
     log_type_label = {
-        LogType.INFO:    "INFO",
+        LogType.INFO: "INFO",
         LogType.SUCCESS: "SUCCESS",
         LogType.WARNING: "WARNING",
-        LogType.PROMPT:  "PROMPT"
+        LogType.PROMPT: "PROMPT",
     }.get(log_type, "INFO")
 
     indent_spaces = " " * indent
@@ -56,12 +56,12 @@ def log_without_type(messages: Union[str, list[str]], indent: int = 2, sub_inden
 
 
 def log_migration_status(
-        resource_type: str,
-        resource_name: str,
-        status: MigrateStatus,
-        rollback_manager: MigrationRollbackManager,
-        resource_kind: ResourceKind,
-        parents: list[str] = None
+    resource_type: str,
+    resource_name: str,
+    status: MigrateStatus,
+    rollback_manager: MigrationRollbackManager,
+    resource_kind: ResourceKind,
+    parents: list[str] = None,
 ):
     """
     Logs the migration status of a resource.

@@ -1,9 +1,9 @@
 import re
 
-from ..common.undecorated_click_commands import get_resource_settings_structure
-from ..migrate.helpers import confirm_action
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
+from ..common.undecorated_click_commands import get_resource_settings_structure
+from ..migrate.helpers import confirm_action
 
 logger = get_logger()
 
@@ -67,7 +67,7 @@ def _extract_table_name_from_sql(sql):
     if not match:
         return None, None
 
-    table_name = match.group(1).replace('`', '').replace('"', '').replace("'", "")
+    table_name = match.group(1).replace("`", "").replace('"', "").replace("'", "")
     project, table = table_name.split(".")
     return project, table
 
@@ -95,7 +95,8 @@ def _update_parent_in_summary_sql(summary_settings: dict) -> dict:
     attempts = 3
     while attempts > 0:
         logger.info(
-            "*  Enter new project and table in 'project.table' format (leave blank to keep current): [!i]"
+            "*  Enter new project and table in 'project.table' format "
+            "(leave blank to keep current): [!i]"
         )
         new_project_table = input().strip()
 
@@ -116,9 +117,13 @@ def _update_parent_in_summary_sql(summary_settings: dict) -> dict:
         logger.info("*  Maximum attempts reached. Keeping current project.table.")
         new_project, new_table = current_project, current_table
 
-    summary_settings["sql"] = sql.replace(current_project, new_project).replace(current_table, new_table)
+    summary_settings["sql"] = sql.replace(current_project, new_project).replace(
+        current_table, new_table
+    )
     if summary_sql:
-        summary_settings["summary_sql"] = summary_sql.replace(current_project, new_project).replace(current_table, new_table)
+        summary_settings["summary_sql"] = summary_sql.replace(current_project, new_project).replace(
+            current_table, new_table
+        )
 
     logger.info(f"{'*' * 40:<42} -> [!n]")
     return summary_settings
@@ -200,51 +205,47 @@ def normalize_dictionary(dictionary: dict) -> dict:
 
 def get_user_value_input(field_name: str, field_type: str):
     while True:
-        user_input = prompt_user_for_value(
-            field_name,
-            message=f"*  {field_name} ({field_type})"
-        )
+        user_input = prompt_user_for_value(field_name, message=f"*  {field_name} ({field_type})")
 
         if not user_input:
-            logger.info(f"*  Invalid value. Please, try again.")
+            logger.info("*  Invalid value. Please, try again.")
             continue
 
         if "integer" in field_type:
             try:
                 return int(user_input)
-            except ValueError or TypeError:
+            except (ValueError, TypeError):
                 logger.info("*  Invalid integer. Please enter a valid number.")
         elif "list" in field_type:
             return [item.strip() for item in user_input.split(",") if item.strip()]
         elif "boolean" in field_type:
-            if user_input.lower() in ('1', 'true', 't', 'yes', 'y'):
+            if user_input.lower() in ("1", "true", "t", "yes", "y"):
                 return True
-            elif user_input.lower() in ('0', 'false', 'f', 'no', 'n'):
+            if user_input.lower() in ("0", "false", "f", "no", "n"):
                 return False
-            else:
-                logger.info("*  Invalid value. Please enter 'true' or 'false'.")
+            logger.info("*  Invalid value. Please enter 'true' or 'false'.")
         elif "decimal" in field_type:
             try:
                 return float(user_input)
-            except ValueError or TypeError:
+            except (ValueError, TypeError):
                 logger.info("*  Invalid value. Please enter a valid decimal number.")
         else:
             return user_input
 
 
-def _adapt_resource_to_api_structure(resource_structure: dict,
-                                     resource_settings: dict | None,
-                                     parent_path="",
-                                     first_time_input=True
-                                     ) -> (dict, bool):
+def _adapt_resource_to_api_structure(
+    resource_structure: dict, resource_settings: dict | None, parent_path="", first_time_input=True
+) -> (dict, bool):
     def is_empty(value):
         return value in (None, {}, [], "")
 
-    adapted_resource_settings = {}
-    for field_name, field_props in resource_structure.items():
-        if field_props.get("read_only", False):
-            continue
+    # Filter out read-only fields
+    filtered_structure = {
+        k: v for k, v in resource_structure.items() if not v.get("read_only", False)
+    }
 
+    adapted_resource_settings = {}
+    for field_name, field_props in filtered_structure.items():
         is_required = field_props.get("required", False)
         field_type = field_props.get("type", "")
         resource_settings_value = resource_settings.get(field_name) if resource_settings else None
@@ -262,7 +263,7 @@ def _adapt_resource_to_api_structure(resource_structure: dict,
                     children_structure,
                     resource_settings_value or {},
                     parent_path=current_path,
-                    first_time_input=first_time_input
+                    first_time_input=first_time_input,
                 )
                 if nested_dict or is_required:
                     adapted_resource_settings[field_name] = nested_dict
@@ -280,7 +281,7 @@ def _adapt_resource_to_api_structure(resource_structure: dict,
                 if first_time_input:
                     logger.info("In progress")
                     logger.info(f"{' Required Fields ':*^40}")
-                    logger.info(f"* The following fields are required to proceed:")
+                    logger.info("* The following fields are required to proceed:")
                     first_time_input = False
 
                 new_value = get_user_value_input(current_path, field_type)
@@ -291,17 +292,15 @@ def _adapt_resource_to_api_structure(resource_structure: dict,
     return adapted_resource_settings, first_time_input
 
 
-def adapt_resource_to_api_structure(profile: ProfileUserContext,
-                                    resource_url: str,
-                                    resource_settings: dict
-                                    ) -> dict:
+def adapt_resource_to_api_structure(
+    profile: ProfileUserContext, resource_url: str, resource_settings: dict
+) -> dict:
     resource_structure = get_resource_settings_structure(profile, resource_url)
     if not resource_structure:
         return resource_settings
 
     adapted_resource, first_time_input = _adapt_resource_to_api_structure(
-        resource_structure,
-        resource_settings
+        resource_structure, resource_settings
     )
 
     if not first_time_input:

@@ -6,8 +6,7 @@ from .exceptions import LogicException
 class CacheDict:
     """A simple cache dictionary"""
 
-    def __init__(self, dict_data, *,
-                 _initialized_from_factory=False):
+    def __init__(self, dict_data, *, _initialized_from_factory=False):
         if not _initialized_from_factory:
             raise LogicException("Must construct CacheDict from factory.")
         self._cache_dict = dict_data

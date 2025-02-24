@@ -1,35 +1,36 @@
 import random
 import string
 from copy import deepcopy
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 from hdx_cli.cli_interface.migrate.helpers import confirm_action
 from hdx_cli.cli_interface.migrate.rc.rc_manager import RcloneAPIConfig
 from hdx_cli.cli_interface.migrate.rc.rc_remotes import (
     RCloneRemote,
+    get_check_remote_body,
     get_remote_config,
-    get_check_remote_body
 )
 from hdx_cli.library_api.common.exceptions import (
-    StorageNotFoundError,
+    RCloneRemoteCheckException,
     RCloneRemoteException,
-    RCloneRemoteCheckException
+    StorageNotFoundError,
 )
-from hdx_cli.library_api.common.storage import get_storage_by_id
 from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.common.storage import get_storage_by_id
 
 logger = get_logger()
 
 
 def generate_random_string(length=5):
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+    return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
-def create_remote(storage_settings: dict,
-                  remotes: dict,
-                  rc_config: RcloneAPIConfig,
-                  migration_side: str,
-                  ) -> RCloneRemote:
+def create_remote(
+    storage_settings: dict,
+    remotes: dict,
+    rc_config: RcloneAPIConfig,
+    migration_side: str,
+) -> RCloneRemote:
     cloud = storage_settings.get("cloud")
     bucket_name = storage_settings.get("bucket_name")
     bucket_path = storage_settings.get("bucket_path", "/")
@@ -45,21 +46,19 @@ def create_remote(storage_settings: dict,
     logger.info(f"  Endpoint: {endpoint}")
 
     new_remote, reused_remote = check_remotes_stock(
-        remotes,
-        bucket_name,
-        bucket_path,
-        cloud,
-        region
+        remotes, bucket_name, bucket_path, cloud, region
     )
     if new_remote and reused_remote:
-        logger.info(f"Access granted using a previous connection")
+        logger.info("Access granted using a previous connection")
         logger.info(f"for bucket name: {reused_remote.bucket_name}{reused_remote.bucket_path}")
         logger.info("Reusing this connection may improve transfer speed.")
         logger.info("If you choose not to reuse it, credentials will be requested.")
         logger.info("")
 
         if confirm_action("Confirm reuse of this connection?"):
-            logger.debug(f"Remote '{reused_remote.name}' is being reused for bucket: {storage_settings}")
+            logger.debug(
+                f"Remote '{reused_remote.name}' is being reused for bucket: {storage_settings}"
+            )
             logger.info("")
             return new_remote
 
@@ -98,12 +97,13 @@ def create_remote(storage_settings: dict,
             raise exc
 
 
-def get_remote(remotes: dict,
-			   storages: list,
-			   storage_id: str,
-			   rc_config: RcloneAPIConfig,
-               migration_side: str = ""
-			   ) -> RCloneRemote:
+def get_remote(
+    remotes: dict,
+    storages: list,
+    storage_id: str,
+    rc_config: RcloneAPIConfig,
+    migration_side: str = "",
+) -> RCloneRemote:
     if remote := remotes.get(storage_id):
         return remote
 
@@ -136,12 +136,9 @@ def check_existing_remote(remote: RCloneRemote, bucket_name, bucket_path) -> boo
         return False
 
 
-def check_remotes_stock(remotes: dict,
-                        bucket_name: str,
-                        bucket_path: str,
-                        cloud: str,
-                        region: str
-                        ) -> Tuple[Optional[RCloneRemote], Optional[RCloneRemote]]:
+def check_remotes_stock(
+    remotes: dict, bucket_name: str, bucket_path: str, cloud: str, region: str
+) -> Tuple[Optional[RCloneRemote], Optional[RCloneRemote]]:
     for remote in remotes.values():
         assert isinstance(remote, RCloneRemote)
         if cloud != remote.cloud or region != remote.region:

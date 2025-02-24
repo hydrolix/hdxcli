@@ -4,17 +4,18 @@ import random
 import string
 
 from hdx_cli.library_api.common.exceptions import (
-    RCloneRemoteException,
     RCloneRemoteCheckException,
-    RCloneRemoteCreationException
+    RCloneRemoteCreationException,
+    RCloneRemoteException,
 )
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.common.rest_operations import post_with_retries
 
 logger = get_logger()
 
+
 def generate_random_string(length=5):
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+    return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
 def _get_azure_config():
@@ -34,7 +35,7 @@ def _get_gcp_config(remote):
     if not os.path.isfile(json_path):
         raise ValueError("Invalid path for Google Service Account JSON file.")
 
-    with open(json_path, "r") as file:
+    with open(json_path, "r", encoding="utf-8") as file:
         google_service_account = json.load(file)
     credentials_string = json.dumps(google_service_account, separators=(",", ":"))
 
@@ -89,26 +90,20 @@ def get_check_remote_body(bucket_name: str, bucket_path: str, remote_name: str) 
     return {
         "fs": f"{remote_name}:",
         "remote": remote_dir,
-        "opt": {
-            "recurse": False,
-            "dirsOnly": True
-        }
+        "opt": {"recurse": False, "dirsOnly": True},
     }
 
 
 def get_remote_config(remote):
     if remote.cloud == "azure":
         return _get_azure_config()
-    elif remote.cloud == "gcp":
+    if remote.cloud == "gcp":
         return _get_gcp_config(remote)
-    elif remote.cloud in ["aws", "linode"]:
+    if remote.cloud in ["aws", "linode"]:
         if remote.endpoint or remote.cloud == "linode":
             return _get_linode_config(remote)
         return _get_aws_config(remote)
-    else:
-        raise ValueError(
-            "Unsupported cloud provider. Supported providers: azure, gcp, aws, linode."
-        )
+    raise ValueError("Unsupported cloud provider. Supported providers: azure, gcp, aws, linode.")
 
 
 class RCloneRemote:
@@ -132,7 +127,7 @@ class RCloneRemote:
             f"{base_url}/config/create",
             self.remote_config,
             user=self.rc_config.user,
-            password=self.rc_config.password
+            password=self.rc_config.password,
         )
 
         if not response or response.status_code != 200:
@@ -146,7 +141,7 @@ class RCloneRemote:
             f"{base_url}/operations/list",
             payload,
             user=self.rc_config.user,
-            password=self.rc_config.password
+            password=self.rc_config.password,
         )
 
         if not response or response.status_code != 200:
@@ -159,7 +154,7 @@ class RCloneRemote:
             f"{base_url}/config/delete",
             data,
             user=self.rc_config.user,
-            password=self.rc_config.password
+            password=self.rc_config.password,
         )
 
         if response and response.status_code != 200:
