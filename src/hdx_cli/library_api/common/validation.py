@@ -7,8 +7,6 @@ def is_valid_username(username):
 
 
 def is_valid_hostname(hostname):
-    # Credits to https://stackoverflow.com/questions/2532053/validate-a-hostname-string
-    # Just import here, since this function is not called often at all
     import re  # pylint:disable=import-outside-toplevel
 
     if not hostname or len(hostname) > 255:
