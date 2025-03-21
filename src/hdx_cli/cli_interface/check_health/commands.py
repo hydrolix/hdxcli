@@ -3,8 +3,9 @@ import click
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.generic_resource import access_resource_detailed
 from ...library_api.common.logging import get_logger
+from ...library_api.common.rest_operations import update_with_put
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
-from . import table_cleaner, utils
+from . import const, table_cleaner, utils
 
 logger = get_logger()
 
@@ -22,10 +23,21 @@ logger = get_logger()
 @click.argument(
     "table_name", metavar="TABLE_NAME", required=False, default=None, type=str
 )
+@click.option(
+    "--repair",
+    is_flag=True,
+    default=False,
+    help="Automatically repair problems with transforms when possible.",
+)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
-def check_health(ctx: click.Context, project_name: str, table_name: str):
+def check_health(
+    ctx: click.Context,
+    project_name: str,
+    table_name: str,
+    repair: bool,
+):
     """
     This command checks the integrity of the transforms and auto-views.
 
@@ -46,11 +58,14 @@ def check_health(ctx: click.Context, project_name: str, table_name: str):
     else:
         click.echo("Checking health of transforms for the entire org...")
 
-    _check_health(profile, project_name, table_name)
+    _check_health(profile, project_name, table_name, repair)
 
 
 def _check_health(
-    profile: ProfileUserContext, target_project_name: str, target_table_name: str
+    profile: ProfileUserContext,
+    target_project_name: str,
+    target_table_name: str,
+    repair: bool,
 ):
     """Check the integrity of transforms and auto-views in a Hydrolix cluster"""
     projects, _ = access_resource_detailed(profile, [("projects", target_project_name)])
@@ -103,4 +118,45 @@ def _check_health(
             cleaner = table_cleaner.TableCleaner(
                 table=table, transforms=transforms, views=views
             )
+            if repair:
+                _repair(profile, cleaner, project, table, transforms)
             cleaner.table_report()
+
+
+def _repair(profile, cleaner, project, table, transforms):
+    """Actually repair the broken transforms"""
+    repaired_transform_settings = cleaner.repaired_transform_settings()
+    if not repaired_transform_settings:
+        return
+
+    # Prepare to make API calls
+    org_id = profile.org_id
+    project_id = project.get("uuid")
+    auth = getattr(profile, "auth")
+    table_id = table.get("uuid")
+    if not auth:
+        return
+
+    base_url = f"{profile.scheme}://{profile.hostname}"
+    headers = {
+        "Authorization": f"{auth.token_type} {auth.token}",
+        "Accept": "application/json",
+    }
+    params = {"force_operation": "true"}
+
+    for transform in transforms:
+        transform_id = transform.get(const.FIELD_UUID, None)
+        if not transform_id:
+            continue
+        correct_settings = repaired_transform_settings.get(transform_id, None)
+        if not correct_settings:
+            continue
+        transform[const.FIELD_SETTINGS] = correct_settings
+        resource_url = f"{base_url}/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/{transform_id}/"
+        update_with_put(
+            resource_url,
+            headers=headers,
+            timeout=profile.timeout,
+            body=transform,
+            params=params,
+        )

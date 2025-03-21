@@ -1,4 +1,5 @@
 FIELD_TYPE = "type"
+FIELD_UUID = "uuid"
 FIELD_RESOLUTION = "resolution"
 FIELD_NAME = "name"
 FIELD_INDEX = "index"

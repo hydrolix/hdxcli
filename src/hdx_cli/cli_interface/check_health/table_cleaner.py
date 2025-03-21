@@ -121,7 +121,7 @@ class TableCleaner:
 
         should_skip = False
         for field in const.SKIP_FIELDS:
-            should_skip = datatype.get(field, False)
+            should_skip = should_skip or datatype.get(field, False)
 
         if should_skip or (not name) or (not datatype):
             return correct_column
@@ -141,16 +141,17 @@ class TableCleaner:
             index = datatype.get(const.FIELD_INDEX, True)
         correct_column[const.FIELD_INDEX] = index
 
-        primary = False
+        primary = None
         if type in const.DATETIME_TYPES:
-            primary = datatype.get(const.FIELD_PRIMARY, False)
+            primary = datatype.get(const.FIELD_PRIMARY, None)
             if resolution is None:
                 if type == const.TYPE_DATETIME64:
                     resolution = const.RESOLUTION_MILLISECOND
                 else:
                     resolution = const.RESOLUTION_SECOND
             correct_column[const.FIELD_RESOLUTION] = resolution
-        correct_column[const.FIELD_PRIMARY] = primary
+        if primary is not None:
+            correct_column[const.FIELD_PRIMARY] = primary
 
         elements = None
         if type in const.COMPLEX_TYPES:
@@ -196,7 +197,7 @@ class TableCleaner:
         correct_columns = {}
         for column in raw_columns:
             correct_column = cls.correct_one_column(column)
-            column_name = correct_column.pop("name", None)
+            column_name = correct_column.pop(const.FIELD_NAME, None)
             if column_name:
                 correct_columns[column_name] = correct_column
         return correct_columns
@@ -221,21 +222,27 @@ class TableCleaner:
         return correct_columns
 
     def _check_primary(self):
-        """Check if table has exactly one primary column"""
+        """Check if table has exactly one primary column
+        Return True if ok, otherwise False
+        """
+        retval = True
         report_log = reportlog.ReportLog()
         primary_columns = []
         if self.columns:
             for column_name, column_values in self.columns.items():
-                if column_values.get("primary", False):
+                if column_values.get(const.FIELD_PRIMARY, False):
                     primary_columns.append(column_name)
         if len(primary_columns) == 0:
+            retval = False
             report_log.add_message(logging.ERROR, "Table has no primary columns")
         elif len(primary_columns) > 1:
+            retval = False
             report_log.add_message(
                 logging.CRITICAL,
                 f"Table has more than one primary column — '{primary_columns}'",
             )
         report_log.report()
+        return retval
 
     def _column_report(self, column) -> bool:
         """analyze a single column
@@ -259,7 +266,7 @@ class TableCleaner:
         # Should we skip this column?
         should_skip = False
         for field in const.SKIP_FIELDS:
-            should_skip = datatype.get(field, False)
+            should_skip = should_skip or datatype.get(field, False)
         if should_skip:
             report_log.report()
             return clean
@@ -311,9 +318,9 @@ class TableCleaner:
         is_datetime = (view_type in const.DATETIME_TYPES) or (
             correct_type in const.DATETIME_TYPES
         )
-        primary = datatype.get(const.FIELD_PRIMARY, False)
-        correct_primary = correct_column.get(const.FIELD_PRIMARY, False)
-        if primary != correct_primary:
+        primary = datatype.get(const.FIELD_PRIMARY, None)
+        correct_primary = correct_column.get(const.FIELD_PRIMARY, None)
+        if bool(primary) != bool(correct_primary):
             report_log.add_message(
                 logging.ERROR,
                 f"Column '{name}' primary '{primary}' conflicts with correct primary '{correct_primary}'",
@@ -364,13 +371,13 @@ class TableCleaner:
             transform_settings = transform.get(const.FIELD_SETTINGS, {})
             transform_columns = transform_settings.get(const.FIELD_OUTPUT_COLUMNS, [])
             for column in transform_columns:
-                name = column.get("name", "")
+                name = column.get(const.FIELD_NAME, "")
                 if not name:
                     continue
                 datatype = column.get(const.FIELD_DATATYPE, {})
                 should_skip = False
                 for field in const.SKIP_FIELDS:
-                    should_skip = datatype.get(field, False)
+                    should_skip = should_skip or datatype.get(field, False)
                 if should_skip:
                     transform_skipped_columns.add(name)
                     continue
@@ -435,3 +442,80 @@ class TableCleaner:
         self._check_primary()
         self._auto_view_report()
         self._report_all_transforms()
+
+    def repaired_transform_settings(self):
+        """Return the repaired transform settings to use"""
+        report_log = reportlog.ReportLog()
+        primary_ok = self._check_primary()
+        if not primary_ok:
+            report_log.add_message(
+                logging.CRITICAL,
+                "Table has primary column issue. Must be repaired manually.",
+            )
+            report_log.report()
+            return
+        repaired_settings = {}
+        for transform in self.transforms:
+            uuid = transform.get(const.FIELD_UUID, None)
+            if uuid is None:
+                continue
+            settings = transform.get(const.FIELD_SETTINGS, {})
+            if not settings:
+                continue
+            original_columns = settings.get(const.FIELD_OUTPUT_COLUMNS, [])
+            correct_columns = []
+            for column in original_columns:
+                name = column.get(const.FIELD_NAME, None)
+                if name is None:
+                    continue
+                datatype = column.get(const.FIELD_DATATYPE, {})
+                if not datatype:
+                    continue
+
+                if not self.columns:
+                    continue
+                correct_column = self.columns.get(name, None)
+                if correct_column is None:
+                    continue
+
+                # fix type
+                raw_transform_type = datatype.get(const.FIELD_TYPE, None)
+                resolution = datatype.get(const.FIELD_RESOLUTION, None)
+                type = self.get_view_datatype(raw_transform_type, resolution)
+                correct_type = correct_column.get(const.FIELD_TYPE)
+                if type != correct_type:
+                    datatype[const.FIELD_TYPE] = correct_type
+
+                # fix index
+                index = datatype.get(const.FIELD_INDEX, None)
+                correct_index = correct_column.get(const.FIELD_INDEX)
+                if index != correct_index:
+                    datatype[const.FIELD_INDEX] = correct_index
+
+                # only for datetime types
+                if correct_type in const.DATETIME_TYPES:
+                    # fix resolution
+                    correct_resolution = correct_column.get(
+                        const.FIELD_RESOLUTION, None
+                    )
+                    if resolution != correct_resolution:
+                        datatype[const.FIELD_RESOLUTION] = correct_resolution
+                # fix primary
+                primary = datatype.get(const.FIELD_PRIMARY, None)
+                correct_primary = correct_column.get("primary", None)
+                if correct_primary or correct_primary:
+                    if primary != correct_primary:
+                        datatype[const.FIELD_PRIMARY] = primary
+
+                # fix elements
+                if correct_type in const.COMPLEX_TYPES:
+                    elements = datatype.get(const.FIELD_ELEMENTS)
+                    correct_elements = correct_column.get(const.FIELD_ELEMENTS)
+                    if elements != correct_elements:
+                        datatype[const.FIELD_ELEMENTS] = correct_elements
+                # Update column with corrected data
+                correct_columns.append(column)
+
+            settings[const.FIELD_OUTPUT_COLUMNS] = correct_columns
+            repaired_settings[uuid] = settings
+        return repaired_settings

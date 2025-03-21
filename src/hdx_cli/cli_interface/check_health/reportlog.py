@@ -1,0 +1,21 @@
+import logging
+
+
+class ReportLog:
+    """A tool to collect many log messages and report them all at once"""
+
+    def __init__(self, logger_name: str = __name__) -> None:
+        self.messages = {}
+        self.logger = logging.getLogger(logger_name)
+
+    def add_message(self, level: int, message: str) -> None:
+        self.messages.setdefault(level, [])
+        self.messages[level].append(message)
+
+    def report(self) -> None:
+        """log all the messages in the report"""
+        for loglevel, all_messages in self.messages.items():
+            for message in all_messages:
+                level_name = logging.getLevelName(int(loglevel))
+                full_message = f"[{level_name}] {message}"
+                self.logger.log(loglevel, full_message)
