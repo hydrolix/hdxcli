@@ -7,13 +7,12 @@ def is_valid_username(username):
 
 
 def is_valid_hostname(hostname):
-    # Credits to https://stackoverflow.com/questions/2532053/validate-a-hostname-string
-    # Just import here, since this function is not called often at all
     import re  # pylint:disable=import-outside-toplevel
 
     if not hostname or len(hostname) > 255:
         return False
     if hostname[-1] == ".":
         hostname = hostname[:-1]  # strip exactly one dot from the right, if present
-    allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+    pattern = r"^([\w\d][\w\d\.\-]+[\w\d])(\:([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?$"
+    allowed = re.compile(pattern, re.IGNORECASE)
     return all(allowed.match(x) for x in hostname.split("."))
