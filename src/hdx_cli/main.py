@@ -30,7 +30,7 @@ from hdx_cli.library_api.common.first_use import first_time_use_config, is_first
 from hdx_cli.library_api.common.logging import get_logger, set_debug_logger, set_info_logger
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 
-VERSION = "1.0.76"
+VERSION = "1.0.77"
 
 logger = get_logger()
 
