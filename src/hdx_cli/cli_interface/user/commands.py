@@ -5,18 +5,18 @@ from typing import Dict
 import click
 
 from ...library_api.common.context import ProfileUserContext
-from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
+from ...library_api.common.exceptions import LogicException
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import (
     dynamic_confirmation_prompt,
     ensure_logged_in,
     report_error_and_exit,
 )
+from ..common.cached_operations import find_invites_user, find_users
 from ..common.undecorated_click_commands import (
-    basic_create_from_dict_body,
+    basic_create,
     basic_delete,
     basic_show,
-    get_resource_list,
 )
 
 logger = get_logger()
@@ -42,15 +42,15 @@ def user(ctx: click.Context, user_email: str):
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def list_users(ctx: click.Context):
-    resource_path = ctx.parent.obj.get("resource_path")
     profile = ctx.parent.obj.get("usercontext")
-    resources = get_resource_list(profile, resource_path)
+    user_list = find_users(profile)
+    if not user_list:
+        return
 
     _log_formatted_table_header({"email": 45, "status": 30})
-
-    for resource in resources:
-        roles_name = resource.get("roles")
-        logger.info(f'{resource["email"].ljust(45)}{(", ".join(roles_name)).ljust(50)}')
+    for user_ in user_list:
+        roles_name = user_.get("roles", "")
+        logger.info(f'{user_.get("email", "").ljust(45)}{(", ".join(roles_name)).ljust(50)}')
 
 
 @click.command(
@@ -123,12 +123,10 @@ def assign(ctx: click.Context, email: str, roles):
     user_uuid = json.loads(basic_show(profile, resource_path, email, filter_field="email")).get(
         "uuid"
     )
-    if not user_uuid:
-        raise LogicException(f"There was an error with the user {email}.")
 
     resource_path = f"{resource_path}{user_uuid}/add_roles/"
     body = {"roles": roles}
-    basic_create_from_dict_body(profile, resource_path, body)
+    basic_create(profile, resource_path, body=body)
     logger.info(f"Added role(s) to {email}")
 
 
@@ -145,14 +143,15 @@ def assign(ctx: click.Context, email: str, roles):
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def remove(ctx: click.Context, email: str, roles):
+def remove(ctx: click.Context, email: str, roles: list):
     profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
-    user_json = json.loads(basic_show(profile, resource_path, email, filter_field="email"))
-    user_uuid = user_json.get("uuid")
-    user_roles = user_json.get("roles")
+    user_ = json.loads(basic_show(profile, resource_path, email, filter_field="email"))
+    user_uuid = user_.get("uuid")
+    user_roles = user_.get("roles")
+
     if not user_uuid or not user_roles:
-        raise LogicException(f"There was an error with the user {email}.")
+        raise LogicException(f"There was an error getting roles for {email}.")
 
     set_roles_to_remove = set(roles)
     set_user_roles = set(user_roles)
@@ -164,7 +163,7 @@ def remove(ctx: click.Context, email: str, roles):
 
     resource_path = f"{resource_path}{user_uuid}/remove_roles/"
     body = {"roles": list(roles)}
-    basic_create_from_dict_body(profile, resource_path, body)
+    basic_create(profile, resource_path, body=body)
     logger.info(f"Removed role(s) from {email}")
 
 
@@ -202,7 +201,7 @@ def send(ctx: click.Context, email: str, roles):
 
     org_id = profile.org_id
     body = {"email": email, "org": org_id, "roles": roles}
-    basic_create_from_dict_body(profile, resource_path, body)
+    basic_create(profile, resource_path, body=body)
     logger.info(f"Sent invitation to {email}")
 
 
@@ -213,17 +212,11 @@ def send(ctx: click.Context, email: str, roles):
 def resend(ctx: click.Context, email: str):
     resource_path = ctx.parent.obj.get("resource_path")
     profile = ctx.parent.obj.get("usercontext")
-
     invite_id = json.loads(basic_show(profile, resource_path, email, filter_field="email")).get(
         "id"
     )
-    if not invite_id:
-        logger.debug("An error occurred while obtaining the invite ID.")
-        raise ResourceNotFoundException("Cannot find the invitation ID.")
-
     resource_path = f"{resource_path}{invite_id}/resend_invite/"
-
-    basic_create_from_dict_body(profile, resource_path, None)
+    basic_create(profile, resource_path)
     logger.info(f"Resent invitation to {email}")
 
 
@@ -232,14 +225,19 @@ def resend(ctx: click.Context, email: str):
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def list_invites(ctx: click.Context, pending: bool):
-    resource_path = ctx.parent.obj.get("resource_path")
-    profile = ctx.parent.obj.get("usercontext")
+    user_profile = ctx.parent.obj.get("usercontext")
+    invites = find_invites_user(user_profile)
+    if pending:
+        invites = [user_invite for user_invite in invites if user_invite.get("status") == "pending"]
 
-    resources = get_resource_list(profile, resource_path, pending_only=pending)
+    if not invites:
+        return
 
     _log_formatted_table_header({"email": 45, "status": 30})
-    for resource in resources:
-        logger.info(f'{resource["email"].ljust(45)}{resource.get("status").ljust(30)}')
+    for user_invite in invites:
+        logger.info(
+            f'{user_invite.get("email", "").ljust(45)}{user_invite.get("status", "").ljust(30)}'
+        )
 
 
 def _log_formatted_table_header(headers_and_spacing: Dict[str, int]):

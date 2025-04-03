@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from hdx_cli.cli_interface.common.undecorated_click_commands import get_resource_list
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.exceptions import HdxCliException
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.common.storage import get_equivalent_storages
 
+from ..common.cached_operations import find_alter_jobs
 from .catalog_operations import Catalog
 from .helpers import MigrationData
 from .resources import interactive_set_default_storage, update_equivalent_multi_storage_settings
@@ -54,8 +54,11 @@ def check_alter_jobs(profile: ProfileUserContext, is_only_resources: bool) -> No
         logger.info("Skipped (--only resources)")
         return
 
-    alter_path = f"/config/v1/orgs/{profile.org_id}/jobs/alter/"
-    alter_jobs = get_resource_list(profile, alter_path).get("results")
+    alter_jobs = find_alter_jobs(profile)
+    # workaround for alter_jobs with pagination
+    if isinstance(alter_jobs, dict) and alter_jobs.get("results"):
+        alter_jobs = alter_jobs.get("results")
+
     is_alter_job_running = list(
         filter(
             lambda x: x.get("status") == "running"

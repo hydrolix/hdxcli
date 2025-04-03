@@ -1,7 +1,9 @@
 import json
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import click
+from requests import JSONDecodeError
 
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.exceptions import (
@@ -9,7 +11,6 @@ from ...library_api.common.exceptions import (
     HdxCliException,
     LogicException,
     ResourceNotFoundException,
-    TransformNotFoundException,
 )
 from ...library_api.common.logging import get_logger
 from ...library_api.userdata.token import AuthInfo
@@ -17,98 +18,31 @@ from ...library_api.utility.functions import heuristically_get_resource_kind
 from .cached_operations import *  # pylint:disable=wildcard-import,unused-wildcard-import
 
 logger = get_logger()
-
 DEFAULT_INDENTATION = 4
 
 
-def basic_create(
-    profile,
-    resource_path,
-    resource_name: str,
-    body_from_file: Optional[str] = None,
-    body_from_file_type="json",
-):
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    url = f"{scheme}://{hostname}{resource_path}"
-    token = profile.auth
-    headers = {"Authorization": f"{token.token_type} {token.token}", "Accept": "application/json"}
-
-    body = {}
-    body_stream = None
-    if body_from_file:
-        # This parameter is for dictionaries
-        if body_from_file_type == "json":
-            with open(body_from_file, "r", encoding="utf-8") as input_body:
-                body = json.load(input_body)
-                body["name"] = f"{resource_name}"
-        else:
-            body_stream = open(body_from_file, "rb")  # pylint:disable=consider-using-with
-    else:
-        body = {"name": f"{resource_name}", "description": "Created with hdxcli tool"}
-    if body_from_file_type == "json":
-        rest_ops.create(url, body=body, headers=headers, timeout=timeout)
-    elif body_from_file and body_stream:
-        rest_ops.create_file(
-            url,
-            headers=headers,
-            file_stream=body_stream,
-            remote_filename=resource_name,
-            timeout=timeout,
-        )
-        if body_stream:
-            body_stream.close()
-    else:
-        rest_ops.create(url, body=body, headers=headers, timeout=timeout)
-
-
-def basic_create_with_body_from_string(
+def basic_get(
     profile: ProfileUserContext,
     resource_path: str,
-    resource_name: str,
-    body_from_string: Optional[str],
-    body_from_string_type: str = "json",
     *,
-    params: dict = None,
-):
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    url = f"{scheme}://{hostname}{resource_path}"
-    token = profile.auth
+    fmt: str = "json",
+    **params,
+) -> Any:
+    """
+    Retrieves a resource.
 
-    body = None
-    headers = {}
-    if body_from_string_type != "json":
-        headers = {
-            "Authorization": f"{token.token_type} {token.token}",
-            # This is basically hardcoding. Could be better
-            "Content-Type": "application/CSV",
-            "Accept": "*/*",
-        }
-        body = body_from_string
-    else:
-        headers = {
-            "Authorization": f"{token.token_type} {token.token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        }
-        body = json.loads(body_from_string)
-        body["name"] = f"{resource_name}"
-    rest_ops.create(
-        url,
-        body=body,
-        headers=headers,
-        body_type=body_from_string_type,
-        timeout=timeout,
-        params=params,
-    )
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Path of the resource.
+        fmt (str, optional): Response format. Defaults to "json".
+        **params: Additional query parameters.
 
+    Raises:
+        HttpException: If the request fails.
 
-def basic_create_from_dict_body(
-    profile: ProfileUserContext, resource_path: str, body: dict, *, params: dict = None
-):
+    Returns:
+        Any: Response from the request.
+    """
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -118,16 +52,228 @@ def basic_create_from_dict_body(
         "Authorization": f"{auth_info.token_type} {auth_info.token}",
         "Accept": "application/json",
     }
-    rest_ops.create(url, headers=headers, timeout=timeout, body=body, params=params)
+    return rest_ops.get(url, headers=headers, timeout=timeout, fmt=fmt, params=params)
+
+
+def basic_create(
+    profile: ProfileUserContext,
+    resource_path: str,
+    resource_name: Optional[str] = None,
+    *,
+    body: Optional[Union[str, bytes, dict]] = None,
+    body_type: str = "json",
+    extra_headers: Optional[dict] = None,
+    **params,
+) -> None:
+    """
+    Creates a resource.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Path to create the resource.
+        resource_name (str, optional): Name of the resource.
+        body (str|bytes|dict, optional): Resource content.
+        body_type (str, optional): Type of the content if body is a string. Defaults to "json".
+        extra_headers (dict, optional): Additional request headers.
+        **params: Additional query parameters.
+
+    Raises:
+        HttpException: If the request fails.
+
+    Returns:
+        None.
+    """
+    hostname = profile.hostname
+    scheme = profile.scheme
+    timeout = profile.timeout
+    url = f"{scheme}://{hostname}{resource_path}"
+    auth_info: AuthInfo = profile.auth
+
+    headers = {
+        "Authorization": f"{auth_info.token_type} {auth_info.token}",
+        "Accept": "application/json",
+    }
+
+    if isinstance(body, dict):
+        request_body = body
+        if resource_name:
+            request_body["name"] = resource_name
+
+    elif isinstance(body, str):
+        if body_type == "json":
+            headers["Content-Type"] = "application/json"
+            request_body = json.loads(body)
+            if resource_name:
+                request_body["name"] = resource_name
+        else:
+            if body_type == "csv":
+                headers["Content-Type"] = "application/CSV"
+                headers["Accept"] = "*/*"
+            request_body = body
+
+    elif isinstance(body, bytes):
+        request_body = body
+
+    elif not body and resource_name:
+        headers["Content-Type"] = "application/json"
+        request_body = {"name": resource_name}
+    else:
+        request_body = None
+
+    if extra_headers:
+        headers.update(extra_headers)
+
+    rest_ops.post(
+        url,
+        body=request_body,
+        headers=headers,
+        body_type=body_type,
+        timeout=timeout,
+        params=params,
+    )
+
+
+def basic_create_file(
+    profile: ProfileUserContext,
+    resource_path: str,
+    resource_name: str = None,
+    *,
+    file_content: bytes,
+    file_type: str = "json",
+    extra_headers: Optional[dict] = None,
+    **params,
+) -> None:
+    """
+    Creates a resource from file content.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Path to create the resource.
+        resource_name (str, optional): Name of the resource.
+        file_content (bytes): Content of the file.
+        file_type (str, optional): Type of the file. Defaults to "json".
+        extra_headers (dict, optional): Additional request headers.
+        **params: Additional query parameters.
+
+    Raises:
+        HttpException: If the request fails.
+
+    Returns:
+        None.
+    """
+    hostname = profile.hostname
+    scheme = profile.scheme
+    timeout = profile.timeout
+    url = f"{scheme}://{hostname}{resource_path}"
+    auth_info: AuthInfo = profile.auth
+    headers = {
+        "Authorization": f"{auth_info.token_type} {auth_info.token}",
+        "Accept": "application/json",
+    }
+
+    if extra_headers:
+        headers.update(extra_headers)
+
+    rest_ops.post_with_file(
+        url,
+        headers=headers,
+        file_content=file_content,
+        file_name=resource_name,
+        timeout=timeout,
+        params=params,
+    )
+
+
+def basic_update(
+    profile: ProfileUserContext,
+    resource_path: str,
+    *,
+    body: Union[str, bytes, dict],
+    resource_name: Optional[str] = None,
+    filter_field: str = "name",
+    **params,
+) -> None:
+    """
+    Updates a resource.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Path of the resource.
+        body (str|bytes|dict): Resource content.
+        resource_name (str, optional): Name of the resource.
+        filter_field (str, optional): Field to filter the resource. Defaults to "name".
+        **params: Additional query parameters.
+
+    Raises:
+        ResourceNotFoundException: If the resource is not found.
+
+    Returns:
+        None.
+    """
+    hostname = profile.hostname
+    scheme = profile.scheme
+    timeout = profile.timeout
+    url = f"{scheme}://{hostname}{resource_path}"
+    auth_info: AuthInfo = profile.auth
+    headers = {
+        "Authorization": f"{auth_info.token_type} {auth_info.token}",
+        "Accept": "application/json",
+    }
+
+    if resource_name:
+        # Get the resource ID from the resource name and update the URL.
+        resource = json.loads(
+            basic_show(
+                profile, resource_path, resource_name, filter_field=filter_field, params=params
+            )
+        )
+        resource_id = resource.get("uuid", resource.get("id", None))
+
+        if not resource_id:
+            _, resource_kind = heuristically_get_resource_kind(resource_path)
+            raise ResourceNotFoundException(
+                f"{resource_kind} with {filter_field} '{resource_name}' not found."
+            )
+        url += f"{resource_id}/"
+
+    if isinstance(body, dict):
+        request_body = body
+    elif isinstance(body, str):
+        request_body = json.loads(body)
+    elif isinstance(body, bytes):
+        request_body = body
+    else:
+        raise ValueError("Invalid body type")
+
+    rest_ops.put(url, headers=headers, body=request_body, timeout=timeout, params=params)
 
 
 def basic_show(
-    profile,
-    resource_path,
-    resource_name,
+    profile: ProfileUserContext,
+    resource_path: str,
+    resource_name: str,
+    *,
     indent: Optional[bool] = False,
     filter_field: Optional[str] = "name",
-):
+    **params,
+) -> str:
+    """
+    Retrieves and returns a specific resource.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Path of the resource.
+        resource_name (str): Name of the resource.
+        indent (bool, optional): Indent JSON output. Defaults to False.
+        filter_field (str, optional): Field to filter the resource. Defaults to "name".
+        **params: Additional query parameters.
+
+    Raises:
+        ResourceNotFoundException: If the resource is not found.
+
+    Returns:
+        str: JSON string of the resource.
+    """
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -137,67 +283,80 @@ def basic_show(
         "Authorization": f"{auth_info.token_type} {auth_info.token}",
         "Accept": "application/json",
     }
-    indentation = DEFAULT_INDENTATION if indent else None
-    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
-    for resource in resources:
-        if resource.get(filter_field) == resource_name:
-            return json.dumps(resource, indent=indentation)
 
-    if resource_name is not None:
-        message = f"Resource with {filter_field} '{resource_name}' not found."
-    else:
-        message = "Cannot find resource."
+    indentation = DEFAULT_INDENTATION if indent else None
+    has_next = True
+    while has_next:
+        response = rest_ops.get(list_url, headers=headers, timeout=timeout, params=params)
+
+        # If the response is paginated, it should contain the "results" key.
+        if "results" in response:
+            resources = response.get("results", [])
+        else:
+            # If not paginated, assume the response is the list of resources.
+            resources = response
+
+        for resource in resources:
+            if resource.get(filter_field) == resource_name:
+                return json.dumps(resource, indent=indentation)
+
+        # If the response is not paginated, break out of the loop.
+        if "results" not in response:
+            break
+
+        # Pagination handling:
+        # Update the "page" parameter to get the next page if available.
+        next_page = response.get("next", 0)
+        current_page = response.get("current", 0)
+        num_pages = response.get("num_pages", 0)
+
+        has_next = next_page != 0 and current_page < num_pages
+        if not params:
+            params = {"page": next_page}
+        else:
+            params["page"] = next_page
+
+    _, resource_kind = heuristically_get_resource_kind(resource_path)
+    message = (
+        f"{resource_kind.capitalize()} with {filter_field} '{resource_name}' not found."
+        if resource_name is not None
+        else "Resource not found."
+    )
     raise ResourceNotFoundException(message)
 
 
 def basic_transform(ctx: click.Context):
-    profile_info: ProfileUserContext = ctx.parent.obj["usercontext"]
-    project_name, table_name = profile_info.projectname, profile_info.tablename
+    profile: ProfileUserContext = ctx.parent.obj["usercontext"]
+    project_name, table_name = profile.projectname, profile.tablename
     if not project_name or not table_name:
         raise HdxCliException(
             f"No project/table parameters provided and "
-            f"no project/table set in profile '{profile_info.profilename}'"
+            f"no project/table set in profile '{profile.profilename}'"
         )
-    hostname = profile_info.hostname
-    org_id = profile_info.org_id
-    scheme = profile_info.scheme
-    timeout = profile_info.timeout
-    list_projects_url = f"{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/"
-    token = profile_info.auth
-    headers = {"Authorization": f"{token.token_type} {token.token}", "Accept": "application/json"}
 
+    org_id = profile.org_id
+    projects_path = f"/config/v1/orgs/{org_id}/projects/"
     try:
-        projects_list = rest_ops.list(list_projects_url, headers=headers, timeout=timeout)
-        project_id = [p["uuid"] for p in projects_list if p["name"] == project_name][0]
-    except IndexError as idx_err:
-        raise LogicException(f"Project '{project_name}' not found.") from idx_err
+        project_id = json.loads(basic_show(profile, projects_path, project_name))["uuid"]
+    except IndexError as exc:
+        raise ResourceNotFoundException(f"Project '{project_name}' not found.") from exc
 
+    tables_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/"
     try:
-        list_tables_url = (
-            f"{scheme}://{hostname}/config/v1/orgs/{org_id}/projects/{project_id}/tables"
-        )
-        tables_list = rest_ops.list(list_tables_url, headers=headers, timeout=timeout)
-        table_id = [t["uuid"] for t in tables_list if t["name"] == table_name][0]
-    except IndexError as idx_err:
-        raise LogicException(f"Table '{table_name}' not found.") from idx_err
+        table_id = json.loads(basic_show(profile, tables_path, table_name))["uuid"]
+    except IndexError as exc:
+        raise ResourceNotFoundException(f"Table with name '{table_name}' not found.") from exc
 
-    transforms_path = (
-        f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/"
-    )
+    transforms_path = f"{tables_path}{table_id}/transforms/"
+    ctx.obj = {"resource_path": transforms_path, "usercontext": profile}
 
-    if profile_info.transformname:
-        transforms_url = f"{scheme}://{hostname}{transforms_path}"
-        transforms_list = rest_ops.list(transforms_url, headers=headers, timeout=timeout)
+    if profile.transformname:
         try:
-            transform_name = [
-                t["name"] for t in transforms_list if t["name"] == profile_info.transformname
-            ][0]
-            profile_info.transformname = transform_name
-        except IndexError as ex:
-            raise TransformNotFoundException(
-                f"Transform '{profile_info.transformname}' not found."
-            ) from ex
-    ctx.obj = {"resource_path": transforms_path, "usercontext": profile_info}
+            _ = json.loads(basic_show(profile, transforms_path, profile.transformname))["uuid"]
+        except IndexError as exc:
+            raise ResourceNotFoundException(
+                f"Transform with name '{profile.transformname}' not found."
+            ) from exc
 
 
 class KeyAbsent:
@@ -315,7 +474,9 @@ DottedKey = str
 
 
 def _settings_update(resource: Dict[str, Any], key: DottedKey, value: Any):
-    "Update resource and return it with updated_data"
+    """
+    Update resource and return it with updated_data
+    """
     key_parts = key.split(".")
     the_value = None
     try:
@@ -330,8 +491,28 @@ def _settings_update(resource: Dict[str, Any], key: DottedKey, value: Any):
     return resource
 
 
-def basic_settings(profile, resource_path, key, value, *, params=None):
-    """Given a resource type, it returns the settings that can be used for it"""
+def basic_settings(
+    profile: ProfileUserContext, resource_path: str, key: str, value: Any, **params
+) -> None:
+    """
+    Three cases:
+    1. key is None: show all settings
+    2. key is not None and value is None: show the value of key
+    3. key is not None and value is not None: update the value of key
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Resource path.
+        key (str): Key to show or update.
+        value (Any): Value to update the key with.
+        **params: Additional query parameters.
+
+    Raises:
+        ResourceNotFoundException: If the resource is not found.
+
+    Returns:
+        None.
+    """
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
@@ -339,24 +520,20 @@ def basic_settings(profile, resource_path, key, value, *, params=None):
     auth = profile.auth
     headers = {"Authorization": f"{auth.token_type} {auth.token}", "Accept": "application/json"}
 
-    structure_resource_settings = get_resource_settings_structure(profile, settings_url)
-    if not structure_resource_settings:
-        raise ActionNotAvailableException(
-            "The 'settings' action is not available on this resource."
-        )
+    structure_resource_settings = basic_options(profile, resource_path)
 
     resource_kind_plural, resource_kind = heuristically_get_resource_kind(resource_path)
-    if not getattr(profile, resource_kind + "name"):
+    if not (resource_name := getattr(profile, resource_kind + "name")):
         raise LogicException(f"No default {resource_kind} found in profile")
     resources = None
 
     try:
         resources = globals()["find_" + resource_kind_plural](profile)
-        resource = [r for r in resources if r["name"] == getattr(profile, resource_kind + "name")][
-            0
-        ]
+        resource = [r for r in resources if r["name"] == resource_name][0]
     except IndexError as idx_err:
-        raise ResourceNotFoundException("Cannot find resource.") from idx_err
+        raise ResourceNotFoundException(
+            f"{resource_kind.capitalize()} with name '{resource_name}' not found."
+        ) from idx_err
 
     if not key:
         logger.info(f'{"-" * (90 + 30 + 40)}')
@@ -372,47 +549,104 @@ def basic_settings(profile, resource_path, key, value, *, params=None):
         this_resource_url = f"{settings_url}{resource['uuid']}"
         try:
             resource = _settings_update(resource, key, value)
-            rest_ops.update_with_put(
+            rest_ops.put(
                 this_resource_url, headers=headers, timeout=timeout, body=resource, params=params
             )
         except Exception as exc:
             logger.debug(f"Error updating resource settings using PUT: {exc}")
             logger.debug("Trying to update using PATCH")
             patch_data = _create_dict_from_dotted_key_and_value(key, value)
-            rest_ops.update_with_patch(
+            rest_ops.patch(
                 this_resource_url, headers=headers, timeout=timeout, body=patch_data, params=params
             )
         logger.info(f"Updated {resource['name']} {key}")
 
 
-def basic_delete(profile, resource_path, resource_name: str, *, params=None, filter_field="name"):
-    hostname = profile.hostname
-    scheme = profile.scheme
+def basic_delete(
+    profile: ProfileUserContext,
+    resource_path: str,
+    resource_name: str,
+    *,
+    filter_field: str = "name",
+    url: Optional[str] = None,
+    **params,
+) -> bool:
+    """
+    Deletes a resource.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Path of the resource.
+        resource_name (str): Name of the resource.
+        filter_field (str, optional): Field to filter the resource. Defaults to "name".
+        url (str, optional): URL of the resource. Defaults to None.
+        **params: Additional query parameters.
+
+    Raises:
+        ResourceNotFoundException: If the resource is not found.
+
+    Returns:
+        bool: True if the resource was deleted, False otherwise.
+    """
+    if not url:
+        resource = json.loads(
+            basic_show(
+                profile, resource_path, resource_name, filter_field=filter_field, params=params
+            )
+        )
+        resource_id = resource.get("uuid", resource.get("id", None))
+
+        scheme = profile.scheme
+        hostname = profile.hostname
+        url = f"{scheme}://{hostname}{resource_path}{resource_id}" if resource_id else None
+        if not url:
+            _, resource_kind = heuristically_get_resource_kind(resource_path)
+            logger.debug(f"Error building URL for {resource_kind} '{resource_name}'.")
+            return False
+
     timeout = profile.timeout
-    list_url = f"{scheme}://{hostname}{resource_path}"
     auth = profile.auth
     headers = {"Authorization": f"{auth.token_type} {auth.token}", "Accept": "application/json"}
-    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
-    url = None
-    for a_resource in resources:
-        if a_resource[filter_field] == resource_name:
-            if "url" in a_resource:
-                url = a_resource["url"].replace("https://", f"{scheme}://")
-            else:
-                try:
-                    url = f"{scheme}://{hostname}{resource_path}{a_resource['uuid']}"
-                except KeyError:
-                    # the role resource is the only one with id instead of uuid
-                    url = f"{scheme}://{hostname}{resource_path}{a_resource['id']}"
-            break
-    if not url:
-        return False
     rest_ops.delete(url, headers=headers, timeout=timeout, params=params)
     return True
 
 
-def basic_list(profile, resource_path, filter_field: Optional[str] = "name"):
-    resources = get_resource_list(profile, resource_path)
+def basic_list(
+    profile: ProfileUserContext,
+    resource_path: str,
+    *,
+    filter_field: Optional[str] = "name",
+    **params,
+) -> None:
+    """
+    List resources using the provided data. If the resources are paginated, it shows
+    the current page, the total number of pages available and the total number of resources.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Resource path to list.
+        filter_field (str, optional): Field to filter the resource. Defaults to "name".
+        **params: Additional query parameters.
+
+    Raises:
+        ResourceNotFoundException: If the resource is not found.
+
+    Returns:
+        None.
+    """
+    response = generic_basic_list(profile, resource_path, **params)
+
+    count, current_count, current, num_pages = None, None, None, None
+    # If the response is paginated, it should contain the "results" key.
+    if "results" in response:
+        resources = response.get("results", [])
+        count = response.get("count", 0)
+        current_count = len(resources)
+        current = response.get("current", 0)
+        num_pages = response.get("num_pages", 0)
+    else:
+        # If not paginated, assume the response is the list of resources.
+        resources = response
 
     for resource in resources:
         if isinstance(resource, str):
@@ -423,67 +657,213 @@ def basic_list(profile, resource_path, filter_field: Optional[str] = "name"):
             else:
                 logger.info(f"{resource[filter_field]}")
 
+    if count not in (None, 0):
+        plural, singular = heuristically_get_resource_kind(resource_path)
+        resource_name = plural if count > 1 else singular
+        logger.info(
+            f"Listed {current_count} of {count} {resource_name} [page {current}/{num_pages}]"
+        )
 
-def _get_resource_information(
-    profile, resource_path, resource_name, action, indent: Optional[bool] = False
-):
+
+def generic_basic_list(
+    profile: ProfileUserContext,
+    resource_path: str,
+    **params,
+) -> dict:
+    """
+    Return a list of resources using the provided data.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Resource path to list.
+        **params: Additional query parameters.
+
+    Raises:
+        ResourceNotFoundException: If the resource is not found.
+
+    Returns:
+        dict: Response from the request.
+    """
     hostname = profile.hostname
     scheme = profile.scheme
     timeout = profile.timeout
-    list_url = f"{scheme}://{hostname}{resource_path}"
+    url = f"{scheme}://{hostname}{resource_path}"
     auth_info: AuthInfo = profile.auth
     headers = {
         "Authorization": f"{auth_info.token_type} {auth_info.token}",
         "Accept": "application/json",
     }
-    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
-    url = None
-    indentation = DEFAULT_INDENTATION if indent else None
-    for resource in resources:
-        if resource["name"] == resource_name:
-            if "url" in resource:
-                url = resource["url"].replace("https://", f"{scheme}://")
-            else:
-                url = f"{scheme}://{hostname}{resource_path}{resource['uuid']}"
-            break
+    return rest_ops.get(url, headers=headers, timeout=timeout, params=params)
+
+
+def basic_stats(
+    profile: ProfileUserContext,
+    resource_path: str,
+    resource_name: str,
+    *,
+    indent: Optional[bool] = False,
+    **params,
+) -> None:
+    """
+    Get and display the statistics of a resource using the provided data.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Resource path to show.
+        resource_name (str): Resource name.
+        indent (bool, optional): Indent JSON output. Defaults to False.
+        **params: Additional query parameters.
+
+    Raises:
+        ResourceNotFoundException: If the resource is not found.
+
+    Returns:
+        None.
+    """
+    resource = json.loads(basic_show(profile, resource_path, resource_name))
+    resource_id = resource.get("uuid", resource.get("id", None))
+
+    hostname = profile.hostname
+    scheme = profile.scheme
+    url = f"{scheme}://{hostname}{resource_path}{resource_id}/stats" if resource_id else None
     if not url:
-        raise ResourceNotFoundException(f"Cannot find resource {resource_name}.")
+        _, resource_kind = heuristically_get_resource_kind(resource_path)
+        raise ResourceNotFoundException(
+            f"There was an error building the URL for the {resource_kind} '{resource_name}'."
+        )
 
-    url += f"/{action}"
-    response = rest_ops.get(url, headers=headers, timeout=timeout)
-    return json.dumps(response, indent=indentation)
-
-
-def basic_stats(profile, resource_path, resource_name, indent):
-    return _get_resource_information(profile, resource_path, resource_name, "stats", indent)
-
-
-def basic_activity(profile, resource_path, resource_name, indent):
-    return _get_resource_information(profile, resource_path, resource_name, "activity", indent)
-
-
-def get_resource_list(profile, resource_path, **kwargs):
-    hostname = profile.hostname
-    scheme = profile.scheme
     timeout = profile.timeout
-    list_url = f"{scheme}://{hostname}{resource_path}"
     auth_info: AuthInfo = profile.auth
     headers = {
         "Authorization": f"{auth_info.token_type} {auth_info.token}",
         "Accept": "application/json",
     }
-    resources = rest_ops.list(list_url, headers=headers, timeout=timeout, params=kwargs)
-    return resources
+    stats = rest_ops.get(url, headers=headers, timeout=timeout, params=params)
+
+    logger.info(json.dumps(stats, indent=DEFAULT_INDENTATION if indent else None))
 
 
-def get_resource_settings_structure(profile, url):
+def _format_activities(activities: list) -> list:
+    simplified = []
+    for act in activities:
+        timestamp = act.get("created")
+        user = act.get("log", {}).get("user", {}).get("username", "unknown")
+        action = act.get("action", "unknown")
+
+        try:
+            timestamp_formatted = datetime.fromisoformat(timestamp.rstrip("Z")).strftime(
+                "%Y-%m-%d %H:%M"
+            )
+        except (ValueError, TypeError, AttributeError):
+            timestamp_formatted = "invalid date"
+
+        simplified.append({"timestamp": timestamp_formatted, "user": user, "action": action})
+
+    return simplified
+
+
+def basic_activity(
+    profile: ProfileUserContext,
+    resource_path: str,
+    resource_name: str,
+    **params,
+) -> None:
+    """
+    Get and display the activity of a resource using the provided data. If the resource is paginated,
+    it shows the current page, the total number of pages available and the total number of activities.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Resource path to show.
+        resource_name (str): Resource name.
+        **params: Additional query parameters.
+
+    Raises:
+        ResourceNotFoundException: If the resource is not found.
+
+    Returns:
+        None.
+    """
+    resource = json.loads(basic_show(profile, resource_path, resource_name))
+    resource_id = resource.get("uuid", resource.get("id", None))
+
+    hostname = profile.hostname
+    scheme = profile.scheme
+    url = f"{scheme}://{hostname}{resource_path}{resource_id}/activity"
+    if not url:
+        _, resource_kind = heuristically_get_resource_kind(resource_path)
+        raise ResourceNotFoundException(
+            f"There was an error building the URL for the {resource_kind} '{resource_name}'."
+        )
+
     timeout = profile.timeout
-    auth = profile.auth
-    headers = {"Authorization": f"{auth.token_type} {auth.token}", "Accept": "application/json"}
+    auth_info: AuthInfo = profile.auth
+    headers = {
+        "Authorization": f"{auth_info.token_type} {auth_info.token}",
+        "Accept": "application/json",
+    }
+    response = rest_ops.get(url, headers=headers, timeout=timeout, params=params)
 
-    options = rest_ops.options(url, headers=headers, timeout=timeout)
+    count, current_count, current, num_pages = None, None, None, None
+    # If the response is paginated, it should contain the "results" key.
+    if "results" in response:
+        activities = response.get("results", [])
+        count = response.get("count", 0)
+        current_count = len(activities)
+        current = response.get("current", 0)
+        num_pages = response.get("num_pages", 0)
+    else:
+        # If not paginated, assume the response is the list of resources.
+        activities = response
+
+    if not activities:
+        return
+
+    simplified_activities = _format_activities(activities)
+    logger.info(f'{"-" * (20 + 35 + 25)}')
+    logger.info(_format_settings_header([("created", 20), ("user", 35), ("action", 25)]))
+    logger.info(f'{"-" * (20 + 35 + 25)}')
+    for act in simplified_activities:
+        logger.info(f"{act['timestamp']:19} {act['user']:34} {act['action']:24}")
+
+    if count is not None:
+        logger.info("")
+        logger.info(f"Showed {current_count} of {count} activities [page {current}/{num_pages}]")
+
+
+def basic_options(profile: ProfileUserContext, resource_path: str, action: str = "POST") -> dict:
+    """
+    Get the available options for a resource using the provided data. The options are the actions
+    that can be performed on the resource. In this case, the action is "POST" by default.
+
+    Args:
+        profile (ProfileUserContext): User profile context.
+        resource_path (str): Resource path to show.
+        action (str, optional): Action to perform. Defaults to "POST".
+
+    Raises:
+        ActionNotAvailableException: If the action is not available on the resource.
+        HttpException: If the request fails.
+
+    Returns:
+        dict: The available options for the resource.
+    """
+    hostname = profile.hostname
+    scheme = profile.scheme
+    timeout = profile.timeout
+    url = f"{scheme}://{hostname}{resource_path}"
+    auth_info: AuthInfo = profile.auth
+    headers = {
+        "Authorization": f"{auth_info.token_type} {auth_info.token}",
+        "Accept": "application/json",
+    }
+
+    response = rest_ops.options(url, headers=headers, timeout=timeout)
     try:
-        return options["actions"]["POST"]
-    except KeyError as exc:
-        logger.debug(f"The 'settings' action is not available on this resource: {exc}.")
-    return None
+        options = response.json()
+        return options["actions"][action]
+    except (JSONDecodeError, KeyError, TypeError) as exc:
+        logger.debug(f"Error getting options for resource: {exc}")
+        raise ActionNotAvailableException(
+            "The 'settings' action is not available on this resource."
+        )

@@ -1,12 +1,9 @@
-"""Commands relative to project handling  operations"""
-
-import json
+"""Commands relative to function handling operations"""
 
 import click
 
-from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileUserContext
-from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
+from ...library_api.common.exceptions import LogicException
 from ...library_api.common.generic_resource import access_resource
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import (
@@ -15,11 +12,13 @@ from ...library_api.utility.decorators import (
     report_error_and_exit,
     target_cluster_options,
 )
+from ...library_api.utility.file_handling import load_json_settings_file
 from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.misc_operations import settings as command_settings
 from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import list_ as command_list
 from ..common.rest_operations import show as command_show
+from ..common.undecorated_click_commands import basic_create
 
 logger = get_logger()
 
@@ -47,8 +46,8 @@ def function(ctx: click.Context, project_name: str, function_name: str):
     ProfileUserContext.update_context(
         user_profile, projectname=project_name, functionname=function_name
     )
-
     project_name = user_profile.projectname
+
     if not project_name:
         raise LogicException(
             f"No project parameter provided and "
@@ -56,9 +55,6 @@ def function(ctx: click.Context, project_name: str, function_name: str):
         )
 
     project_body = access_resource(user_profile, [("projects", project_name)])
-    if not project_body:
-        raise ResourceNotFoundException(f"Project '{project_name}' not found.")
-
     project_id = project_body.get("uuid")
     org_id = user_profile.org_id
     ctx.obj = {
@@ -71,6 +67,8 @@ def function(ctx: click.Context, project_name: str, function_name: str):
 @click.option(
     "--sql-from-file",
     "-f",
+    type=click.Path(exists=True, readable=True),
+    callback=load_json_settings_file,
     help="Create the body of the sql from a json description as in the POST request in "
     "https://docs.hydrolix.io/docs/custom-functions."
     """For example:
@@ -82,10 +80,10 @@ def function(ctx: click.Context, project_name: str, function_name: str):
     default=None,
 )
 @click.option("--inline-sql", "-s", help="Use inline sql in the command-line", default=None)
-@click.argument("function_name")
+@click.argument("function_name", metavar="FUNCTION_NAME")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create(ctx: click.Context, function_name: str, sql_from_file: str, inline_sql: str):
+def create(ctx: click.Context, function_name: str, sql_from_file: dict, inline_sql: str):
     if inline_sql and sql_from_file:
         raise LogicException(
             "Only one of the options --inline-sql and --sql-from-file can be used."
@@ -97,21 +95,12 @@ def create(ctx: click.Context, function_name: str, sql_from_file: str, inline_sq
 
     resource_path = ctx.parent.obj["resource_path"]
     profile = ctx.parent.obj["usercontext"]
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    url = f"{scheme}://{hostname}{resource_path}"
-    token = profile.auth
-    headers = {"Authorization": f"{token.token_type} {token.token}", "Accept": "application/json"}
     body = {}
-    if sql_from_file:
-        with open(sql_from_file, "r", encoding="utf-8") as input_body:
-            body = json.load(input_body)
-            body["name"] = f"{function_name}"
-    elif inline_sql:
-        body["name"] = f"{function_name}"
+    if inline_sql:
         body["sql"] = inline_sql
-    rest_ops.create(url, body=body, headers=headers, timeout=timeout)
+    else:
+        body = sql_from_file
+    basic_create(profile, resource_path, function_name, body=body)
     logger.info(f"Created function {function_name}")
 
 

@@ -1,8 +1,9 @@
 import re
 
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.exceptions import ActionNotAvailableException, HttpException
 from ...library_api.common.logging import get_logger
-from ..common.undecorated_click_commands import get_resource_settings_structure
+from ..common.undecorated_click_commands import basic_options
 from ..migrate.helpers import confirm_action
 
 logger = get_logger()
@@ -293,10 +294,12 @@ def _adapt_resource_to_api_structure(
 
 
 def adapt_resource_to_api_structure(
-    profile: ProfileUserContext, resource_url: str, resource_settings: dict
+    profile: ProfileUserContext, resource_path: str, resource_settings: dict
 ) -> dict:
-    resource_structure = get_resource_settings_structure(profile, resource_url)
-    if not resource_structure:
+    try:
+        resource_structure = basic_options(profile, resource_path)
+    except (HttpException, ActionNotAvailableException) as e:
+        logger.debug(f"Error fetching resource options: {e}")
         return resource_settings
 
     adapted_resource, first_time_input = _adapt_resource_to_api_structure(

@@ -4,9 +4,9 @@ from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
-from ..common import rest_operations as rest_ops
-from ..userdata.token import AuthInfo
-from .logging import get_logger
+from hdx_cli.library_api.common.context import ProfileUserContext
+from hdx_cli.library_api.common.generic_resource import access_resource
+from hdx_cli.library_api.common.logging import get_logger
 
 logger = get_logger()
 
@@ -27,11 +27,11 @@ class Role(BaseModel):
 
 def get_available_scope_type_list(profile, resource_path) -> list:
     global AVAILABLE_SCOPE_TYPE
-
+    print(f"{"SIIIIIIIIII" if AVAILABLE_SCOPE_TYPE else "NOOOOOOOOOO"}")
     if AVAILABLE_SCOPE_TYPE:
         return AVAILABLE_SCOPE_TYPE
 
-    permissions_list = get_permissions_list(profile, resource_path)
+    permissions_list = access_resource(profile, [("permissions", None)], base_path=resource_path)
     AVAILABLE_SCOPE_TYPE = [item["scope_type"] for item in permissions_list]
     return AVAILABLE_SCOPE_TYPE
 
@@ -59,22 +59,8 @@ def is_valid_uuid(value) -> bool:
         return False
 
 
-def get_permissions_list(profile, resource_path) -> list:
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    list_url = f"{scheme}://{hostname}{resource_path}permissions/"
-    auth_info: AuthInfo = profile.auth
-    headers = {
-        "Authorization": f"{auth_info.token_type} {auth_info.token}",
-        "Accept": "application/json",
-    }
-    permissions_list = rest_ops.list(list_url, headers=headers, timeout=timeout)
-    return permissions_list
-
-
 def get_permissions_by_scope_type(profile, resource_path, scope_type=None) -> list:
-    permissions_list = get_permissions_list(profile, resource_path)
+    permissions_list = access_resource(profile, [("permissions", None)], base_path=resource_path)
     response = []
 
     for item in permissions_list:
@@ -88,18 +74,9 @@ def get_permissions_by_scope_type(profile, resource_path, scope_type=None) -> li
     return list(set(response))
 
 
-def get_role_data_from_standard_input(profile, resource_path) -> Union[Role, None]:
-    input_role_name = None
-
-    # ROLE NAME SECTION
-    while not input_role_name:
-        # '[!n]' in the logger means: without new line
-        logger.info("Enter the name for the new role: [!n]")
-        input_role_name = input("").strip()
-        if not input_role_name or not is_valid_rolename(input_role_name):
-            logger.info("Invalid role name, please try again")
-            input_role_name = None
-
+def get_role_data_from_standard_input(
+    profile, resource_path: str, role_name: str
+) -> Union[Role, None]:
     policies = []
     add_another_policy = True
 
@@ -111,7 +88,7 @@ def get_role_data_from_standard_input(profile, resource_path) -> Union[Role, Non
         logger.info("Do you want to add another Policy? [Y/n]: [!n]")
         add_another_policy = input("").lower() == "y"
 
-    role_to_create = Role(name=input_role_name, policies=policies)
+    role_to_create = Role(name=role_name, policies=policies)
     _display_role_details(role_to_create)
 
     logger.info("Confirm the creation of the new role? [Y/n]: [!n]")
@@ -139,7 +116,7 @@ def modify_role_data_from_standard_input(profile, resource_path, role: Role) -> 
     while not selected_option:
         logger.info("1. Add a new policy")
         logger.info("2. Modify an existing policy")
-        logger.info("3. Delete a policy")
+        logger.info("3. Remove a policy")
 
         logger.info("Please select an option: [!n]")
         selected_option = input("").strip()
@@ -161,7 +138,11 @@ def modify_role_data_from_standard_input(profile, resource_path, role: Role) -> 
     return role_to_update
 
 
-function_mapping = {"1": "add_policy", "2": "modify_policy", "3": "delete_policy"}
+function_mapping = {
+    "1": "add_policy_from_role",
+    "2": "modify_policy_from_role",
+    "3": "remove_policy_from_role",
+}
 
 
 def get_data_for_policy(profile, resource_path) -> Policy:
@@ -282,7 +263,7 @@ def _display_policies(policies):
         logger.info(f"Permissions: {', '.join(policy.permissions)}")
 
 
-def _get_selection(list_size: int, input_text="Please select an option:") -> int:
+def _get_selection(list_size: int, input_text="Please select an option:") -> int | None:
     """
     Prompt the user to select an option and validate the input.
     Returns:adjusted index of the selected option in the list
@@ -303,22 +284,20 @@ def _get_selection(list_size: int, input_text="Please select an option:") -> int
         selected_option = None
 
 
-def delete_policy(profile, resource_path, role):
+def remove_policy_from_role(profile: ProfileUserContext, resource_path: str, role: Role) -> Role:
     _display_policies(role.policies)
-    selected_option = _get_selection(len(role.policies), "Choose a policy to delete")
+    selected_option = _get_selection(len(role.policies), "Choose a policy to remove")
     del role.policies[selected_option]
-
     return role
 
 
-def add_policy(profile, resource_path, role):
+def add_policy_from_role(profile: ProfileUserContext, resource_path: str, role: Role) -> Role:
     policy_details = get_data_for_policy(profile, resource_path)
     role.policies.append(policy_details)
-
     return role
 
 
-def modify_policy(profile, resource_path, role):
+def modify_policy_from_role(profile: ProfileUserContext, resource_path: str, role: Role) -> Role:
     _display_policies(role.policies)
     selected_policy = _get_selection(len(role.policies), "Choose a policy to modify")
     policy = role.policies[selected_policy]
@@ -379,21 +358,4 @@ def modify_policy(profile, resource_path, role):
 
         else:
             logger.info("Invalid option, please try again")
-
     return role
-
-
-def update_role_request(profile, resource_path, resource_body):
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    update_url = f"{scheme}://{hostname}{resource_path}"
-    auth_info: AuthInfo = profile.auth
-    headers = {
-        "Authorization": f"{auth_info.token_type} {auth_info.token}",
-        "Accept": "application/json",
-    }
-
-    rest_ops.update_with_put(
-        update_url, headers=headers, timeout=timeout, body=resource_body, params=None
-    )

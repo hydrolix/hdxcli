@@ -10,6 +10,7 @@ from tqdm import tqdm
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.logging import get_logger
 
+from ...library_api.common.exceptions import HdxCliException
 from .catalog_operations import Catalog
 
 logger = get_logger()
@@ -61,7 +62,8 @@ def update_catalog_and_upload(
             catalog.update(project_id, table_id, target_storage_id)
 
         catalog.upload(profile, uploaded_count)
-    except Exception as exc:
+    except HdxCliException as exc:
+        logger.debug(f"Error while uploading catalog: {exc}")
         exceptions.put(exc)
 
     upload_done.set()

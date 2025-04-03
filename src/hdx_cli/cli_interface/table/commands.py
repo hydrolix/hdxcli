@@ -1,11 +1,11 @@
 """Commands relative to tables handling operations"""
 
-import click
-import requests
+import json
 
-from ...library_api.common import rest_operations as rest_ops
+import click
+
 from ...library_api.common.context import ProfileUserContext
-from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
+from ...library_api.common.exceptions import HttpException, LogicException
 from ...library_api.common.generic_resource import access_resource
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import (
@@ -22,7 +22,7 @@ from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import list_ as command_list
 from ..common.rest_operations import show as command_show
 from ..common.rest_operations import stats as command_stats
-from ..common.undecorated_click_commands import basic_create_from_dict_body
+from ..common.undecorated_click_commands import basic_create, basic_show
 
 logger = get_logger()
 
@@ -56,9 +56,6 @@ def table(ctx: click.Context, project_name: str, table_name: str):
         )
 
     project_body = access_resource(user_profile, [("projects", project_name)])
-    if not project_body:
-        raise ResourceNotFoundException(f"Project '{project_name}' not found.")
-
     project_id = project_body.get("uuid")
     org_id = user_profile.org_id
     ctx.obj = {
@@ -68,7 +65,7 @@ def table(ctx: click.Context, project_name: str, table_name: str):
 
 
 @click.command(help="Create table.")
-@click.argument("table_name")
+@click.argument("table_name", metavar="TABLENAME", required=True)
 @click.option(
     "--type",
     "-t",
@@ -89,7 +86,7 @@ def table(ctx: click.Context, project_name: str, table_name: str):
 @click.option(
     "--sql-query-file",
     "-f",
-    type=click.Path(),
+    type=click.Path(exists=True, readable=True),
     required=False,
     default=None,
     callback=load_plain_file,
@@ -98,7 +95,7 @@ def table(ctx: click.Context, project_name: str, table_name: str):
 @click.option(
     "--settings-file",
     "-S",
-    type=click.Path(),
+    type=click.Path(exists=True, readable=True),
     required=False,
     default=None,
     callback=load_json_settings_file,
@@ -127,8 +124,7 @@ def create(
     body = {}
     if settings_file:
         body.update(settings_file)
-
-    body.update({"name": table_name})
+    body["name"]: table_name
 
     if table_type == "summary":
         summary_sql_query = sql_query_file if sql_query_file else sql_query
@@ -140,46 +136,30 @@ def create(
         settings["summary"] = summary_settings
         body["settings"] = settings
 
-    basic_create_from_dict_body(user_profile, resource_path, body)
+    basic_create(user_profile, resource_path, table_name, body=body)
     logger.info(f"Created table {table_name}")
 
 
-def _basic_truncate(profile, resource_path, resource_name: str):
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    list_url = f"{scheme}://{hostname}{resource_path}"
-    auth = profile.auth
-    headers = {"Authorization": f"{auth.token_type} {auth.token}", "Accept": "application/json"}
-    resources = rest_ops.list(list_url, headers=headers, timeout=timeout)
-    url = None
-    for a_resource in resources:
-        if a_resource["name"] == resource_name:
-            if "url" in a_resource:
-                url = a_resource["url"].replace("https://", f"{scheme}://")
-            else:
-                url = f"{scheme}://{hostname}{resource_path}{a_resource['uuid']}"
-            break
-    if not url:
-        return False
-    url = f"{url}/truncate"
-    result = requests.post(url, headers=headers, timeout=timeout)
-    if result.status_code not in (200, 201):
-        return False
-    return True
+def _truncate_table(profile: ProfileUserContext, resource_path: str, table_name: str):
+    table_ = json.loads(basic_show(profile, resource_path, table_name))
+    table_id = table_.get("uuid")
+    truncate_url = f"{resource_path}{table_id}/truncate"
+    try:
+        basic_create(profile, truncate_url)
+        logger.info(f"Truncated table {table_name}")
+    except HttpException as exc:
+        logger.debug(f"Error truncating table {table_name}: {exc}")
+        logger.info(f"Could not truncate table {table_name}")
 
 
 @click.command(help="Truncate table.")
 @click.argument("table_name")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def command_truncate(ctx: click.Context, table_name):
+def command_truncate(ctx: click.Context, table_name: str):
     user_profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
-    if not _basic_truncate(user_profile, resource_path, table_name):
-        logger.info(f"Could not truncate table {table_name}")
-        return
-    logger.info(f"Truncated table {table_name}")
+    _truncate_table(user_profile, resource_path, table_name)
 
 
 @click.command(

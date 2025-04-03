@@ -1,13 +1,13 @@
-import json
 from typing import List, Tuple, Union
 
 import click
 
-from ...library_api.common import rest_operations as rest_ops
-from ...library_api.common.auth import AuthInfo
+from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import HdxCliException, QueryOptionNotFound
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from ...library_api.utility.file_handling import load_json_settings_file
+from ..common.undecorated_click_commands import basic_get, basic_options, basic_update
 
 logger = get_logger()
 
@@ -25,11 +25,17 @@ def query_option(ctx: click.Context):
 @click.command(help="Set query option(s).", name="set")
 @click.argument("query_option_name", default=None, required=False)
 @click.argument("query_option_value", default=None, required=False)
-@click.option("--from-file", default=None, help="Set query options from a JSON file.")
+@click.option(
+    "--from-file",
+    default=None,
+    type=click.Path(exists=True, readable=True),
+    callback=load_json_settings_file,
+    help="Set query options from a JSON file.",
+)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def set_(
-    ctx: click.Context, query_option_name: str, query_option_value: Union[str, int], from_file
+    ctx: click.Context, query_option_name: str, query_option_value: Union[str, int], from_file: dict
 ):
     user_profile = ctx.parent.obj["usercontext"]
     resource_path = ctx.parent.obj["resource_path"]
@@ -70,19 +76,18 @@ def list_(ctx: click.Context):
     _list(profile, resource_path)
 
 
-def _set(profile, resource_path, query_option_name=None, query_option_value=None, from_file=None):
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    url = f"{scheme}://{hostname}{resource_path}"
-    token = profile.auth
-    headers = {"Authorization": f"{token.token_type} {token.token}", "Accept": "application/json"}
-
-    if not (available_options := _available_query_options(url, headers, timeout)):
+def _set(
+    profile: ProfileUserContext,
+    resource_path: str,
+    query_option_name: str = None,
+    query_option_value: Union[str, int] = None,
+    from_file: dict = None,
+):
+    if not (available_options := _available_query_options(profile, resource_path)):
         logger.error("There was an error catching available query options.")
         return
 
-    result = rest_ops.list(url, headers=headers, timeout=timeout)
+    result = basic_get(profile, resource_path)
     if not result.get("settings") or "default_query_options" not in result.get("settings"):
         raise HdxCliException("An error occurred while trying to get the query options.")
 
@@ -92,39 +97,25 @@ def _set(profile, resource_path, query_option_name=None, query_option_value=None
 
         result["settings"]["default_query_options"][query_option_name] = query_option_value
     else:
-        try:
-            with open(from_file, "r", encoding="utf-8") as file:
-                query_options_from_file = json.load(file)
-        except FileNotFoundError as exc:
-            raise HdxCliException("The specified file does not exist.") from exc
-        except json.JSONDecodeError as exc:
-            raise HdxCliException("The file does not contain valid JSON.") from exc
-
-        if not all(key in available_options for key in query_options_from_file.keys()):
+        if not all(key in available_options for key in from_file.keys()):
             raise QueryOptionNotFound("There are invalid query options in the file.")
 
-        result["settings"]["default_query_options"].update(query_options_from_file)
+        result["settings"]["default_query_options"].update(from_file)
 
-    rest_ops.update_with_put(url, headers=headers, body=result, timeout=timeout, params=None)
+    basic_update(profile, resource_path, body=result)
+
     return (
         f"Set '{query_option_name}' query option"
         if query_option_name
-        else f"Set query options from file {from_file}"
+        else "Set query options from file"
     )
 
 
-def _unset(profile, resource_path, query_option_name=None):
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    url = f"{scheme}://{hostname}{resource_path}"
-    token = profile.auth
-    headers = {"Authorization": f"{token.token_type} {token.token}", "Accept": "application/json"}
-
-    result = rest_ops.list(url, headers=headers, timeout=timeout)
-
-    if not result.get("settings") or "default_query_options" not in result.get("settings"):
-        raise HdxCliException("An error occurred while trying to get the query options.")
+def _unset(profile: ProfileUserContext, resource_path: str, query_option_name: str = None) -> str:
+    result = basic_get(profile, resource_path)
+    default_query_options = result.get("settings", {}).get("default_query_options")
+    if not default_query_options:
+        return "No query options found to unset."
 
     data = result["settings"]
     try:
@@ -137,7 +128,7 @@ def _unset(profile, resource_path, query_option_name=None):
             f"{query_option_name} not found in the set query options."
         ) from key_err
 
-    rest_ops.update_with_put(url, headers=headers, body=result, timeout=timeout, params=None)
+    basic_update(profile, resource_path, body=result)
     return (
         f"Unset '{query_option_name}' query option"
         if query_option_name
@@ -145,26 +136,13 @@ def _unset(profile, resource_path, query_option_name=None):
     )
 
 
-def _list(profile, resource_path):
-    hostname = profile.hostname
-    scheme = profile.scheme
-    url = f"{scheme}://{hostname}{resource_path}"
-    auth_info: AuthInfo = profile.auth
-    timeout = profile.timeout
-    headers = {
-        "Authorization": f"{auth_info.token_type} {auth_info.token}",
-        "Accept": "application/json",
-    }
-
-    default_query_options = (
-        rest_ops.list(url, headers=headers, timeout=timeout)
-        .get("settings", {})
-        .get("default_query_options")
-    )
+def _list(profile: ProfileUserContext, resource_path: str) -> None:
+    result = basic_get(profile, resource_path)
+    default_query_options = result.get("settings", {}).get("default_query_options")
     if not default_query_options:
         return
 
-    if not (available_options := _available_query_options(url, headers, timeout)):
+    if not (available_options := _available_query_options(profile, resource_path)):
         logger.error("There was an error catching available query options.")
         return
 
@@ -178,16 +156,14 @@ def _list(profile, resource_path):
             )
 
 
-def _available_query_options(url, headers, timeout) -> dict:
-    response = rest_ops.options(url, headers=headers, timeout=timeout)
-    actions = response.get("actions", {})
-    put_action = actions.get("PUT", {})
-    settings = put_action.get("settings", {})
+def _available_query_options(profile: ProfileUserContext, resource_path: str) -> dict:
+    response = basic_options(profile, resource_path, action="PUT")
+    settings = response.get("settings", {})
     children = settings.get("children", {})
     return children.get("default_query_options", {}).get("children")
 
 
-def _format_settings_header(headers_and_spacing: List[Tuple[str, int]]):
+def _format_settings_header(headers_and_spacing: List[Tuple[str, int]]) -> str:
     format_strings = []
     for key, spacing in headers_and_spacing:
         format_strings.append(f"{key:<{spacing}}")

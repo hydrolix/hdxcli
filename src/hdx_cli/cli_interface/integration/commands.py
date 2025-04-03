@@ -6,7 +6,7 @@ from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileLoadContext, ProfileUserContext
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
-from ..common.undecorated_click_commands import basic_create_with_body_from_string, basic_transform
+from ..common.undecorated_click_commands import basic_create, basic_transform
 
 logger = get_logger()
 
@@ -68,7 +68,7 @@ def _github_list(ctx: click.Context):
     resource_path = f"{resource_path}/index.json"
     url = f"https://{raw_hostname}{resource_path}"
     timeout = profile.timeout
-    return rest_ops.list(url, headers={}, timeout=timeout)
+    return rest_ops.get(url, headers={}, timeout=timeout)
 
 
 @click.command(help="Integration transforms.")
@@ -93,7 +93,7 @@ def _basic_show(ctx: click.Context, transform_name: str, indent: bool = False):
         if res["name"] == transform_name:
             resource_url = f'{base_resource_url}{res["url"]}'
             timeout = user_profile.timeout
-            result = rest_ops.list(resource_url, headers={}, timeout=timeout)
+            result = rest_ops.get(resource_url, headers={}, timeout=timeout)
             indentation = DEFAULT_INDENTATION if indent else None
             return json.dumps(result, indent=indentation)
     else:
@@ -107,19 +107,16 @@ def _basic_show(ctx: click.Context, transform_name: str, indent: bool = False):
 @report_error_and_exit(exctype=Exception)
 def apply(ctx: click.Context, integration_transform_name: str, transform_name: str):
     transform_contents = _basic_show(ctx, integration_transform_name)
+    transform_dict = json.loads(transform_contents)
     try:
-        transform_dict = json.loads(transform_contents)
         del transform_dict["settings"]["is_default"]
-        transform_contents = json.dumps(transform_dict)
     except KeyError:
         pass
 
     user_profile = ctx.parent.obj["usercontext"]
     basic_transform(ctx)
     resource_path = ctx.obj["resource_path"]
-    basic_create_with_body_from_string(
-        user_profile, resource_path, transform_name, transform_contents
-    )
+    basic_create(user_profile, resource_path, transform_name, body=transform_dict)
     logger.info(f"Created transform {transform_name} from {integration_transform_name}")
 
 

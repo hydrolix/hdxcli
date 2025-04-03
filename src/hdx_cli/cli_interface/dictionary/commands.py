@@ -1,13 +1,9 @@
-"""Commands relative to project handling  operations"""
-
-import json
+"""Commands relative to dictionary handling operations"""
 
 import click
 
-from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import (
-    InvalidFormatFileException,
     MissingSettingsException,
     ResourceNotFoundException,
 )
@@ -19,12 +15,13 @@ from ...library_api.utility.decorators import (
     report_error_and_exit,
     target_cluster_options,
 )
+from ...library_api.utility.file_handling import load_bytes_file, load_json_settings_file
 from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.misc_operations import settings as command_settings
 from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import list_ as command_list
 from ..common.rest_operations import show as command_show
-from ..common.undecorated_click_commands import basic_create, basic_create_with_body_from_string
+from ..common.undecorated_click_commands import basic_create, basic_create_file, basic_delete
 
 logger = get_logger()
 
@@ -59,10 +56,8 @@ def dictionary(ctx: click.Context, project_name: str, dictionary_name: str):
             f"No project parameter provided and "
             f"no project set in profile '{user_profile.profilename}'"
         )
-    project_body = access_resource(user_profile, [("projects", project_name)])
-    if not project_body:
-        raise ResourceNotFoundException(f"Project '{project_name}' not found.")
 
+    project_body = access_resource(user_profile, [("projects", project_name)])
     project_id = project_body.get("uuid")
     org_id = user_profile.org_id
     resource_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/dictionaries/"
@@ -83,34 +78,30 @@ def files(ctx: click.Context):
     "the dictionary. The filename and name in settings will be replaced by "
     "'dictionary_filename' and 'dictionary_name' respectively."
 )
-@click.argument("dictionary_settings_file")
+@click.argument(
+    "dictionary_settings_file",
+    metavar="DICTIONARYSETTINGSFILE",
+    type=click.Path(exists=True, readable=True),
+    callback=load_json_settings_file,
+)
 @click.argument("dictionary_filename")
 @click.argument("dictionary_name")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create_dict(
     ctx: click.Context,
-    dictionary_settings_file: str,
+    dictionary_settings_file: dict,
     dictionary_filename: str,
     dictionary_name: str,
 ):
     profile = ctx.parent.obj["usercontext"]
     resource_path = ctx.parent.obj["resource_path"]
-    with open(dictionary_settings_file, "r", encoding="utf-8") as input_body:
-        try:
-            dictionary_body = json.loads(input_body.read())
-        except json.decoder.JSONDecodeError as exc:
-            raise InvalidFormatFileException(
-                f"Unexpected data structure found in {dictionary_settings_file}"
-            ) from exc
 
-    if not dictionary_body.get("settings"):
-        raise MissingSettingsException(f"Missing 'settings' field in {dictionary_settings_file}")
+    if not dictionary_settings_file.get("settings"):
+        raise MissingSettingsException("Missing 'settings' field in 'DICTIONARYSETTINGSFILE'")
 
-    dictionary_body["settings"]["filename"] = dictionary_filename
-    basic_create_with_body_from_string(
-        profile, resource_path, dictionary_name, json.dumps(dictionary_body)
-    )
+    dictionary_settings_file["settings"]["filename"] = dictionary_filename
+    basic_create(profile, resource_path, dictionary_name, body=dictionary_settings_file)
     logger.info(f"Created {dictionary_name}")
 
 
@@ -123,22 +114,31 @@ def create_dict(
     metavar="BODYFROMFILETYPE",
     default="json",
 )
-@click.argument("dictionary_file_to_upload")
-@click.argument("dictionary_filename")
+@click.argument(
+    "dictionary_file_to_upload",
+    metavar="DICTIONARYFILE",
+    type=click.Path(exists=True, readable=True),
+    callback=load_bytes_file,
+)
+@click.argument("dictionary_filename", metavar="DICTIONARYFILENAME")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def upload_file_dict(
-    ctx: click.Context, dictionary_file_to_upload: str, dictionary_filename, body_from_file_type
+    ctx: click.Context,
+    dictionary_file_to_upload: bytes,
+    dictionary_filename: str,
+    body_from_file_type: str,
 ):
     profile = ctx.parent.obj["usercontext"]
     resource_path = ctx.parent.obj["resource_path"]
-    basic_create(
-        profile, resource_path, dictionary_filename, dictionary_file_to_upload, body_from_file_type
+    basic_create_file(
+        profile,
+        resource_path,
+        dictionary_filename,
+        file_content=dictionary_file_to_upload,
+        file_type=body_from_file_type,
     )
-    logger.info(
-        f"Uploaded dictionary file from {dictionary_file_to_upload} "
-        f"with name {dictionary_filename}."
-    )
+    logger.info(f"Uploaded dictionary file {dictionary_filename}")
 
 
 @click.command(help="Delete dictionary file.")
@@ -150,11 +150,8 @@ def dict_file_delete(ctx: click.Context, dictionary_filename):
     resource_path = ctx.parent.obj["resource_path"]
     hostname = profile.hostname
     scheme = profile.scheme
-    timeout = profile.timeout
     resource_url = f"{scheme}://{hostname}{resource_path}/{dictionary_filename}"
-    auth = profile.auth
-    headers = {"Authorization": f"{auth.token_type} {auth.token}", "Accept": "application/json"}
-    rest_ops.delete(resource_url, headers=headers, timeout=timeout)
+    basic_delete(profile, resource_path, dictionary_filename, url=resource_url)
     logger.info(f"Deleted {dictionary_filename}")
 
 

@@ -1,23 +1,21 @@
-import json
 from functools import partial
 
 import click
 
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.exceptions import ResourceNotFoundException
+from ...library_api.common.generic_resource import access_resource
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import (
     dynamic_confirmation_prompt,
     ensure_logged_in,
     report_error_and_exit,
 )
+from ...library_api.utility.file_handling import load_json_settings_file
+from ..common.misc_operations import settings_with_force as command_settings_with_force
 from ..common.rest_operations import list_ as command_list
 from ..common.rest_operations import show as command_show
-from ..common.undecorated_click_commands import (
-    basic_create_from_dict_body,
-    basic_delete,
-    basic_settings,
-    get_resource_list,
-)
+from ..common.undecorated_click_commands import basic_create, basic_delete
 
 logger = get_logger()
 
@@ -28,17 +26,11 @@ def get_credential_id(ctx, param, value):
         return value
 
     user_profile = ctx.parent.obj.get("usercontext")
-    org_id = user_profile.org_id
-    resource_path = f"/config/v1/orgs/{org_id}/credentials/"
-    credentials_list = get_resource_list(user_profile, resource_path)
-    credential_id = [
-        c.get("uuid")
-        for c in credentials_list
-        if c.get("name") == value and c.get("uuid") is not None
-    ]
-    if not credential_id:
-        raise click.BadParameter(f"Credential name '{value}' not found.")
-    return credential_id[0]
+    try:
+        credential = access_resource(user_profile, [("credentials", value)])
+    except ResourceNotFoundException as exc:
+        raise click.BadParameter(f"Credential name '{value}' not found.") from exc
+    return credential.get("uuid")
 
 
 @click.group(help="Storage-related operations")
@@ -68,8 +60,11 @@ def storage(ctx: click.Context, storage_name: str):
 @click.option(
     "-f",
     "--settings-filename",
+    "settings_file",
+    type=click.Path(exists=True, readable=True),
     default=None,
     required=False,
+    callback=load_json_settings_file,
     help="Filename containing storage configuration settings.",
 )
 @click.option(
@@ -107,7 +102,7 @@ def storage(ctx: click.Context, storage_name: str):
 def create(
     ctx: click.Context,
     storage_name: str,
-    settings_filename: str,
+    settings_file: dict,
     bucket_path: str,
     bucket_name: str,
     region: str,
@@ -116,7 +111,7 @@ def create(
     credential_id: str,
     io_perf_mode: str,
 ):
-    if not settings_filename and not all((bucket_path, bucket_name, region, cloud)):
+    if not settings_file and not all((bucket_path, bucket_name, region, cloud)):
         raise click.BadParameter(
             "You must specify either a settings file or the bucket path, name, region, and cloud."
         )
@@ -124,7 +119,7 @@ def create(
     user_profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
 
-    if not settings_filename:
+    if not settings_file:
         storage_settings = {
             "bucket_path": bucket_path,
             "bucket_name": bucket_name,
@@ -140,11 +135,9 @@ def create(
             },
         }
     else:
-        with open(settings_filename, "r", encoding="utf-8") as file:
-            body = json.load(file)
+        body = settings_file
 
-    body["name"] = storage_name
-    basic_create_from_dict_body(user_profile, resource_path, body)
+    basic_create(user_profile, resource_path, storage_name, body=body)
     logger.info(f"Created storage {storage_name}")
 
 
@@ -171,38 +164,14 @@ def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: 
     _confirmation_prompt(prompt_active=not disable_confirmation_prompt)
     resource_path = ctx.parent.obj.get("resource_path")
     user_profile = ctx.parent.obj.get("usercontext")
-    params = {"force_operation": True}
-    if basic_delete(user_profile, resource_path, resource_name, params=params):
-        logger.info(f"Deleted {resource_name}")
-    else:
+    if not basic_delete(user_profile, resource_path, resource_name, force_operation=True):
         logger.info(f"Could not delete {resource_name}. Not found")
-
-
-@click.command(
-    help="Get, set or list settings on a resource. When invoked with "
-    "only the key, it retrieves the value of the setting. If retrieved "
-    "with both key and value, the value for the key, if it exists, will "
-    "be set.\n"
-    "Otherwise, when invoked with no arguments, all the settings will be listed."
-)
-@click.argument("key", required=False, default=None)
-@click.argument("value", required=False, default=None)
-@click.pass_context
-@report_error_and_exit(exctype=Exception)
-def settings(ctx: click.Context, key, value):
-    resource_path = ctx.parent.obj.get("resource_path")
-    user_profile = ctx.parent.obj.get("usercontext")
-    params = {"force_operation": True}
-    the_value = value
-    if value:
-        the_value = value
-        if (stripped := value.strip()).startswith("[") and stripped.endswith("]"):
-            the_value = json.loads(stripped)
-    basic_settings(user_profile, resource_path, key, the_value, params=params)
+        return
+    logger.info(f"Deleted {resource_name}")
 
 
 storage.add_command(command_list)
 storage.add_command(create)
 storage.add_command(delete)
 storage.add_command(command_show)
-storage.add_command(settings)
+storage.add_command(command_settings_with_force, name="settings")

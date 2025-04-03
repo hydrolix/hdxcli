@@ -1,6 +1,8 @@
 import logging
 import sys
 
+from tqdm import tqdm
+
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # key to have logging outputs without '\n' new line.
@@ -38,7 +40,6 @@ class DebugStreamHandler(logging.StreamHandler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            stream = self.stream
             if SPECIAL_CODE in record.msg:
                 if self.last_message_no_newline:
                     msg = record.getMessage().replace(SPECIAL_CODE, "")
@@ -54,7 +55,8 @@ class DebugStreamHandler(logging.StreamHandler):
                 else:
                     msg = f"{msg}\n"
 
-            stream.write(f"{msg}")
+            # tqdm.write is used to write to the console without new line
+            tqdm.write(msg, end="")
             self.flush()
         except Exception:
             self.handleError(record)

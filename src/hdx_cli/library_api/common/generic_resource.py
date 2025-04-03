@@ -1,5 +1,6 @@
 from typing import Any, List, Optional, Tuple
 
+from ..utility.functions import heuristically_get_resource_kind
 from . import rest_operations as rest_ops
 from .context import ProfileUserContext
 from .exceptions import ResourceNotFoundException
@@ -14,7 +15,8 @@ def access_resource_detailed(
     *,
     base_path="",
 ) -> Tuple[Any, str]:
-    """Receives a a context and a list of [(resource_kind, resource_name),...].
+    """
+    Receives a context and a list of [(resource_kind, resource_name),...].
     It keeps building a path to access it by accumulation, with one request
     (in the future it could be cached) per pair.
 
@@ -35,25 +37,34 @@ def access_resource_detailed(
     headers = {"Authorization": f"{token.token_type} {token.token}", "Accept": "application/json"}
     scheme = profile_info.scheme
     timeout = profile_info.timeout
+    no_pagination = {"pagination": False}
     resource_url = (
         f"{scheme}://{hostname}/config/v1/orgs/{org_id}/"
         if not base_path
         else f"{scheme}://{hostname}{base_path}"
     )
     if not resource_kind_and_name:
-        resource = rest_ops.list(resource_url, headers=headers, timeout=timeout)
-        return (resource, resource_url)
+        resource = rest_ops.get(
+            resource_url, headers=headers, timeout=timeout, params=no_pagination
+        )
+        return resource, resource_url
 
     for idx, (resource, resource_name) in enumerate(resource_kind_and_name):
         resource_url = f"{resource_url}{resource}/"
-        resource_list = rest_ops.list(resource_url, headers=headers, timeout=timeout)
+        resource_list = rest_ops.get(
+            resource_url, headers=headers, timeout=timeout, params=no_pagination
+        )
         if resource_name is None:
-            return (resource_list, resource_url)
+            return resource_list, resource_url
 
         a_resource = [r for r in resource_list if r["name"] == resource_name]
         if not a_resource:
             if idx <= len(resource_kind_and_name) - 1:  # More items to go through
-                raise ResourceNotFoundException(f"Resource '{resource_name}' not found.")
+                # TODO: This should be the default message of the ResourceNotFoundException
+                _, resource_kind = heuristically_get_resource_kind(resource_url)
+                raise ResourceNotFoundException(
+                    f"{resource_kind.capitalize()} with name '{resource_name}' not found."
+                )
             return None, resource_url
 
         a_resource = a_resource[0]
@@ -62,7 +73,7 @@ def access_resource_detailed(
     if not resource_kind_and_name:
         pass
 
-    return (a_resource, resource_url)
+    return a_resource, resource_url
 
 
 def access_resource(
