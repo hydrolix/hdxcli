@@ -27,7 +27,7 @@ class Role(BaseModel):
 
 def get_available_scope_type_list(profile, resource_path) -> list:
     global AVAILABLE_SCOPE_TYPE
-    print(f"{"SIIIIIIIIII" if AVAILABLE_SCOPE_TYPE else "NOOOOOOOOOO"}")
+
     if AVAILABLE_SCOPE_TYPE:
         return AVAILABLE_SCOPE_TYPE
 
