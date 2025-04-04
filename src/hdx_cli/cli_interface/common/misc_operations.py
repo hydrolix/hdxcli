@@ -41,8 +41,7 @@ def settings_with_force(ctx: click.Context, key: str, value: str, force_operatio
     resource_path = ctx.parent.obj["resource_path"]
     profile = ctx.parent.obj["usercontext"]
     the_value = value_formatter(value)
-    params = {"force_operation": str(force_operation).lower()}
-    basic_settings(profile, resource_path, key, the_value, params=params)
+    basic_settings(profile, resource_path, key, the_value, force_operation=force_operation)
 
 
 def value_formatter(value: str) -> Any:

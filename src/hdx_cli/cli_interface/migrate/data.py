@@ -7,7 +7,7 @@ from hdx_cli.cli_interface.migrate.rc.rc_manager import RcloneAPIConfig
 from hdx_cli.cli_interface.migrate.rc.rc_remotes import RCloneRemote
 from hdx_cli.cli_interface.migrate.rc.rc_utils import close_remotes, get_remote, recreate_remotes
 from hdx_cli.library_api.common.context import ProfileUserContext
-from hdx_cli.library_api.common.exceptions import MigrationFailureException
+from hdx_cli.library_api.common.exceptions import HdxCliException, MigrationFailureException
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.common.rest_operations import post_with_retries
 from hdx_cli.library_api.common.storage import get_storage_default_by_table
@@ -96,11 +96,12 @@ def migrate_partitions_threaded(
             return
 
         data = {"srcFs": from_to_path[0], "dstFs": from_to_path[1]}
-        response = post_with_retries(url, data, user=rc_config.user, password=rc_config.password)
+        response = post_with_retries(url, body=data, auth=(rc_config.user, rc_config.password))
         if not response or response.status_code != 200:
             failed_items.put(from_to_path)
             logger.debug(f"Failed to migrate partition: {from_to_path}")
         else:
+            logger.debug(f"Successfully migrated partition: {from_to_path}")
             migrated_sizes_queue.put(from_to_path[2])
 
     def sync_partition_retry(from_to_path):
@@ -108,7 +109,7 @@ def migrate_partitions_threaded(
             return
 
         data = {"srcFs": from_to_path[0], "dstFs": from_to_path[1]}
-        response = post_with_retries(url, data, user=rc_config.user, password=rc_config.password)
+        response = post_with_retries(url, body=data, auth=(rc_config.user, rc_config.password))
         if not response or response.status_code != 200:
             stop_migration.set()
             exceptions.put(
@@ -205,7 +206,6 @@ def upload_catalog_and_monitor(
     target_data: MigrationData = None,
     target_storage_id: str = None,
 ) -> None:
-    partitions_count = catalog.get_partitions_count()
     uploaded_count = Queue()
     exceptions = Queue()
     upload_done = threading.Event()
@@ -223,7 +223,7 @@ def upload_catalog_and_monitor(
         ),
     ).start()
     monitor_progress(
-        partitions_count,
+        catalog.partitions_count,
         uploaded_count,
         exceptions,
         upload_done,
@@ -232,6 +232,11 @@ def upload_catalog_and_monitor(
         unit_divisor=1,
         desc="Catalog",
     )
+
+    if exceptions.qsize() != 0:
+        exception = exceptions.get()
+        logger.debug(f"Catalog upload failed: {exception}")
+        raise HdxCliException("Catalog upload failed.")
 
 
 def migrate_data(
@@ -256,7 +261,7 @@ def migrate_data(
 
     target_storage_id = get_storage_default_by_table(target_profile, target_data.storages)
     partitions_by_storage = catalog.get_partitions_by_storage()
-    partitions_size = catalog.get_size()
+    partitions_size = catalog.total_size
 
     migration_list = []
     exceptions = Queue()

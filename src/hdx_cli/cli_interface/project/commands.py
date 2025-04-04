@@ -41,13 +41,13 @@ def project(ctx: click.Context, project_name: str):
 
 
 @click.command(help="Create project.")
-@click.argument("project_name")
+@click.argument("project_name", metavar="PROJECTNAME", required=True)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context, project_name: str):
     user_profile = ctx.parent.obj["usercontext"]
     resource_path = ctx.parent.obj["resource_path"]
-    basic_create(user_profile, resource_path, project_name, None, None)
+    basic_create(user_profile, resource_path, project_name)
     logger.info(f"Created project {project_name}")
 
 

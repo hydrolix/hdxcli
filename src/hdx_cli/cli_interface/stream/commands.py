@@ -1,11 +1,12 @@
 import click
 
-from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import ResourceNotFoundException
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from ...library_api.utility.file_handling import load_bytes_file
 from ..common.cached_operations import find_transforms
+from ..common.undecorated_click_commands import basic_create
 
 logger = get_logger()
 
@@ -50,10 +51,15 @@ def stream(ctx: click.Context, project_name: str, table_name: str, transform_nam
 
 
 @click.command(help="Ingest data via stream.")
-@click.argument("stream_data_file")
+@click.argument(
+    "stream_data_file",
+    metavar="STREAMDATAFILE",
+    type=click.Path(exists=True, readable=True),
+    callback=load_bytes_file,
+)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def ingest(ctx: click.Context, stream_data_file: str):
+def ingest(ctx: click.Context, stream_data_file: bytes):
     resource_path = ctx.parent.obj["resource_path"]
     user_profile = ctx.parent.obj["usercontext"]
     if not user_profile.projectname or not user_profile.tablename:
@@ -78,21 +84,18 @@ def ingest(ctx: click.Context, stream_data_file: str):
             "No default transform found to apply ingest command and no --transform passed"
         ) from exc
 
-    with open(stream_data_file, "rb") as data_file:
-        data = data_file.read()
-
-    hostname = user_profile.hostname
-    scheme = user_profile.scheme
-    timeout = user_profile.timeout
-    url = f"{scheme}://{hostname}{resource_path}"
-    token = user_profile.auth
-    headers = {
-        "Authorization": f"{token.token_type} {token.token}",
+    extra_headers = {
         "content-type": _get_content_type(transform_type),
         "x-hdx-table": f"{user_profile.projectname}.{user_profile.tablename}",
         "x-hdx-transform": transform_name,
     }
-    rest_ops.create(url, body=data, body_type=bytes, headers=headers, timeout=timeout)
+    basic_create(
+        user_profile,
+        resource_path,
+        body=stream_data_file,
+        body_type="bytes",
+        extra_headers=extra_headers,
+    )
     logger.info("Created stream ingest")
 
 

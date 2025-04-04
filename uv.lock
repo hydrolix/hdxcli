@@ -104,7 +104,7 @@ wheels = [
 
 [[package]]
 name = "hdxcli"
-version = "1.0.76"
+version = "1.0.77"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

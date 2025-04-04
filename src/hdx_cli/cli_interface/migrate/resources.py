@@ -1,10 +1,10 @@
 import copy
-import io
-import json
 from urllib.parse import urlparse
 
 from hdx_cli.cli_interface.common.undecorated_click_commands import (
-    basic_create_with_body_from_string,
+    basic_create,
+    basic_create_file,
+    basic_get,
 )
 from hdx_cli.cli_interface.migrate.helpers import MigrationData, confirm_action
 from hdx_cli.cli_interface.migrate.resource_adapter import (
@@ -15,7 +15,6 @@ from hdx_cli.cli_interface.migrate.resource_adapter import (
     normalize_table,
     normalize_transform,
 )
-from hdx_cli.library_api.common import rest_operations as lro
 from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.exceptions import (
     HdxCliException,
@@ -86,16 +85,16 @@ def _create_project(
     target_project_body = copy.deepcopy(source_project_body)
 
     adapted_project = adapt_resource_to_api_structure(
-        target_profile, target_projects_url, target_project_body
+        target_profile, target_projects_path, target_project_body
     )
     normalized_project = normalize_project(adapted_project, reuse_partitions)
 
     try:
-        basic_create_with_body_from_string(
+        basic_create(
             target_profile,
             target_projects_path,
             target_profile.projectname,
-            json.dumps(normalized_project),
+            body=normalized_project,
         )
         logger.info("Done")
     except HttpException as exc:
@@ -119,16 +118,13 @@ def _create_functions(
         logger.info(f"{f'    name: {function_name}':<42} -> [!n]")
 
         adapted_function = adapt_resource_to_api_structure(
-            target_profile, target_functions_url, function
+            target_profile, target_functions_path, function
         )
         normalized_function = normalize_function(adapted_function)
         message = None
         try:
-            basic_create_with_body_from_string(
-                target_profile,
-                target_functions_path,
-                function_name,
-                json.dumps(normalized_function),
+            basic_create(
+                target_profile, target_functions_path, function_name, body=normalized_function
             )
             message = "Done"
         except HttpException as exc:
@@ -158,7 +154,7 @@ def _create_dictionaries(
         d_name = dictionary.get("name")
         logger.info(f"{f'    name: {d_name}':<42} -> [!n]")
         adapted_dictionary = adapt_resource_to_api_structure(
-            target_profile, target_dictionaries_url, dictionary
+            target_profile, target_dictionaries_path, dictionary
         )
         normalized_dictionary = normalize_dictionary(adapted_dictionary)
 
@@ -166,21 +162,14 @@ def _create_dictionaries(
         d_file = d_settings.get("filename")
         d_format = d_settings.get("format")
         table_name = f"{source_profile.projectname}_{d_name}"
-        query_endpoint = (
-            f"{source_profile.scheme}://{source_profile.hostname}"
-            f"/query/?query=SELECT * FROM {table_name} FORMAT {d_format}"
-        )
+        query_path = "/query/"
+        query_sql = f"SELECT * FROM {table_name} FORMAT {d_format}"
+        dict_file_content = basic_get(source_profile, query_path, fmt="verbatim", query=query_sql)
 
-        headers = {
-            "Authorization": f"{source_profile.auth.token_type} {source_profile.auth.token}",
-            "Accept": "*/*",
-        }
-        timeout = source_profile.timeout
-        contents = lro.get(query_endpoint, headers=headers, timeout=timeout, fmt="verbatim")
         try:
             if d_file not in dictionary_files_so_far:
                 _create_dictionary_file(
-                    target_profile.projectname, d_file, contents, target_profile
+                    target_profile, target_dictionaries_path, d_file, dict_file_content
                 )
                 dictionary_files_so_far.add(d_file)
         except HttpException as exc:
@@ -188,15 +177,13 @@ def _create_dictionaries(
                 logger.debug(f"Error creating dictionary file '{d_file}': {exc}")
             else:
                 logger.debug(f"Dictionary file '{d_file}' already exists, skipping")
-            continue
+        except Exception as exc:
+            logger.debug(f"Unexpected error creating dictionary file '{d_file}': {exc}")
         finally:
             message = None
             try:
-                basic_create_with_body_from_string(
-                    target_profile,
-                    target_dictionaries_path,
-                    d_name,
-                    json.dumps(normalized_dictionary),
+                basic_create(
+                    target_profile, target_dictionaries_path, d_name, body=normalized_dictionary
                 )
                 message = "Done"
             except HttpException as exc:
@@ -206,23 +193,22 @@ def _create_dictionaries(
                 else:
                     logger.debug(f"Dictionary '{d_name}' already exists, skipping")
                     message = "Exists, skipping"
+            except Exception as exc:
+                logger.debug(f"Unexpected error creating dictionary '{d_name}': {exc}")
+                message = "Done with errors"
             finally:
                 logger.info(message)
 
 
 def _create_dictionary_file(
-    project_name: str, dict_file: str, contents, profile: ProfileUserContext
+    profile: ProfileUserContext, target_dicts_path: str, dict_file: str, dict_file_contents: bytes
 ) -> None:
-    _, project_url = access_resource_detailed(profile, [("projects", project_name)])
-    headers = {"Authorization": f"{profile.auth.token_type} {profile.auth.token}", "Accept": "*/*"}
-    file_url = f"{project_url}dictionaries/files/"
-    timeout = profile.timeout
-    lro.create_file(
-        file_url,
-        headers=headers,
-        file_stream=io.BytesIO(contents),
-        remote_filename=dict_file,
-        timeout=timeout,
+    target_dict_files_path = f"{target_dicts_path}files/"
+    basic_create_file(
+        profile,
+        target_dict_files_path,
+        dict_file,
+        file_content=dict_file_contents,
     )
 
 
@@ -238,12 +224,12 @@ def _create_table(
     target_table_body = copy.deepcopy(source_table_body)
 
     adapted_table = adapt_resource_to_api_structure(
-        target_profile, target_table_url, target_table_body
+        target_profile, target_tables_path, target_table_body
     )
     normalized_table = normalize_table(adapted_table, reuse_partitions)
 
-    basic_create_with_body_from_string(
-        target_profile, target_tables_path, target_profile.tablename, json.dumps(normalized_table)
+    basic_create(
+        target_profile, target_tables_path, target_profile.tablename, body=normalized_table
     )
     logger.info("Done")
 
@@ -268,12 +254,12 @@ def _create_transforms(
         transform_name = transform.get("name")
         logger.info(f"{f'    name: {transform_name}':<42} -> [!n]")
         adapted_transform = adapt_resource_to_api_structure(
-            target_profile, target_transforms_url, transform
+            target_profile, target_transforms_path, transform
         )
         normalized_transform = normalize_transform(adapted_transform)
 
-        basic_create_with_body_from_string(
-            target_profile, target_transforms_path, transform_name, json.dumps(normalized_transform)
+        basic_create(
+            target_profile, target_transforms_path, transform_name, body=normalized_transform
         )
         logger.info("Done")
 

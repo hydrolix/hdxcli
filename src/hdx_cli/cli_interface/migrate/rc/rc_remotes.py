@@ -123,12 +123,9 @@ class RCloneRemote:
 
     def _send_create_request(self) -> None:
         base_url = self.rc_config.get_url()
-        response = post_with_retries(
-            f"{base_url}/config/create",
-            self.remote_config,
-            user=self.rc_config.user,
-            password=self.rc_config.password,
-        )
+        auth = (self.rc_config.user, self.rc_config.password)
+        url = f"{base_url}/config/create"
+        response = post_with_retries(url, body=self.remote_config, auth=auth)
 
         if not response or response.status_code != 200:
             raise RCloneRemoteCreationException(self.bucket_name, self.cloud)
@@ -139,9 +136,8 @@ class RCloneRemote:
         base_url = self.rc_config.get_url()
         response = post_with_retries(
             f"{base_url}/operations/list",
-            payload,
-            user=self.rc_config.user,
-            password=self.rc_config.password,
+            body=payload,
+            auth=(self.rc_config.user, self.rc_config.password),
         )
 
         if not response or response.status_code != 200:
@@ -152,9 +148,8 @@ class RCloneRemote:
         base_url = self.rc_config.get_url()
         response = post_with_retries(
             f"{base_url}/config/delete",
-            data,
-            user=self.rc_config.user,
-            password=self.rc_config.password,
+            body=data,
+            auth=(self.rc_config.user, self.rc_config.password),
         )
 
         if response and response.status_code != 200:

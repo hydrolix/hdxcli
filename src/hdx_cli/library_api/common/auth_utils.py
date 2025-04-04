@@ -32,6 +32,7 @@ def load_user_context(load_context, **args):
             user_context.hostname,
             password=args.get("password"),
             use_ssl=user_context.scheme == "https",
+            profile_name=load_context.profilename,
         )
         user_context.auth = auth_info
         user_context.org_id = auth_info.org_id
@@ -75,6 +76,7 @@ def generate_temporal_profile(
         cluster_hostname,
         password=cluster_password,
         use_ssl=(cluster_uri_scheme == "https"),
+        profile_name=target_load_ctx.profilename,
     )
     temp_profile = load_profile(target_load_ctx)
     temp_profile.auth = auth_info

@@ -1,7 +1,6 @@
 """Transform resource command. It flows down url for current table"""
 
 import json
-from pathlib import Path
 from typing import Optional
 
 import click
@@ -22,12 +21,13 @@ from ...library_api.utility.decorators import (
     report_error_and_exit,
     target_cluster_options,
 )
+from ...library_api.utility.file_handling import load_json_settings_file
 from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.misc_operations import settings_with_force as command_settings_with_force
 from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import list_ as command_list
 from ..common.rest_operations import show as command_show
-from ..common.undecorated_click_commands import basic_create_with_body_from_string, basic_transform
+from ..common.undecorated_click_commands import basic_create, basic_transform
 
 logger = get_logger()
 
@@ -67,26 +67,29 @@ def transform(ctx: click.Context, project_name: str, table_name: str, transform_
 
 
 @click.command(help="Create transform.")
-@click.argument("transform_name")
+@click.argument("transform_name", metavar="TRANSFORMNAME", required=True)
 @click.option(
     "--body-from-file",
     "-f",
-    type=click.Path(exists=True, readable=True, path_type=Path),
-    help="Use file contents as the transform settings."
+    type=click.Path(exists=True, readable=True),
+    help="Path to a file containing settings for the transform."
     "'name' key from the body will be replaced by the given 'resource_name'.",
     metavar="BODYFROMFILE",
     default=None,
+    callback=load_json_settings_file,
 )
 @force_operation_option
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create(ctx: click.Context, transform_name: str, body_from_file: Path, force_operation: bool):
+def create(ctx: click.Context, transform_name: str, body_from_file: dict, force_operation: bool):
     user_profile = ctx.parent.obj["usercontext"]
     resource_path = ctx.parent.obj["resource_path"]
-    params = {"force_operation": str(force_operation).lower()}
-    body = body_from_file.read_text(encoding="utf-8")
-    basic_create_with_body_from_string(
-        user_profile, resource_path, transform_name, body, params=params
+    basic_create(
+        user_profile,
+        resource_path,
+        transform_name,
+        body=body_from_file,
+        force_operation=force_operation,
     )
     logger.info(f"Created transform {transform_name}")
 
@@ -166,9 +169,7 @@ def map_from(
 
     user_profile = ctx.parent.obj["usercontext"]
     resource_path = ctx.parent.obj["resource_path"]
-    basic_create_with_body_from_string(
-        user_profile, resource_path, transform_name, body_from_string=transform_str
-    )
+    basic_create(user_profile, resource_path, transform_name, body=transform_str)
     logger.info(f"Created transform {transform_name}")
 
 

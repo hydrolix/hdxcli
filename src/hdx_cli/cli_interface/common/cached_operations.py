@@ -56,8 +56,12 @@ def find_functions(user_ctx: ProfileUserContext) -> list[dict]:
     return access_resource(user_ctx, [("projects", user_ctx.projectname), ("functions", None)])
 
 
-def find_batch(user_ctx: ProfileUserContext) -> list[dict]:
+def find_batch_jobs(user_ctx: ProfileUserContext) -> list[dict]:
     return access_resource(user_ctx, [("jobs/batch", None)])
+
+
+def find_alter_jobs(user_ctx: ProfileUserContext) -> list[dict]:
+    return access_resource(user_ctx, [("jobs/alter", None)])
 
 
 def find_transforms(user_ctx: ProfileUserContext) -> list[dict]:
@@ -77,6 +81,14 @@ def find_pools(user_ctx: ProfileUserContext) -> list[dict]:
 
 def find_credentials(user_ctx: ProfileUserContext) -> list[dict]:
     return access_resource(user_ctx, [("credentials", None)])
+
+
+def find_users(user_ctx: ProfileUserContext) -> list[dict]:
+    return access_resource(user_ctx, [("users", None)], base_path="/config/v1/")
+
+
+def find_invites_user(user_ctx: ProfileUserContext) -> list[dict]:
+    return access_resource(user_ctx, [("invites", None)], base_path="/config/v1/")
 
 
 @find_in_disk_cache(cache_file=HDX_CONFIG_DIR / "cache/cache.bin", namespace="projects_ids")

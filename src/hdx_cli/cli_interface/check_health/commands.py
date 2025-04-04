@@ -3,8 +3,8 @@ import click
 from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.generic_resource import access_resource_detailed
 from ...library_api.common.logging import get_logger
-from ...library_api.common.rest_operations import update_with_put
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from ..common.undecorated_click_commands import basic_update
 from . import const, table_cleaner, utils
 
 logger = get_logger()
@@ -17,12 +17,8 @@ logger = get_logger()
     "You can optionally specify a PROJECT_NAME to check only that project,"
     "or both PROJECT_NAME and TABLE_NAME to narrow it down to a specific table.",
 )
-@click.argument(
-    "project_name", metavar="PROJECT_NAME", required=False, default=None, type=str
-)
-@click.argument(
-    "table_name", metavar="TABLE_NAME", required=False, default=None, type=str
-)
+@click.argument("project_name", metavar="PROJECT_NAME", required=False, default=None, type=str)
+@click.argument("table_name", metavar="TABLE_NAME", required=False, default=None, type=str)
 @click.option(
     "--repair",
     is_flag=True,
@@ -115,9 +111,7 @@ def _check_health(
                 )
                 continue
 
-            cleaner = table_cleaner.TableCleaner(
-                table=table, transforms=transforms, views=views
-            )
+            cleaner = table_cleaner.TableCleaner(table=table, transforms=transforms, views=views)
             if repair:
                 _repair(profile, cleaner, project, table, transforms)
             cleaner.table_report()
@@ -137,13 +131,6 @@ def _repair(profile, cleaner, project, table, transforms):
     if not auth:
         return
 
-    base_url = f"{profile.scheme}://{profile.hostname}"
-    headers = {
-        "Authorization": f"{auth.token_type} {auth.token}",
-        "Accept": "application/json",
-    }
-    params = {"force_operation": "true"}
-
     for transform in transforms:
         transform_id = transform.get(const.FIELD_UUID, None)
         if not transform_id:
@@ -152,11 +139,5 @@ def _repair(profile, cleaner, project, table, transforms):
         if not correct_settings:
             continue
         transform[const.FIELD_SETTINGS] = correct_settings
-        resource_url = f"{base_url}/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/{transform_id}/"
-        update_with_put(
-            resource_url,
-            headers=headers,
-            timeout=profile.timeout,
-            body=transform,
-            params=params,
-        )
+        resource_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/{transform_id}/"
+        basic_update(profile, resource_path, body=transform, force_operation="true")

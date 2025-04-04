@@ -7,6 +7,7 @@ import requests as req
 from ..userdata.token import AuthInfo
 from .exceptions import HdxCliException, LogicException, LoginException
 from .logging import get_logger
+from .rest_operations import post as req_post
 
 logger = get_logger()
 
@@ -16,7 +17,8 @@ def _do_login(username, hostname, password, *, use_ssl=True):
         scheme = "https" if use_ssl else "http"
         url = f"{scheme}://{hostname}/config/v1/login"
         login_data = {"username": f"{username}", "password": f"{password}"}
-        result = req.post(url, json=login_data, headers={"Accept": "application/json"}, timeout=15)
+        headers = {"Accept": "application/json"}
+        result = req_post(url, body=login_data, headers=headers, timeout=15)
     except req.ConnectTimeout as exc:
         raise HdxCliException("Timeout exception.") from exc
     except req.ConnectionError as exc:
@@ -42,8 +44,8 @@ def _do_login(username, hostname, password, *, use_ssl=True):
     )
 
 
-def _do_interactive_login(username, hostname, *, use_ssl):
-    password = getpass(f"Enter your password ({hostname}): ")
+def _do_interactive_login(username, hostname, *, use_ssl, profile_name):
+    password = getpass(f"Password for {username} [{profile_name}]: ")
     return _do_login(username, hostname, use_ssl=use_ssl, password=password)
 
 
@@ -58,9 +60,18 @@ def _retry(num_retries, func, *args, **kwargs):
     assert False, "Unreachable code"
 
 
-def login(username, hostname, password=None, *, use_ssl=True) -> AuthInfo:
+def login(
+    username: str,
+    hostname: str,
+    password: str = None,
+    *,
+    profile_name: str,
+    use_ssl: bool = True,
+) -> AuthInfo:
     """Login a user given a profile"""
     if not password:
-        auth_token = _retry(3, _do_interactive_login, username, hostname, use_ssl=use_ssl)
+        auth_token = _retry(
+            3, _do_interactive_login, username, hostname, use_ssl=use_ssl, profile_name=profile_name
+        )
         return auth_token
     return _do_login(username, hostname, use_ssl=use_ssl, password=password)

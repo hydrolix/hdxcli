@@ -10,7 +10,7 @@ from ..common.misc_operations import settings as command_settings
 from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import list_ as command_list
 from ..common.rest_operations import show as command_show
-from ..common.undecorated_click_commands import basic_create_from_dict_body
+from ..common.undecorated_click_commands import basic_create
 
 logger = get_logger()
 
@@ -102,13 +102,12 @@ def create(
                 logger.info("Too many failed attempts. Canceling operation.")
                 return
 
-    payload = {
-        "name": credential_name,
+    body = {
         "description": description,
         "type": credential_type,
         "details": details,
     }
-    basic_create_from_dict_body(profile, resource_path, payload)
+    basic_create(profile, resource_path, credential_name, body=body)
     logger.info(f"Created credential {credential_name}")
 
 

@@ -1,14 +1,13 @@
-import io
 import json
 from urllib.parse import urlparse
 
-from ....library_api.common import rest_operations as lro
 from ....library_api.common.auth_utils import get_profile
 from ....library_api.common.context import ProfileUserContext
 from ....library_api.common.exceptions import HdxCliException, HttpException
 from ....library_api.common.generic_resource import access_resource_detailed
 from ....library_api.common.logging import get_logger
-from ...common.undecorated_click_commands import basic_create_from_dict_body, basic_show
+from ...common.undecorated_click_commands import basic_show
+from ..undecorated_click_commands import basic_create, basic_create_file, basic_get
 from .logs import LogType, log_message, log_migration_status
 from .migration_rollback import (
     DoNothingMigrationRollbackManager,
@@ -84,6 +83,8 @@ def migrate_resource_config(
         target_cluster_uri_scheme,
         source_profile.timeout,
     )
+    # Make sure the target profile has the same timeout as the source profile
+    target_profile.timeout = source_profile.timeout
 
     mrm = MigrationRollbackManager
     if no_rollback:
@@ -155,7 +156,7 @@ def migrate_project(
         project_settings["name"] = target_project
         project_settings = normalize_project(project_settings)
 
-        basic_create_from_dict_body(target_profile, target_projects_path, project_settings)
+        basic_create(target_profile, target_projects_path, body=project_settings)
     except HttpException as exc:
         if exc.error_code != 400 or "already exists" not in str(exc.message):
             logger.debug(f"Error migrating project: {exc}")
@@ -280,7 +281,7 @@ def migrate_table(
         table_settings["name"] = target_table
         table_settings = normalize_table(table_settings)
 
-        basic_create_from_dict_body(target_profile, target_tables_path, table_settings)
+        basic_create(target_profile, target_tables_path, body=table_settings)
     except HttpException as exc:
         if exc.error_code != 400 or "already exists" not in str(exc.message):
             logger.debug(f"Error migrating table: {exc}")
@@ -371,7 +372,7 @@ def migrate_transform(
         transform_settings["name"] = target_transform
         transform_settings = normalize_transform(transform_settings)
 
-        basic_create_from_dict_body(target_profile, target_transforms_path, transform_settings)
+        basic_create(target_profile, target_transforms_path, body=transform_settings)
     except HttpException as exc:
         if exc.error_code != 400 or "already exists" not in str(exc.message):
             logger.debug(f"Error migrating transform: {exc}")
@@ -464,20 +465,14 @@ def migrate_dictionary(
     d_file = d_settings["filename"]
     d_format = d_settings["format"]
     table_name = f"{source_project}_{d_name}"
-    query_endpoint = (
-        f"{source_profile.scheme}://{source_profile.hostname}"
-        f"/query/?query=SELECT * FROM {table_name} FORMAT {d_format}"
-    )
-    headers = {
-        "Authorization": f"{source_profile.auth.token_type} {source_profile.auth.token}",
-        "Accept": "*/*",
-    }
-    timeout = source_profile.timeout
-    dict_file_contents = lro.get(query_endpoint, headers=headers, timeout=timeout, fmt="verbatim")
+
+    query_path = "/query/"
+    query_sql = f"SELECT * FROM {table_name} FORMAT {d_format}"
+    dict_file_content = basic_get(source_profile, query_path, fmt="verbatim", query=query_sql)
 
     try:
         _create_dictionary_file_for_project(
-            target_profile, target_project, d_file, dict_file_contents
+            target_profile, target_dicts_path, d_file, dict_file_content
         )
     except HttpException as exc:
         if exc.error_code != 400:
@@ -488,7 +483,8 @@ def migrate_dictionary(
     try:
         dictionary["name"] = target_dict
         dictionary = normalize_dictionary(dictionary)
-        basic_create_from_dict_body(target_profile, target_dicts_path, dictionary)
+
+        basic_create(target_profile, target_dicts_path, body=dictionary)
     except HttpException as exc:
         if exc.error_code != 400 or "already exists" not in str(exc.message):
             logger.debug(f"Error migrating dictionary: {exc}")
@@ -501,21 +497,15 @@ def migrate_dictionary(
 
 
 def _create_dictionary_file_for_project(
-    profile: ProfileUserContext, project: str, dict_file: str, dict_file_contents: bytes
+    profile: ProfileUserContext, target_dicts_path: str, dict_file: str, dict_file_contents: bytes
 ):
     """Migrates a single dictionary file."""
-    _, project_url = access_resource_detailed(profile, [("projects", project)])
-
-    headers = {"Authorization": f"{profile.auth.token_type} {profile.auth.token}", "Accept": "*/*"}
-    file_url = f"{project_url}dictionaries/files/"
-    timeout = profile.timeout
-
-    lro.create_file(
-        file_url,
-        headers=headers,
-        file_stream=io.BytesIO(dict_file_contents),
-        remote_filename=dict_file,
-        timeout=timeout,
+    target_dict_files_path = f"{target_dicts_path}files/"
+    basic_create_file(
+        profile,
+        target_dict_files_path,
+        dict_file,
+        file_content=dict_file_contents,
     )
 
 
@@ -592,7 +582,7 @@ def migrate_function(
         function_settings["name"] = target_function
         function_settings = normalize_function(function_settings)
 
-        basic_create_from_dict_body(target_profile, target_functs_path, function_settings)
+        basic_create(target_profile, target_functs_path, body=function_settings)
     except HttpException as exc:
         if exc.error_code != 400 or "already exists" not in str(exc.message):
             logger.debug(f"Error migrating function: {exc}")
