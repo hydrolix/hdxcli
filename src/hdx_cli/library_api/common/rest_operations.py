@@ -109,7 +109,7 @@ def post(
     body: Optional[Union[Dict[str, Any], bytes, str]] = None,
     body_type: str = "json",
     params: Params = None,
-) -> Any:
+) -> requests.Response:
     """
     Performs a POST request without retries or authentication.
 
