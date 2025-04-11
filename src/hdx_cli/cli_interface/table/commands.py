@@ -31,14 +31,14 @@ logger = get_logger()
 @click.option(
     "--project",
     "project_name",
-    help="Use or override project set in the profile.",
+    help="Use or override project set in the profile",
     metavar="PROJECTNAME",
     default=None,
 )
 @click.option(
     "--table",
     "table_name",
-    help="Use or override table set in the profile.",
+    help="Use or override table set in the profile",
     metavar="TABLENAME",
     default=None,
 )

@@ -64,7 +64,7 @@ def basic_create(
     body_type: str = "json",
     extra_headers: Optional[dict] = None,
     **params,
-) -> None:
+) -> Any:
     """
     Creates a resource.
 
@@ -81,7 +81,7 @@ def basic_create(
         HttpException: If the request fails.
 
     Returns:
-        None.
+        Any.
     """
     hostname = profile.hostname
     scheme = profile.scheme
@@ -123,7 +123,7 @@ def basic_create(
     if extra_headers:
         headers.update(extra_headers)
 
-    rest_ops.post(
+    return rest_ops.post(
         url,
         body=request_body,
         headers=headers,

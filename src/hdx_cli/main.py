@@ -14,6 +14,7 @@ from hdx_cli.cli_interface.project import commands as project_
 from hdx_cli.cli_interface.query_option import commands as query_option_
 from hdx_cli.cli_interface.role import commands as role_
 from hdx_cli.cli_interface.set import commands as set_commands
+from hdx_cli.cli_interface.shadow import commands as shadow_
 from hdx_cli.cli_interface.sources import commands as sources_
 from hdx_cli.cli_interface.storage import commands as storage_
 from hdx_cli.cli_interface.stream import commands as stream_
@@ -132,6 +133,7 @@ def version():
 hdx_cli.add_command(init)
 hdx_cli.add_command(project_.project)
 hdx_cli.add_command(table_.table)
+hdx_cli.add_command(shadow_.shadow)
 hdx_cli.add_command(transform_.transform)
 hdx_cli.add_command(set_commands.set_default_resources)
 hdx_cli.add_command(set_commands.unset_default_resources)
