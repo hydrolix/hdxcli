@@ -10,6 +10,7 @@ from ...library_api.utility.decorators import (
     ensure_logged_in,
     no_rollback_option,
     report_error_and_exit,
+    skip_group_logic_on_help,
     target_cluster_options,
 )
 from ...library_api.utility.file_handling import load_json_settings_file
@@ -39,6 +40,7 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
+@skip_group_logic_on_help
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def function(ctx: click.Context, project_name: str, function_name: str):
