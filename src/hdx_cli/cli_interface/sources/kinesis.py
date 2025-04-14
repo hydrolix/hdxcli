@@ -1,7 +1,11 @@
 import click
 
 from ...library_api.common.context import ProfileUserContext
-from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from ...library_api.utility.decorators import (
+    ensure_logged_in,
+    report_error_and_exit,
+    skip_group_logic_on_help,
+)
 from ..common.misc_operations import settings as command_settings
 from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import list_ as command_list
@@ -33,6 +37,7 @@ from .common_commands import create as command_create
     default=None,
 )
 @click.pass_context
+@skip_group_logic_on_help
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def kinesis(ctx: click.Context, project_name: str, table_name: str, source_name: str):
