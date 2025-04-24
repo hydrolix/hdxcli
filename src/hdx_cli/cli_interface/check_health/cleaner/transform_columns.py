@@ -239,6 +239,8 @@ class TransformColumn(columns.Column):
         if self.column_reference:
             reference_type = self.column_reference.get(const.FIELD_TYPE)
             if self.view_type != reference_type:
+                if reference_type in const.DATETIME_TYPES:
+                    return const.TYPE_DATETIME
                 return reference_type
         return self.column_type
 
