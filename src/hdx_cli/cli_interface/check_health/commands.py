@@ -130,20 +130,27 @@ def _check_health(
 def _repair(profile, cleaner, project, table):
     """Actually repair the broken transforms"""
     if cleaner.repair_is_possible and cleaner.repair_is_necessary:
-        project_id = project.get("uuid")
-        table_id = table.get("uuid")
+        logger.info("[INFO] Table needs repair")
+        project_id = project.get(const.FIELD_UUID)
+        table_id = table.get(const.FIELD_UUID)
         corrected_auto_view = cleaner.corrected_autoview
         if corrected_auto_view:
-            auto_view_id = corrected_auto_view.get("uuid")
+            logger.info("[INFO] Repairing autoview")
+            auto_view_id = corrected_auto_view.get(const.FIELD_UUID)
             _update_view(
                 profile, project_id, table_id, auto_view_id, corrected_auto_view
             )
+        else:
+            logger.info("[INFO] Autoview does not need repair")
 
         # Repair the transforms
         for transform_id, corrected_transform in cleaner.corrected_transforms.items():
+            repairing_transform_name = corrected_transform.get(const.FIELD_NAME)
+            logger.info(f"[INFO] Repairing transform {repairing_transform_name}")
             _update_transform(
                 profile, project_id, table_id, transform_id, corrected_transform
             )
+        logger.info("[INFO] Table repair completed")
     elif cleaner.repair_is_necessary:
         logger.info("[ERROR] This table has issues which must be repaired manually")
     else:
