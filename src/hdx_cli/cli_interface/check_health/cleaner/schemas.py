@@ -12,6 +12,10 @@ class TableSchema:
         self.columns = [columns.Column(**c) for c in self.raw_columns]
 
     @property
+    def id(self) -> str:
+        return self.schema.get(const.FIELD_UUID, "")
+
+    @property
     def unskipped_columns(self) -> list[columns.Column]:
         """Columns that are not suppressed or ignored"""
         return [c for c in self.columns if not c.skip]

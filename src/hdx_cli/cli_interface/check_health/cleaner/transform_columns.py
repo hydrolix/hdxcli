@@ -34,7 +34,7 @@ class TransformColumn(columns.Column):
         if self.correct_type in const.COMPLEX_TYPES:
             if self.elements.repair_is_necessary:
                 return False
-        return self.has_primary_issue
+        return not self.has_primary_issue
 
     @property
     def is_missing_from_reference(self):
