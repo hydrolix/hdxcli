@@ -1,11 +1,13 @@
 import click
 
 from ...library_api.common.context import ProfileUserContext
+from ...library_api.common.exceptions import ResourceNotFoundException
 from ...library_api.common.generic_resource import access_resource_detailed
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
 from ..common.undecorated_click_commands import basic_update
-from . import const, table_cleaner, utils
+from . import const, utils
+from .cleaner import table as table_cleaner
 
 logger = get_logger()
 
@@ -17,8 +19,12 @@ logger = get_logger()
     "You can optionally specify a PROJECT_NAME to check only that project,"
     "or both PROJECT_NAME and TABLE_NAME to narrow it down to a specific table.",
 )
-@click.argument("project_name", metavar="PROJECT_NAME", required=False, default=None, type=str)
-@click.argument("table_name", metavar="TABLE_NAME", required=False, default=None, type=str)
+@click.argument(
+    "project_name", metavar="PROJECT_NAME", required=False, default=None, type=str
+)
+@click.argument(
+    "table_name", metavar="TABLE_NAME", required=False, default=None, type=str
+)
 @click.option(
     "--repair",
     is_flag=True,
@@ -74,7 +80,7 @@ def _check_health(
 
     for project in projects:
         project_name = project.get("name", "")
-        utils.print_header(project_name, underline_char="+")
+        utils.print_header(f"Project — {project_name}", underline_char="+")
 
         tables, _ = access_resource_detailed(
             profile, [("projects", project_name), ("tables", target_table_name)]
@@ -88,56 +94,113 @@ def _check_health(
 
         for table in tables:
             table_name = table.get("name")
-            views, _ = access_resource_detailed(
-                profile,
-                [
-                    ("projects", project_name),
-                    ("tables", table_name),
-                    ("views", None),
-                ],
-            )
-
-            transforms, _ = access_resource_detailed(
-                profile,
-                [
-                    ("projects", project_name),
-                    ("tables", table_name),
-                    ("transforms", None),
-                ],
-            )
-            if (not transforms) and (not views):
+            utils.print_header(f"Table — {table_name}", underline_char="+")
+            table_settings = table.get("settings", {})
+            table_summary_settings = table_settings.get("summary", None)
+            if table_summary_settings:
                 logger.info(
-                    f"\n[INFO] Table '{project_name}.{table_name}' skipped — no views or transforms"
+                    f"\n[INFO] Table '{project_name}.{table_name}' is summary table. Skipping"
+                )
+                continue
+            auto_view = _load_auto_view(profile, project_name, table_name)
+            transforms = _load_transforms(profile, project_name, table_name)
+            if (not transforms) and (not auto_view):
+                logger.info(
+                    f"\n[INFO] Table '{project_name}.{table_name}' skipped — no auto_view or transforms"
                 )
                 continue
 
-            cleaner = table_cleaner.TableCleaner(table=table, transforms=transforms, views=views)
             if repair:
-                _repair(profile, cleaner, project, table, transforms)
-            cleaner.table_report()
+                cleaner = table_cleaner.TableCleaner(
+                    table=table,
+                    transforms=transforms,
+                    auto_view=auto_view,
+                )
+                _repair(profile, cleaner, project, table)
+                auto_view = _load_auto_view(profile, project_name, table_name)
+                transforms = _load_transforms(profile, project_name, table_name)
+            cleaner = table_cleaner.TableCleaner(
+                table=table,
+                transforms=transforms,
+                auto_view=auto_view,
+            )
+            cleaner.print_reports()
 
 
-def _repair(profile, cleaner, project, table, transforms):
+def _repair(profile, cleaner, project, table):
     """Actually repair the broken transforms"""
-    repaired_transform_settings = cleaner.repaired_transform_settings()
-    if not repaired_transform_settings:
-        return
+    if cleaner.repair_is_possible and cleaner.repair_is_necessary:
+        logger.info("[INFO] Table needs repair")
+        project_id = project.get(const.FIELD_UUID)
+        table_id = table.get(const.FIELD_UUID)
+        corrected_auto_view = cleaner.corrected_autoview
+        if corrected_auto_view:
+            logger.info("[INFO] Repairing autoview")
+            auto_view_id = corrected_auto_view.get(const.FIELD_UUID)
+            _update_view(
+                profile, project_id, table_id, auto_view_id, corrected_auto_view
+            )
+        else:
+            logger.info("[INFO] Autoview does not need repair")
 
-    # Prepare to make API calls
+        # Repair the transforms
+        for transform_id, corrected_transform in cleaner.corrected_transforms.items():
+            repairing_transform_name = corrected_transform.get(const.FIELD_NAME)
+            logger.info(f"[INFO] Repairing transform {repairing_transform_name}")
+            _update_transform(
+                profile, project_id, table_id, transform_id, corrected_transform
+            )
+        logger.info("[INFO] Table repair completed")
+    elif cleaner.repair_is_necessary:
+        logger.info("[ERROR] This table has issues which must be repaired manually")
+    else:
+        logger.info("[INFO] This table does not need to be repaired.")
+
+
+def _load_auto_view(profile, project_name, table_name):
+    """Get the view and tables, and build a cleaner"""
+
+    try:
+        auto_view, _ = access_resource_detailed(
+            profile,
+            [
+                ("projects", project_name),
+                ("tables", table_name),
+                ("views", const.AUTO_VIEW_NAME),
+            ],
+        )
+    except ResourceNotFoundException:
+        auto_view = {}
+    return auto_view
+
+
+def _load_transforms(profile, project_name, table_name):
+    transforms, _ = access_resource_detailed(
+        profile,
+        [
+            ("projects", project_name),
+            ("tables", table_name),
+            ("transforms", None),
+        ],
+    )
+    return transforms
+
+
+def _update_view(profile, project_id, table_id, view_id, correct_view_body):
+    """Update a view"""
     org_id = profile.org_id
-    project_id = project.get("uuid")
-    auth = getattr(profile, "auth")
-    table_id = table.get("uuid")
-    if not auth:
-        return
+    resource_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/views/{view_id}/"
+    return basic_update(
+        profile, resource_path, body=correct_view_body, force_operation="true"
+    )
 
-    for transform in transforms:
-        transform_id = transform.get(const.FIELD_UUID, None)
-        if not transform_id:
-            continue
-        correct_settings = repaired_transform_settings.get(transform_id, None)
-        if not correct_settings:
-            continue
-        transform[const.FIELD_SETTINGS] = correct_settings
-        resource_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/{transform_id}/"
-        basic_update(profile, resource_path, body=transform, force_operation="true")
+
+def _update_transform(
+    profile, project_id, table_id, transform_id, correct_transform_body
+):
+    """Update a transform"""
+    org_id = profile.org_id
+    resource_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/{transform_id}/"
+    return basic_update(
+        profile, resource_path, body=correct_transform_body, force_operation="true"
+    )
