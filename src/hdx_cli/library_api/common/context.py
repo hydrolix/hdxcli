@@ -44,6 +44,7 @@ class ProfileUserContext:
     useremail: Optional[str] = None
     rolename: Optional[str] = None
     credentialname: Optional[str] = None
+    service_accountname: Optional[str] = None
     scheme: str = "https"
     timeout: int = DEFAULT_TIMEOUT
 

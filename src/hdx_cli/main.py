@@ -18,6 +18,7 @@ from hdx_cli.cli_interface.shadow import commands as shadow_
 from hdx_cli.cli_interface.sources import commands as sources_
 from hdx_cli.cli_interface.storage import commands as storage_
 from hdx_cli.cli_interface.stream import commands as stream_
+from hdx_cli.cli_interface.svc_account import commands as service_account_
 from hdx_cli.cli_interface.table import commands as table_
 from hdx_cli.cli_interface.transform import commands as transform_
 from hdx_cli.cli_interface.user import commands as user_
@@ -148,6 +149,7 @@ hdx_cli.add_command(sources_.sources)
 hdx_cli.add_command(migrate_.migrate)
 hdx_cli.add_command(integration_.integration)
 hdx_cli.add_command(user_.user)
+hdx_cli.add_command(service_account_.service_account)
 hdx_cli.add_command(role_.role)
 hdx_cli.add_command(query_option_.query_option)
 hdx_cli.add_command(credentials_.credential)

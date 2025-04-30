@@ -17,6 +17,7 @@ from ..common.undecorated_click_commands import (
     basic_create,
     basic_delete,
     basic_show,
+    log_formatted_table_header,
 )
 
 logger = get_logger()
@@ -47,8 +48,10 @@ def list_users(ctx: click.Context):
     if not user_list:
         return
 
-    _log_formatted_table_header({"email": 45, "status": 30})
+    log_formatted_table_header({"email": 45, "roles": 50})
     for user_ in user_list:
+        if user_.get("is_service_account", False):
+            continue
         roles_name = user_.get("roles", "")
         logger.info(f'{user_.get("email", "").ljust(45)}{(", ".join(roles_name)).ljust(50)}')
 
@@ -233,24 +236,11 @@ def list_invites(ctx: click.Context, pending: bool):
     if not invites:
         return
 
-    _log_formatted_table_header({"email": 45, "status": 30})
+    log_formatted_table_header({"email": 45, "status": 30})
     for user_invite in invites:
         logger.info(
             f'{user_invite.get("email", "").ljust(45)}{user_invite.get("status", "").ljust(30)}'
         )
-
-
-def _log_formatted_table_header(headers_and_spacing: Dict[str, int]):
-    format_strings = []
-    values = headers_and_spacing.values()
-
-    logger.info(f'{"-" * sum(values)}')
-
-    for key, spacing in headers_and_spacing.items():
-        format_strings.append(f"{key:<{spacing}}")
-
-    logger.info(f'{"".join(format_strings)}')
-    logger.info(f'{"-" * sum(values)}')
 
 
 user.add_command(list_users)

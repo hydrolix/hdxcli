@@ -91,6 +91,14 @@ def find_invites_user(user_ctx: ProfileUserContext) -> list[dict]:
     return access_resource(user_ctx, [("invites", None)], base_path="/config/v1/")
 
 
+def find_roles(user_ctx: ProfileUserContext) -> list[dict]:
+    return access_resource(user_ctx, [("roles", None)], base_path="/config/v1/")
+
+
+def find_service_accounts(user_ctx: ProfileUserContext) -> list[dict]:
+    return access_resource(user_ctx, [("service_accounts", None)], base_path="/config/v1/")
+
+
 @find_in_disk_cache(cache_file=HDX_CONFIG_DIR / "cache/cache.bin", namespace="projects_ids")
 def find_project_id(user_ctx: ProfileUserContext, project_name: str) -> list[str]:
     projects = find_projects(user_ctx)
