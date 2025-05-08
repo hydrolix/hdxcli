@@ -48,9 +48,10 @@ def confirmation_prompt(prompt, confirmation_message, fail_message):
     def confirmation_prompt_deco(func):
         @wraps(func)
         def confirm_wrapper(*args, **kwargs):
-            dynamic_confirmation_prompt(
-                prompt, confirmation_message, fail_message, prompt_active=True
-            )
+            if not kwargs.get("disable_confirmation_prompt", False):
+                dynamic_confirmation_prompt(
+                    prompt, confirmation_message, fail_message, prompt_active=True
+                )
             return func(*args, **kwargs)
 
         return confirm_wrapper
@@ -136,6 +137,18 @@ def with_profiles_context(func):
         return func(ctx, profile_context, config_profiles, *args, **kwargs)
 
     return decorated_function
+
+
+def skip_group_logic_on_help(func):
+    """Decorator to skip group logic if --help is in sys.argv."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if "--help" in sys.argv:
+            return
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 def force_operation_option(func):
