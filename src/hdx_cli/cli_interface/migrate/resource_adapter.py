@@ -1,8 +1,8 @@
 import re
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import ActionNotAvailableException, HttpException
 from ...library_api.common.logging import get_logger
+from ...models import ProfileUserContext
 from ..common.undecorated_click_commands import basic_options
 from ..migrate.helpers import confirm_action
 

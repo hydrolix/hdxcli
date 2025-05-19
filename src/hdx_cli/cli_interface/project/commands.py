@@ -2,7 +2,6 @@
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import (
     ensure_logged_in,
@@ -10,6 +9,7 @@ from ...library_api.utility.decorators import (
     report_error_and_exit,
     target_cluster_options,
 )
+from ...models import ProfileUserContext
 from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.misc_operations import settings as command_settings
 from ..common.rest_operations import activity as command_activity

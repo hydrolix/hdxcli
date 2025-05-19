@@ -2,7 +2,6 @@
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import (
     MissingSettingsException,
     ResourceNotFoundException,
@@ -17,6 +16,7 @@ from ...library_api.utility.decorators import (
     target_cluster_options,
 )
 from ...library_api.utility.file_handling import load_bytes_file, load_json_settings_file
+from ...models import ProfileUserContext
 from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.misc_operations import settings as command_settings
 from ..common.rest_operations import delete as command_delete

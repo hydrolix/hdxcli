@@ -11,7 +11,6 @@ from queue import Queue
 from typing import Optional
 
 from hdx_cli.library_api.common import rest_operations as rest_ops
-from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.exceptions import (
     CatalogException,
     HdxCliException,
@@ -19,6 +18,7 @@ from hdx_cli.library_api.common.exceptions import (
     ResourceNotFoundException,
 )
 from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
 

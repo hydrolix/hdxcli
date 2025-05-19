@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.exceptions import HdxCliException
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.common.storage import get_equivalent_storages
 
+from ...models import ProfileUserContext
 from ..common.cached_operations import find_alter_jobs
 from .catalog_operations import Catalog
 from .helpers import MigrationData

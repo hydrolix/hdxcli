@@ -15,7 +15,6 @@ from hdx_cli.cli_interface.migrate.resource_adapter import (
     normalize_table,
     normalize_transform,
 )
-from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.exceptions import (
     HdxCliException,
     HttpException,
@@ -30,6 +29,7 @@ from hdx_cli.library_api.common.storage import (
     get_storage_default,
     valid_storage_id,
 )
+from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
 

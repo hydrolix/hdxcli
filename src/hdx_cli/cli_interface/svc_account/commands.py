@@ -4,20 +4,26 @@ import json
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.utility.decorators import (
     ensure_logged_in,
     report_error_and_exit,
 )
+from ...models import ProfileUserContext
 from ..common.cached_operations import find_roles, find_service_accounts, find_users
 from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import show as command_show
 from ..common.undecorated_click_commands import basic_create, basic_show, log_formatted_table_header
+from .utils import (
+    create_service_account,
+    create_service_account_token,
+    update_roles,
+    validate_roles_exist,
+)
 
 
 @click.group(
-    name="svc-account",
+    name="service-account",
     help="Service account related operations.",
 )
 @click.option(
@@ -95,7 +101,7 @@ def create(
 @click.command(help="List service accounts.")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def list_svc_account(ctx: click.Context):
+def list_service_account(ctx: click.Context):
     profile = ctx.parent.obj.get("usercontext")
     svc_account_list = find_service_accounts(profile)
     if not svc_account_list:
@@ -148,7 +154,8 @@ def generate_token(ctx: click.Context, service_account_name: str, json_: bool):
 
     click.echo(f"Access Token: {token_data.get('access_token', '[not found]')}")
     click.echo(
-        f"Expires In: {token_data.get('expires_in', 0)} seconds (~{token_data.get('expires_in', 0) // 86400} days)"
+        f"Expires In: {token_data.get('expires_in', 0)} seconds "
+        f"(~{token_data.get('expires_in', 0) // 86400} days)"
     )
     click.echo(f"Token Type: {token_data.get('token_type', '[not found]')}")
 
@@ -170,7 +177,7 @@ def assign_role(ctx: click.Context, service_account_name: str, roles: list):
     user_profile = ctx.parent.obj["usercontext"]
 
     # Check that all requested roles exist before assigning them
-    _validate_roles_exist(user_profile, roles)
+    validate_roles_exist(user_profile, roles)
 
     # Get the service account ID
     resource_path = ctx.parent.obj["resource_path"]
@@ -180,7 +187,7 @@ def assign_role(ctx: click.Context, service_account_name: str, roles: list):
         raise LogicException("Service account UUID not found in response.")
 
     # Assign the roles to the service account
-    _modify_roles(user_profile, svc_account_id, roles)
+    update_roles(user_profile, svc_account_id, roles)
     click.echo(f"Added role(s) to {service_account_name}")
 
 
@@ -231,102 +238,11 @@ def remove_role(ctx: click.Context, service_account_name: str, roles: list):
         )
 
     # Remove roles from the service account
-    _modify_roles(user_profile, svc_account_id, roles, action="remove")
+    update_roles(user_profile, svc_account_id, roles, action="remove")
     click.echo(f"Removed role(s) from {service_account_name}")
 
 
-def create_service_account_token(profile: ProfileUserContext, svc_account_id: str) -> dict:
-    path = f"/config/v1/service_accounts/{svc_account_id}/tokens/"
-    response = basic_create(profile, path).json()
-    return response.get("token", {})
-
-
-def create_service_account(
-    profile: ProfileUserContext,
-    svc_account_name: str,
-    roles: list,
-    svc_account_path: str = "/config/v1/service_accounts/",
-    audit: bool = False,
-) -> dict:
-    """
-    Create a new service account and assign roles to it.
-
-    :param profile: ProfileUserContext object
-    :param svc_account_name: Name of the service account to create
-    :param roles: List of roles to assign to the service account
-    :param svc_account_path: Path to the service account resource
-    :param audit: Whether to audit the service account or not
-
-    :return: None
-
-    :raises ResourceNotFoundException: If any of the requested roles do not exist
-    :raises LogicException: If the service account creation fails or lacks a UUID
-    """
-    # Check that all requested roles exist before creating the service account
-    # This avoids creating the service account if any of the roles are invalid
-    _validate_roles_exist(profile, roles)
-
-    # Create the service account using the provided name and audit flag
-    svc_account = basic_create(
-        profile, svc_account_path, svc_account_name, body={"audit": audit}
-    ).json()
-    svc_account_id = svc_account.get("uuid")
-    if not svc_account_id:
-        raise LogicException("Service account UUID not found in response.")
-
-    # Assign the service account to each valid role using the /add_user/ endpoint
-    _modify_roles(profile, svc_account_id, roles)
-    return svc_account
-
-
-def _validate_roles_exist(profile: ProfileUserContext, roles: list) -> None:
-    """
-    Validate that all requested roles exist.
-
-    :param profile: ProfileUserContext object
-    :param roles: List of roles to check
-
-    :return: None
-
-    :raises ResourceNotFoundException: If any of the requested roles do not exist
-    """
-    existing_roles = find_roles(profile)
-    if not existing_roles:
-        raise ResourceNotFoundException("No roles found.")
-
-    indexed_existing_roles = {role.get("name", ""): role.get("id") for role in existing_roles}
-    for role_name in roles:
-        if not indexed_existing_roles.get(role_name):
-            raise ResourceNotFoundException(f"Role with name '{role_name}' not found.")
-
-
-def _modify_roles(
-    profile: ProfileUserContext,
-    svc_account_id: str,
-    roles: list,
-    action: str = "add",
-) -> None:
-    """
-    Add or remove roles from a service account.
-
-    :param profile: ProfileUserContext object
-    :param svc_account_id: ID of the service account
-    :param roles: List of roles to assign or remove
-    :param action: Action to perform: "add" or "remove"
-
-    :return: None
-
-    :raises ValueError: If the action is not "add" or "remove"
-    """
-    if action not in ("add", "remove"):
-        raise ValueError("Action must be either 'add' or 'remove'")
-
-    body = {"roles": list(roles)}
-    path = f"/config/v1/users/{svc_account_id}/{action}_roles/"
-    basic_create(profile, path, body=body)
-
-
-service_account.add_command(list_svc_account, name="list")
+service_account.add_command(list_service_account, name="list")
 service_account.add_command(create)
 service_account.add_command(generate_token, name="generate-token")
 service_account.add_command(assign_role, name="assign-role")

@@ -3,9 +3,9 @@ from enum import Enum
 from typing import List
 from urllib.parse import urlparse
 
-from ....library_api.common.context import ProfileUserContext
 from ....library_api.common.generic_resource import access_resource_detailed
 from ....library_api.common.logging import get_logger
+from ....models import ProfileUserContext
 from ...common.undecorated_click_commands import basic_delete
 
 logger = get_logger()

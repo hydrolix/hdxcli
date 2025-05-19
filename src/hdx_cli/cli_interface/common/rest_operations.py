@@ -61,16 +61,25 @@ def list_(ctx: click.Context, page: int, page_size: int):
     help="Show resource. If not resource_name is provided, it will show the default "
     "if there is one."
 )
+@click.argument("resource_name", required=False, default=None)
 @click.option("-i", "--indent", is_flag=True, default=False, help="Indent the output.")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def show(ctx: click.Context, indent: bool):
+def show(ctx: click.Context, resource_name: str, indent: bool):
     profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
     _, resource_kind = heuristically_get_resource_kind(resource_path)
-    if not (resource_name := getattr(profile, resource_kind + "name")):
-        raise LogicException(f"No default {resource_kind} found in profile")
-    logger.info(basic_show(profile, resource_path, resource_name, indent=indent))
+
+    # Prioritize the argument from the command line
+    effective_name = resource_name
+    if not effective_name:
+        effective_name = getattr(profile, resource_kind + "name", None)
+
+    if not effective_name:
+        raise LogicException(
+            f"No default {resource_kind} found in profile and none provided as argument."
+        )
+    logger.info(basic_show(profile, resource_path, effective_name, indent=indent))
 
 
 @click.command(

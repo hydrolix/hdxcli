@@ -2,10 +2,10 @@ import json
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.generic_resource import access_resource
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from ...models import ProfileUserContext
 from ..common.misc_operations import settings as command_settings
 from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import list_ as command_list

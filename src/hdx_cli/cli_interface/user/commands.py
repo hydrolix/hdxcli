@@ -1,10 +1,8 @@
 import json
 from functools import partial
-from typing import Dict
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import LogicException
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import (
@@ -12,6 +10,7 @@ from ...library_api.utility.decorators import (
     ensure_logged_in,
     report_error_and_exit,
 )
+from ...models import ProfileUserContext
 from ..common.cached_operations import find_invites_user, find_users
 from ..common.undecorated_click_commands import (
     basic_create,

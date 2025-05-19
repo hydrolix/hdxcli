@@ -4,7 +4,6 @@ import json
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import HttpException, LogicException
 from ...library_api.common.generic_resource import access_resource
 from ...library_api.common.logging import get_logger
@@ -16,6 +15,7 @@ from ...library_api.utility.decorators import (
     target_cluster_options,
 )
 from ...library_api.utility.file_handling import load_json_settings_file, load_plain_file
+from ...models import ProfileUserContext
 from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.misc_operations import settings as command_settings
 from ..common.rest_operations import activity as command_activity

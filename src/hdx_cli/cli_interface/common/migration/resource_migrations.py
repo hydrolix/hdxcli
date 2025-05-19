@@ -1,11 +1,11 @@
 import json
 from urllib.parse import urlparse
 
-from ....library_api.common.auth_utils import get_profile
-from ....library_api.common.context import ProfileUserContext
+from ....auth.context_builder import get_profile
 from ....library_api.common.exceptions import HdxCliException, HttpException
 from ....library_api.common.generic_resource import access_resource_detailed
 from ....library_api.common.logging import get_logger
+from ....models import ProfileUserContext
 from ...common.undecorated_click_commands import basic_show
 from ..undecorated_click_commands import basic_create, basic_create_file, basic_get
 from .logs import LogType, log_message, log_migration_status

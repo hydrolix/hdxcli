@@ -6,12 +6,12 @@ from hdx_cli.cli_interface.migrate.catalog_operations import Catalog
 from hdx_cli.cli_interface.migrate.rc.rc_manager import RcloneAPIConfig
 from hdx_cli.cli_interface.migrate.rc.rc_remotes import RCloneRemote
 from hdx_cli.cli_interface.migrate.rc.rc_utils import close_remotes, get_remote, recreate_remotes
-from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.exceptions import HdxCliException, MigrationFailureException
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.common.rest_operations import post_with_retries
 from hdx_cli.library_api.common.storage import get_storage_default_by_table
 
+from ...models import ProfileUserContext
 from .helpers import (
     MigrationData,
     cancel_migration,

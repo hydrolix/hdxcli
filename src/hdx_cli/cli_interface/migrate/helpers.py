@@ -7,10 +7,10 @@ from typing import Dict, List, Optional
 
 from tqdm import tqdm
 
-from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.logging import get_logger
 
 from ...library_api.common.exceptions import HdxCliException
+from ...models import ProfileUserContext
 from .catalog_operations import Catalog
 
 logger = get_logger()

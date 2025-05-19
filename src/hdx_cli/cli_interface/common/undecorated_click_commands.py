@@ -13,8 +13,8 @@ from ...library_api.common.exceptions import (
     ResourceNotFoundException,
 )
 from ...library_api.common.logging import get_logger
-from ...library_api.userdata.token import AuthInfo
 from ...library_api.utility.functions import heuristically_get_resource_kind
+from ...models import AuthInfo, ProfileUserContext
 from .cached_operations import *  # pylint:disable=wildcard-import,unused-wildcard-import
 
 logger = get_logger()

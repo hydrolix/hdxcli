@@ -2,7 +2,6 @@ from functools import partial
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import ResourceNotFoundException
 from ...library_api.common.generic_resource import access_resource
 from ...library_api.common.logging import get_logger
@@ -12,6 +11,7 @@ from ...library_api.utility.decorators import (
     report_error_and_exit,
 )
 from ...library_api.utility.file_handling import load_json_settings_file
+from ...models import ProfileUserContext
 from ..common.misc_operations import settings_with_force as command_settings_with_force
 from ..common.rest_operations import list_ as command_list
 from ..common.rest_operations import show as command_show

@@ -2,11 +2,11 @@ import json
 
 import click
 
-from ....library_api.common.context import ProfileUserContext
 from ....library_api.common.exceptions import LogicException
 from ....library_api.common.logging import get_logger
 from ....library_api.utility.decorators import report_error_and_exit
 from ....library_api.utility.functions import heuristically_get_resource_kind
+from ....models import ProfileUserContext
 from ...common.cached_operations import find_alter_jobs
 from ...common.rest_operations import delete as command_delete
 from ...common.rest_operations import show as command_show

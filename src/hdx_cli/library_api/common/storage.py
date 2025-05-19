@@ -1,7 +1,7 @@
 from typing import Optional, Tuple, Union
 
-from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.generic_resource import access_resource_detailed
+from hdx_cli.models import ProfileUserContext
 
 
 def is_same_bucket(settings_source: dict, settings_target: dict) -> bool:

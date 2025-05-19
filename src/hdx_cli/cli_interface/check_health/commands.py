@@ -1,10 +1,10 @@
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import ResourceNotFoundException
 from ...library_api.common.generic_resource import access_resource_detailed
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from ...models import ProfileUserContext
 from ..common.undecorated_click_commands import basic_update
 from . import const, utils
 from .cleaner import table as table_cleaner
@@ -19,12 +19,8 @@ logger = get_logger()
     "You can optionally specify a PROJECT_NAME to check only that project,"
     "or both PROJECT_NAME and TABLE_NAME to narrow it down to a specific table.",
 )
-@click.argument(
-    "project_name", metavar="PROJECT_NAME", required=False, default=None, type=str
-)
-@click.argument(
-    "table_name", metavar="TABLE_NAME", required=False, default=None, type=str
-)
+@click.argument("project_name", metavar="PROJECT_NAME", required=False, default=None, type=str)
+@click.argument("table_name", metavar="TABLE_NAME", required=False, default=None, type=str)
 @click.option(
     "--repair",
     is_flag=True,
@@ -137,9 +133,7 @@ def _repair(profile, cleaner, project, table):
         if corrected_auto_view:
             logger.info("[INFO] Repairing autoview")
             auto_view_id = corrected_auto_view.get(const.FIELD_UUID)
-            _update_view(
-                profile, project_id, table_id, auto_view_id, corrected_auto_view
-            )
+            _update_view(profile, project_id, table_id, auto_view_id, corrected_auto_view)
         else:
             logger.info("[INFO] Autoview does not need repair")
 
@@ -147,9 +141,7 @@ def _repair(profile, cleaner, project, table):
         for transform_id, corrected_transform in cleaner.corrected_transforms.items():
             repairing_transform_name = corrected_transform.get(const.FIELD_NAME)
             logger.info(f"[INFO] Repairing transform {repairing_transform_name}")
-            _update_transform(
-                profile, project_id, table_id, transform_id, corrected_transform
-            )
+            _update_transform(profile, project_id, table_id, transform_id, corrected_transform)
         logger.info("[INFO] Table repair completed")
     elif cleaner.repair_is_necessary:
         logger.info("[ERROR] This table has issues which must be repaired manually")
@@ -189,18 +181,14 @@ def _load_transforms(profile, project_name, table_name):
 def _update_view(profile, project_id, table_id, view_id, correct_view_body):
     """Update a view"""
     org_id = profile.org_id
-    resource_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/views/{view_id}/"
-    return basic_update(
-        profile, resource_path, body=correct_view_body, force_operation="true"
+    resource_path = (
+        f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/views/{view_id}/"
     )
+    return basic_update(profile, resource_path, body=correct_view_body, force_operation="true")
 
 
-def _update_transform(
-    profile, project_id, table_id, transform_id, correct_transform_body
-):
+def _update_transform(profile, project_id, table_id, transform_id, correct_transform_body):
     """Update a transform"""
     org_id = profile.org_id
     resource_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/{table_id}/transforms/{transform_id}/"
-    return basic_update(
-        profile, resource_path, body=correct_transform_body, force_operation="true"
-    )
+    return basic_update(profile, resource_path, body=correct_transform_body, force_operation="true")
