@@ -92,7 +92,7 @@ def shadow(ctx: click.Context, project_name: str, table_name: str, transform_nam
     type=str,
     required=False,
     default=None,
-    help="Name of the new shadow table to be created. Default: shadow_<source_table_name>",
+    help="Name of the shadow table. Default: shadow + source table name.",
 )
 @click.option(
     "--table-settings",
@@ -100,14 +100,14 @@ def shadow(ctx: click.Context, project_name: str, table_name: str, transform_nam
     required=False,
     default=None,
     callback=load_json_settings_file,
-    help="Path to a file containing settings for the new shadow table",
+    help="Path to a file containing settings for the shadow table.",
 )
 @click.option(
     "--transform-name",
     type=str,
     required=False,
-    default="default",
-    help="Name of the transform to be created into the shadow table. Default: default",
+    default=None,
+    help="Name of the transform for the shadow table. Default: shadow + source transform name.",
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -145,9 +145,12 @@ def create_shadow_table(
         f'{resource_path}{source_table_id}/transforms/{source_transform.get("uuid")}/'
     )
 
-    # Create the new shadow table
+    # Create shadow table name if not provided
     if not table_name:
         table_name = f"shadow_{source_table_name}"
+    # Create transform name for the shadow table if not provided
+    if not transform_name:
+        transform_name = f"shadow_{source_transform_name}"
 
     # Settings file could be passed with or without the "settings" key
     if table_settings and not table_settings.get("settings"):
@@ -157,7 +160,7 @@ def create_shadow_table(
     shadow_table_id = shadow_table.get("uuid")
     click.echo(f"Created shadow table {table_name}")
 
-    # Create the new transform that belongs to the new shadow table
+    # Create the transform that belongs to the shadow table
     resource_path = f"{resource_path}{shadow_table_id}/transforms/"
     shadow_transform = basic_create(
         user_profile, resource_path, transform_name, body=transform_settings
