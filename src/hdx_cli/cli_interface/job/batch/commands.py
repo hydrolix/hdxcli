@@ -2,11 +2,11 @@ import json
 
 import click
 
-from ....library_api.common.context import ProfileUserContext
 from ....library_api.common.exceptions import ResourceNotFoundException
 from ....library_api.common.logging import get_logger
 from ....library_api.utility.decorators import report_error_and_exit
 from ....library_api.utility.file_handling import load_json_settings_file
+from ....models import ProfileUserContext
 from ...common.cached_operations import find_transforms
 from ...common.misc_operations import settings as command_settings
 from ...common.rest_operations import delete as command_delete

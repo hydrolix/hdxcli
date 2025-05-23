@@ -2,11 +2,11 @@ from typing import List, Tuple, Union
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import HdxCliException, QueryOptionNotFound
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
 from ...library_api.utility.file_handling import load_json_settings_file
+from ...models import ProfileUserContext
 from ..common.undecorated_click_commands import basic_get, basic_options, basic_update
 
 logger = get_logger()

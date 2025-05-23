@@ -4,9 +4,9 @@ from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
-from hdx_cli.library_api.common.context import ProfileUserContext
 from hdx_cli.library_api.common.generic_resource import access_resource
 from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
 

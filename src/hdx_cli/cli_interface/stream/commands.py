@@ -1,10 +1,10 @@
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import ResourceNotFoundException
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
 from ...library_api.utility.file_handling import load_bytes_file
+from ...models import ProfileUserContext
 from ..common.cached_operations import find_transforms
 from ..common.undecorated_click_commands import basic_create
 

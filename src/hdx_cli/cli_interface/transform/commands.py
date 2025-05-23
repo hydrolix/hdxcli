@@ -5,7 +5,6 @@ from typing import Optional
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import CommandLineException
 from ...library_api.common.logging import get_logger
 from ...library_api.ddl.common_algo import (
@@ -23,6 +22,7 @@ from ...library_api.utility.decorators import (
     target_cluster_options,
 )
 from ...library_api.utility.file_handling import load_json_settings_file
+from ...models import ProfileUserContext
 from ..common.migration.resource_migrations import migrate_resource_config
 from ..common.misc_operations import settings_with_force as command_settings_with_force
 from ..common.rest_operations import delete as command_delete

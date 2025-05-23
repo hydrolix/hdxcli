@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import click
 from trogon import tui
 
+from hdx_cli.auth.context_builder import load_user_context
 from hdx_cli.cli_interface.check_health import commands as check_health_
 from hdx_cli.cli_interface.credential import commands as credentials_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
@@ -18,20 +21,18 @@ from hdx_cli.cli_interface.shadow import commands as shadow_
 from hdx_cli.cli_interface.sources import commands as sources_
 from hdx_cli.cli_interface.storage import commands as storage_
 from hdx_cli.cli_interface.stream import commands as stream_
+from hdx_cli.cli_interface.svc_account import commands as service_account_
 from hdx_cli.cli_interface.table import commands as table_
 from hdx_cli.cli_interface.transform import commands as transform_
 from hdx_cli.cli_interface.user import commands as user_
+from hdx_cli.config.initial_setup import first_time_use_config, is_first_time_use
 from hdx_cli.library_api.common.config_constants import PROFILE_CONFIG_FILE
-from hdx_cli.library_api.common.context import DEFAULT_TIMEOUT, ProfileLoadContext
-from hdx_cli.library_api.common.exceptions import (
-    ConfigurationExistsException,
-    ConfigurationNotFoundException,
-)
-from hdx_cli.library_api.common.first_use import first_time_use_config, is_first_time_use
+from hdx_cli.library_api.common.exceptions import ConfigurationExistsException
 from hdx_cli.library_api.common.logging import get_logger, set_debug_logger, set_info_logger
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
+from hdx_cli.models import DEFAULT_TIMEOUT, ProfileLoadContext
 
-VERSION = "1.0.77"
+VERSION = "1.0.79"
 
 logger = get_logger()
 
@@ -53,8 +54,15 @@ def configure_logger(debug=False):
 @click.option(
     "--profile",
     metavar="PROFILENAME",
-    default=None,
+    default="default",
     help="Perform operation with a different profile (default profile is 'default').",
+)
+@click.option(
+    "--username",
+    metavar="USERNAME",
+    default=None,
+    help="Login username. If it's the first login attempt or no active session exists, "
+    "this username will be used (requires --password).",
 )
 @click.option(
     "--password",
@@ -62,12 +70,18 @@ def configure_logger(debug=False):
     default=None,
     help="Login password. If provided and the access token is expired, it will be used.",
 )
-@click.option("--profile-config-file", hidden=True, default=None, help="Used only for testing.")
+@click.option(
+    "--profile-config-file",
+    type=click.Path(path_type=Path),
+    hidden=True,
+    default=PROFILE_CONFIG_FILE,
+    help="Used only for testing.",
+)
 @click.option(
     "--uri-scheme",
-    default="default",
-    type=click.Choice(["default", "http", "https"]),
-    help="Scheme used.",
+    default=None,
+    type=click.Choice(["http", "https"]),
+    help="Specify the URI scheme to use.",
 )
 @click.option(
     "--timeout",
@@ -85,8 +99,16 @@ def configure_logger(debug=False):
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-# pylint: enable=line-too-long
-def hdx_cli(ctx, profile, password, profile_config_file, uri_scheme, timeout, debug):
+def hdx_cli(
+    ctx,
+    profile: str,
+    username: str,
+    password: str,
+    profile_config_file: Path,
+    uri_scheme: str,
+    timeout: int,
+    debug: bool,
+):
     """
     Command-line entry point for hdx cli interface
     """
@@ -94,18 +116,15 @@ def hdx_cli(ctx, profile, password, profile_config_file, uri_scheme, timeout, de
     if ctx.invoked_subcommand in ("version", "init"):
         return
 
-    profile_config_file = profile_config_file if profile_config_file else PROFILE_CONFIG_FILE
+    # Check if the profile configuration file exists
     if is_first_time_use(profile_config_file):
-        raise ConfigurationNotFoundException(
-            "Configuration not found for accessing your Hydrolix cluster. "
-            "Please run the 'hdxcli init' to create a new configuration."
-        )
+        profile_context = first_time_use_config(profile_config_file)
+    else:
+        profile_context = ProfileLoadContext(profile, profile_config_file)
 
-    profile = "default" if not profile else profile
-    load_context = ProfileLoadContext(profile, profile_config_file)
-    ctx.obj = {"profilecontext": load_context}
-
+    ctx.obj = {"profilecontext": profile_context}
     user_options = {
+        "username": username,
         "password": password,
         "profile_config_file": profile_config_file,
         "uri_scheme": uri_scheme,
@@ -120,9 +139,12 @@ def init():
     if not is_first_time_use():
         raise ConfigurationExistsException(
             "Configuration already exists for accessing your Hydrolix cluster. "
-            "Please run the 'profile edit' command to edit the configuration."
+            "Please run the 'edit' command to update the configuration."
         )
-    first_time_use_config()
+
+    profile_load_ctx = first_time_use_config()
+    if profile_load_ctx:
+        load_user_context(profile_load_ctx)
 
 
 @click.command(help="Print hdxcli version")
@@ -148,6 +170,7 @@ hdx_cli.add_command(sources_.sources)
 hdx_cli.add_command(migrate_.migrate)
 hdx_cli.add_command(integration_.integration)
 hdx_cli.add_command(user_.user)
+hdx_cli.add_command(service_account_.service_account)
 hdx_cli.add_command(role_.role)
 hdx_cli.add_command(query_option_.query_option)
 hdx_cli.add_command(credentials_.credential)

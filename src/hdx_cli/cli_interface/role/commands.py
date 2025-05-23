@@ -11,10 +11,10 @@ from hdx_cli.cli_interface.role.utils import (
     modify_role_data_from_standard_input,
 )
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from ...models import ProfileUserContext
 from ..common.cached_operations import find_users
 from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import list_ as command_list

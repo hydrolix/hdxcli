@@ -1,8 +1,8 @@
 from typing import Any, List, Optional, Tuple
 
+from ...models import ProfileUserContext
 from ..utility.functions import heuristically_get_resource_kind
 from . import rest_operations as rest_ops
-from .context import ProfileUserContext
 from .exceptions import ResourceNotFoundException
 
 ResourceKind = str

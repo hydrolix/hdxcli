@@ -665,13 +665,13 @@ expected_output_re = '.*?default.*'
 [[test]]
 name = "Profiles can be shown"
 setup = ["python3 -m hdx_cli.main --profile default unset"]
-commands_under_test = ["python3 -m hdx_cli.main --profile default profile show"]
-expected_output_expr = '"username" in result and "hostname" in result and "scheme" in result and "projectname" not in result and "tablename" not in result'
+commands_under_test = ["python3 -m hdx_cli.main profile show default"]
+expected_output_expr = '"hostname" in result and "scheme" in result and "projectname" not in result and "tablename" not in result'
 
 [[test]]
 name = "Profile can be shown with preset project/table"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
-commands_under_test = ["python3 -m hdx_cli.main --profile default profile show"]
+commands_under_test = ["python3 -m hdx_cli.main profile show default"]
 teardown = ["python3 -m hdx_cli.main unset"]
 expected_output_re = '.*?projectname: test_ci_project.*'
 

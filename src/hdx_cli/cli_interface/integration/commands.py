@@ -3,9 +3,9 @@ import json
 import click
 
 from ...library_api.common import rest_operations as rest_ops
-from ...library_api.common.context import ProfileLoadContext, ProfileUserContext
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from ...models import ProfileLoadContext, ProfileUserContext
 from ..common.undecorated_click_commands import basic_create, basic_transform
 
 logger = get_logger()

@@ -6,11 +6,13 @@ from functools import wraps
 from pathlib import Path
 
 import click
+import toml
 
-from ..common.auth_utils import load_user_context
+from ...auth.context_builder import load_user_context
+from ...config.paths import PROFILE_CONFIG_FILE
+from ...models import ProfileLoadContext
 from ..common.exceptions import HdxCliException, HttpException
 from ..common.logging import get_logger
-from ..common.profile import get_profiles
 from .json_util import http_error_pretty_format
 
 logger = get_logger()
@@ -118,6 +120,7 @@ def ensure_logged_in(func):
         user_options = ctx.parent.obj["useroptions"]
         user_context = load_user_context(
             profile_context,
+            username=user_options.get("username"),
             password=user_options.get("password"),
             profile_config_file=user_options.get("profile_config_file"),
             uri_scheme=user_options.get("uri_scheme"),
@@ -132,9 +135,13 @@ def ensure_logged_in(func):
 def with_profiles_context(func):
     @functools.wraps(func)
     def decorated_function(ctx, *args, **kwargs):
-        profile_context = ctx.parent.obj["profilecontext"]
-        config_profiles = get_profiles(profile_config_file=profile_context.profile_config_file)
-        return func(ctx, profile_context, config_profiles, *args, **kwargs)
+        profile_config_file = ctx.parent.obj["profilecontext"].config_file
+        profile_configs = get_profile_configs(profile_config_file=profile_config_file)
+        profile_context = ProfileLoadContext(
+            name=kwargs.get("profile_name"),
+            config_file=profile_config_file,
+        )
+        return func(ctx, profile_context, profile_configs, *args, **kwargs)
 
     return decorated_function
 
@@ -223,3 +230,8 @@ def target_cluster_options(func):
     )(func)
 
     return func
+
+
+def get_profile_configs(profile_config_file: Path = PROFILE_CONFIG_FILE) -> dict:
+    with open(profile_config_file, "r", encoding="utf-8") as config_file:
+        return toml.load(config_file)

@@ -13,8 +13,8 @@ from ...library_api.common.exceptions import (
     ResourceNotFoundException,
 )
 from ...library_api.common.logging import get_logger
-from ...library_api.userdata.token import AuthInfo
 from ...library_api.utility.functions import heuristically_get_resource_kind
+from ...models import AuthInfo, ProfileUserContext
 from .cached_operations import *  # pylint:disable=wildcard-import,unused-wildcard-import
 
 logger = get_logger()
@@ -491,6 +491,19 @@ def _settings_update(resource: Dict[str, Any], key: DottedKey, value: Any):
     return resource
 
 
+def log_formatted_table_header(headers_and_spacing: Dict[str, int]) -> None:
+    format_strings = []
+    values = headers_and_spacing.values()
+
+    logger.info(f'{"-" * sum(values)}')
+
+    for key, spacing in headers_and_spacing.items():
+        format_strings.append(f"{key:<{spacing}}")
+
+    logger.info(f'{"".join(format_strings)}')
+    logger.info(f'{"-" * sum(values)}')
+
+
 def basic_settings(
     profile: ProfileUserContext, resource_path: str, key: str, value: Any, **params
 ) -> None:
@@ -536,9 +549,7 @@ def basic_settings(
         ) from idx_err
 
     if not key:
-        logger.info(f'{"-" * (90 + 30 + 40)}')
-        logger.info(_format_settings_header([("name", 90), ("type", 30), ("value", 40)]))
-        logger.info(f'{"-" * (90 + 30 + 40)}')
+        log_formatted_table_header({"name": 90, "type": 30, "value": 40})
         _for_each_setting(structure_resource_settings, resource=resource)
     elif key and not value:
         try:

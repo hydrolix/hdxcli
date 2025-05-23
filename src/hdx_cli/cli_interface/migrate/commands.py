@@ -2,10 +2,11 @@ from datetime import datetime
 
 import click
 
-from ...library_api.common.auth_utils import get_profile
+from ...auth.context_builder import get_profile
+from ...config.profile_settings import is_valid_hostname
+from ...library_api.common.exceptions import InvalidHostnameException
 from ...library_api.common.logging import get_logger
 from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
-from ..profile.commands import validate_hostname
 from .data import migrate_data
 from .helpers import MigrationData, get_catalog
 from .rc.rc_manager import RcloneAPIConfig
@@ -25,6 +26,13 @@ def validate_tablename_format(ctx, param, value):
     if value is None or len(value.split(".")) != 2:
         raise click.BadParameter(f"'{value}' is not in the 'project_name.table_name' format.")
     return value
+
+
+@report_error_and_exit(exctype=Exception)
+def validate_hostname(ctx, params, hostname: str) -> str:
+    if hostname and not is_valid_hostname(hostname):
+        raise InvalidHostnameException("Invalid host name format.")
+    return hostname
 
 
 @click.command(

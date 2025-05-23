@@ -3,7 +3,6 @@ from urllib.parse import urlparse
 
 import click
 
-from ...library_api.common.context import ProfileUserContext
 from ...library_api.common.exceptions import LogicException
 from ...library_api.utility.decorators import (
     confirmation_prompt,
@@ -12,6 +11,7 @@ from ...library_api.utility.decorators import (
     skip_group_logic_on_help,
 )
 from ...library_api.utility.file_handling import load_json_settings_file
+from ...models import ProfileUserContext
 from ..common.cached_operations import find_tables, find_transforms
 from ..common.undecorated_click_commands import basic_create, basic_delete, basic_show, basic_update
 
