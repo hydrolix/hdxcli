@@ -9,7 +9,6 @@ def create_service_account(
     svc_account_name: str,
     roles: list,
     svc_account_path: str = "/config/v1/service_accounts/",
-    audit: bool = False,
 ) -> dict:
     """
     Create a new service account and assign roles to it.
@@ -18,7 +17,6 @@ def create_service_account(
     :param svc_account_name: Name of the service account to create
     :param roles: List of roles to assign to the service account
     :param svc_account_path: Path to the service account resource
-    :param audit: Whether to audit the service account or not
 
     :return: None
 
@@ -30,9 +28,7 @@ def create_service_account(
     validate_roles_exist(profile, roles)
 
     # Create the service account using the provided name and audit flag
-    svc_account = basic_create(
-        profile, svc_account_path, svc_account_name, body={"audit": audit}
-    ).json()
+    svc_account = basic_create(profile, svc_account_path, svc_account_name).json()
     svc_account_id = svc_account.get("uuid")
     if not svc_account_id:
         raise LogicException("Service account UUID not found in response.")

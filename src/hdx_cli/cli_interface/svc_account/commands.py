@@ -59,14 +59,6 @@ def service_account(ctx: click.Context, service_account_name: str):
     "It can be specified multiple times to assign multiple roles.",
 )
 @click.option(
-    "--audit",
-    is_flag=True,
-    show_default=True,
-    default=False,
-    help="By default, the service account is not audited. "
-    "If this option is set, the service account will be audited.",
-)
-@click.option(
     "--generate-token",
     "--gt",
     "generate_token_",
@@ -77,14 +69,10 @@ def service_account(ctx: click.Context, service_account_name: str):
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create(
-    ctx: click.Context, service_account_name: str, roles: list, audit: bool, generate_token_: bool
-):
+def create(ctx: click.Context, service_account_name: str, roles: list, generate_token_: bool):
     user_profile = ctx.parent.obj["usercontext"]
     resource_path = ctx.parent.obj["resource_path"]
-    svc_account = create_service_account(
-        user_profile, service_account_name, roles, resource_path, audit=audit
-    )
+    svc_account = create_service_account(user_profile, service_account_name, roles, resource_path)
     click.echo(f"Created service account {service_account_name}")
 
     # Generate a token for the service account if requested
