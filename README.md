@@ -1,198 +1,144 @@
 [![](images/hdxcli.png)](https://github.com/hydrolix/hdx-cli)
 
 
-`hdxcli` is a command-line tool to work with hydrolix projects and tables
-interactively.
+`hdxcli` is the command-line tool to work with your Hydrolix clusters. It helps you manage resources like projects, tables, and Service Accounts. You can use it to automate tasks and include Hydrolix in your scripts and workflows.
 
-Common operations such as CRUD operations on projects/tables/transforms 
-and others  can be performed.
 
-# Hdx-cli installation
-
-You can install `hdxcli` from pip:
-
-```shell
-pip install hdxcli
-```
 ## System Requirements
-Python version `>= 3.10` is required.
+- Python: `>= 3.10`
 
-Make sure you have the correct Python version installed before proceeding 
-with the installation of `hdxcli`.
+Make sure you have the correct Python version installed.
 
-# Usage
-
-## Command-line tool organization
-
-The tool is organized, mostly with the general invocation form of:
-
+## Installation
+You can install hdxcli using pip:
 ```shell
-hdxcli <resource> [<subresource...] <verb> [<resource_name>]
+  pip install hdxcli
 ```
 
-Table and project resources have defaults that depend on the profile
-you are working with, so they can be omitted if you previously used 
-the `set` command.
+# First Steps: Initial Setup
+When you run your first `hdxcli` command (for example, `hdxcli project list`), if the CLI does not find a previous setup, it will guide you to create a 'default' connection profile. You will need to enter:
 
-For all other resources, you can use `--transform`, `--dictionary`, 
-`--source`, etc. Please see the command line help for more information.
+1. The **hostname** of your Hydrolix cluster (e.g., `mycluster.hydrolix.live`).
+2. If the connection will use **TLS (https)** (recommended).
 
-## Profiles
-`hdxcli` supports multiple profiles. You can use a default profile or
-use the `--profile` option to operate on a non-default profile.
+After setting up the profile, you will be asked to log in with your Hydrolix **username and password**. After a successful login, you can choose how the CLI will authenticate for future operations:
 
-When trying to invoke a command, if a login to the server is necessary, 
-a prompt will be shown and the token will be cached.
+- Continue using your user credentials.
+- Set up the CLI to use a **Service Account**. This is useful for longer sessions or for automated scripts.
 
-## Listing and showing profiles
-
-Listing profiles:
+You can also start this setup process yourself by running:
 ```shell
-hdxcli profile list
+  hdxcli init
 ```
+This command is good if you prefer to set up the CLI before running other commands.
 
-Showing default profile:
+## General Usage
+The main way to use commands is:
+
+`hdxcli [GLOBAL OPTIONS] RESOURCE [ACTION] [SPECIFIC ARGUMENTS...]`
+
+For example, `hdxcli project list` or `hdxcli table --project myproject create mytable`
+
+### Common Global Options (see hdxcli --help for all options):
+- `--profile PROFILE_NAME`: Use a specific connection profile.
+- `--username USERNAME`: Username for login (if needed).
+- `--password PASSWORD`: Password for login (if `--username` is used).
+- `--uri-scheme [http|https]</var>`: Choose the connection scheme (http or https).
+- `--timeout SECONDS`: Timeout for API requests.
+
+- ### Connection Profiles
+Profiles let you save settings for different Hydrolix clusters or users.
+
+- List profiles: `hdxcli profile list`
+- View details of the 'default' profile: `hdxcli profile show default`
+- Use a profile in a command: `hdxcli --profile my_other_profile project list`
+
+### Default Project and Table Context
+To make commands simpler, you can set a "current" or "default" project and table.
+
+- Set default project and table:
+    ```shell
+    hdxcli set <project-name> <table-name>
+    ```
+    Example: `hdxcli set weblogs access_logs`
+
+- After setting defaults, commands for tables or transforms will not need `--project` or `--table` options:
+    ```shell
+    hdxcli transform show my_transform # Will use project and table set by 'set' command
+    ```
+
+- Clear default project and table:
+    ```shell
+    hdxcli unset
+    ```
+  
+## Main Commands (Summary)
+`hdxcli` commands are grouped by the type of resource they manage. Use `hdxcli --help` to see all commands. Some of the main groups are:
+
+- `profile`: Manage your connection profiles.
+- `init`: Initialize `hdxcli` configuration.
+- `set` / `unset`: Set or clear the default project/table.
+- `project`: Create, list, delete, and manage projects.
+- `table`: Manage tables inside projects.
+- `transform`: Manage transforms.
+- `service-account`: Manage Service Accounts and their tokens.
+- `job`: Manage ingestion jobs.
+- (Other important groups like `dictionary`, `function`, `storage`, etc.)
+- `version`: Show the `hdxcli` version.
+
+To get help for a specific command group or command:
 ```shell
-hdxcli profile show
+    hdxcli project --help
+    hdxcli project create --help
 ```
 
-## Projects, tables and transforms
+### Usage Examples
+1. Set up the CLI, log in, and list projects:
+    ```shell
+    $ hdxcli init
+    # ... follow prompts to set up hostname, scheme, and login ...
+    # ... optionally, set up a Service Account ...
+    
+    $ hdxcli project list
+    project_a
+    project_b
+    ```
 
-The basic operations you can do with these resources are:
+2. Create a new project and then a table:
+    ```shell
+    $ hdxcli project create my_new_project
+    Created project 'my_new_project'
+    
+    $ hdxcli table --project my_new_project create my_new_table
+    Created table 'my_new_table'
+    ```
 
-- list them
-- create a new resource
-- delete an existing resource
-- modify an existing resource
-- show a resource in raw json format
-- show settings from a resource
-- write a setting
-- show a single setting
+3. Set a default context and show transform details:
+    ```shell
+    $ hdxcli set my_new_project my_new_table
+    Profile 'default' set project/table
+    
+    $ hdxcli transform show my_existing_transform
+    # ... (output of the transform) ...
+    ```
 
-## Working with transforms
+4. Show project information in indented JSON format:
+    ```shell
+    $ hdxcli project show my_new_project -i
+    {
+        "name": "my_new_project",
+        "org_id": "xxxx-xxxx-xxxx-xxxx",
+        ...
+    }
+    ```
+### Getting Help
+- For an overview of commands: `hdxcli --help`
+- For help on a specific resource or action: `hdxcli <resource> --help` or `hdxcli <resource> <action> --help`
+- For more in-depth information, check out the [official Hydrolix documentation](https://docs.hydrolix.io/docs/hdxcli).
 
-You can create and override transforms with the following commands.
+## License
 
-Create a transform:
-``` shell
-hdxcli transform create -f <transform-settings-file> <transform-name>
-```
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Remember that a transform is applied to a table in a project, so whatever 
-you set with the command-line tool will be the target of your transform.
-
-
-If you want to override it, do:
-
-``` shell
-hdxcli --project <project-name> --table <table-name> transform create -f <transform-settings-file>.json <transform-name>
-```
-
-## Ingest
-### Batch Job
-Create a batch job:
-
-``` shell
-hdxcli job batch ingest <job-name> <job-settings>.json
-```
-
-`job-name` is the name of the job that will be displayed when listing batch 
-jobs. `job-settings` is the path to the file containing the specifications 
-required to create that ingestion (for more information on the required 
-specifications, see Hydrolix API Reference).
-
-In this case, the project, table, and transform are being omitted and the 
-CLI will use the default transform within the project and table previously 
-configured in the profile with the `--set` command. Otherwise, you can add 
-`--project <project-name>, --table <table-name> --transform <transform-name>`.
-
-This allows you to execute the command as follows:
-``` shell
-hdxcli --project <project-name>, --table <table-name> --transform <transform-name> job batch ingest <job-name> <job-settings>.json
-```
-
-# Commands
-
-- Profile
-  - *list*
-    - `hdxcli profile list`
-  - *add*
-    - `hdxcli profile add <profile-name>`
-  - *show*
-    - `hdxcli --profile <profile-name> profile show`
-- Set/Unset
-  - *set*
-    - `hdxcli set <project-name> <table-name>`
-  - *unset*
-    - `hdxcli unset`
-- Project
-  - *list*
-    - `hdxcli project list`
-  - *create*
-    - `hdxcli project create <project-name>`
-  - *delete*
-    - `hdxcli project delete <project-name>`
-  - *activity*
-    - `hdxcli --project <project-name> project activity`
-  - *stats*
-    - `hdxcli --project <project-name> project stats`
-  - *show*
-    - `hdxcli --project <project-name> project show`
-  - *settings*
-    - `hdxcli --project <project-name> project settings`
-    - `hdxcli --project <project-name> project settings <setting-name>`
-    - `hdxcli --project <project-name> project settings <setting-name> <new-value>`
-- Table
-- Transform
-- Job
-- Purgejobs
-- Sources
-- Dictionary
-- Dictionary Files
-- Function
-- Storage
-- Integration
-- Migrate
-- Version
-
-# FAQ: Common operations
-
-## Showing help 
-
-In order to see what you can do with the tool:
-
-``` shell
-hdxcli --help
-```
-
-Check which commands are available for each resource by typing:
-``` shell
-hdxcli [<resource>...] [<verb>] --help
-```
-
-## Performing operations against another server
-
-If you want to use `hdxcli` against another server, use `--profile` option:
-``` shell
-hdxcli --profile <profile-name> project list
-```
-
-## Obtain indented resource information
-
-When you use the verb `show` on any resource, the output looks like this:
-``` shell
-hdxcli --project <project-name> project show
-{"name": "project-name", "org": "org-uuid", "description": "description", "uuid": "uuid", ...}
-```
-
-If you need to have an indented json version, just add `-i`, `--indent int`:
-``` shell
-hdxcli --project <project-name> project show -i 4
-{
-    "name": "project-name", 
-    "org": "org-uuid", 
-    "description": "description", 
-    "uuid": "uuid", 
-    ...,
-}
-```
+This project is licensed under the terms of the **Apache License 2.0**.
+You can find a copy of the license in the [LICENSE](LICENSE) file included in this repository.

@@ -13,7 +13,7 @@ name = "hdxcli"
 version = "1.0.79"
 description = "Hydrolix command line utility to do CRUD operations on projects, tables, transforms and other resources in Hydrolix clusters"
 authors = ["German Diago Gomez <german@hydrolix.io>", "Agustin Actis <agustin@hydrolix.io>"]
-license = "MIT license"
+license = "Apache-2.0"
 keywords = ["database", "bigdata", "hydrolix"]
 classifiers = ["Development Status :: 3 - Alpha",
                "Topic :: Database",
