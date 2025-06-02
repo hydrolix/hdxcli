@@ -7,18 +7,12 @@ run_hdxcli_tests:
   variables:
     PYTHONPATH: "$CI_PROJECT_DIR/src"
   before_script:
-    # Install uv
+    # Install uv and hdxcli dependencies
     - pip install uv
-    # Install project dependencies using uv
-    - uv pip install
-
-    # Install Poetry
-    #- pip install poetry
-    # Install project dependencies using Poetry
-    #- poetry install
+    - uv venv .venv --python $(which python)
+    - uv pip install . --python .venv/bin/python
   script:
     # Run tests
     - uv run pytest -v
-    #- poetry run python -m pytest -v
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
