@@ -11,6 +11,8 @@ run_hdxcli_tests:
     - pip install uv
     - uv venv .venv --python $(which python)
     - uv pip install . --python .venv/bin/python
+    # Install pytest
+    - uv pip install pytest --python .venv/bin/python
   script:
     # Run tests
     - uv run pytest -v
