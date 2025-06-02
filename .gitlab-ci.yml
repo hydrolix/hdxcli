@@ -1,0 +1,18 @@
+stages:
+  - test
+
+run_hdxcli_tests:
+  stage: test
+  image: python:3.11
+  variables:
+    PYTHONPATH: "$CI_PROJECT_DIR/src"
+  before_script:
+    # Install Poetry
+    - pip install poetry
+    # Install project dependencies using Poetry
+    - poetry install
+  script:
+    # Run tests
+    - poetry run python -m pytest -v
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
