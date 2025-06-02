@@ -1,0 +1,20 @@
+stages:
+  - test
+
+run_hdxcli_tests:
+  stage: test
+  image: python:3.11
+  variables:
+    PYTHONPATH: "$CI_PROJECT_DIR/src"
+  before_script:
+    # Install uv and hdxcli dependencies
+    - pip install uv
+    - uv venv .venv --python $(which python)
+    - uv pip install . --python .venv/bin/python
+    # Install pytest
+    - uv pip install pytest --python .venv/bin/python
+  script:
+    # Run tests
+    - uv run pytest -v
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
