@@ -72,6 +72,13 @@ def find_transforms(user_ctx: ProfileUserContext) -> list[dict]:
     )
 
 
+def find_views(user_ctx: ProfileUserContext) -> list[dict]:
+    return access_resource(
+        user_ctx,
+        [("projects", user_ctx.projectname), ("tables", user_ctx.tablename), ("views", None)],
+    )
+
+
 def find_storages(user_ctx: ProfileUserContext) -> list[dict]:
     return access_resource(user_ctx, [("storages", None)])
 

@@ -1,0 +1,28 @@
+{
+    "name": "view_name_should_be_here",
+    "description": "view_description_should_be_here",
+    "settings": {
+        "is_default": false,
+        "output_columns": [
+            {
+                "name": "datetime_second_s_indexed_valid",
+                "datatype": {
+                    "primary": true,
+                    "type": "datetime",
+                    "index": false,
+                    "format": "2006-01-02T15:04:05Z",
+                    "resolution": "seconds"
+                }
+            },
+            {
+                "name": "datetime_second_s_indexed_invalid",
+                "datatype": {
+                    "type": "datetime",
+                    "index": true,
+                    "format": "2006-01-02T15:04:05Z",
+                    "resolution": "seconds"
+                }
+            }
+        ]
+    }
+}
