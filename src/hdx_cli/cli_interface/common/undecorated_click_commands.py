@@ -325,9 +325,16 @@ def basic_show(
     raise ResourceNotFoundException(message)
 
 
-def basic_transform(ctx: click.Context):
+def _prepare_table_subresource_context(
+        ctx: click.Context,
+        plural_resource_name: str,  # e.g., "transforms", "views"
+        singular_resource_name: str,  # e.g., "transform", "view"
+):
+    """Prepare the context for table subresource."""
+    # Common logic to fetch profile, project, and table details
     profile: ProfileUserContext = ctx.parent.obj["usercontext"]
     project_name, table_name = profile.projectname, profile.tablename
+
     if not project_name or not table_name:
         raise HdxCliException(
             f"No project/table parameters provided and "
@@ -339,24 +346,46 @@ def basic_transform(ctx: click.Context):
     try:
         project_id = json.loads(basic_show(profile, projects_path, project_name))["uuid"]
     except IndexError as exc:
-        raise ResourceNotFoundException(f"Project '{project_name}' not found.") from exc
+        raise ResourceNotFoundException(f"Project with name '{project_name}' not found.") from exc
 
-    tables_path = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/"
+    tables_path_prefix = f"/config/v1/orgs/{org_id}/projects/{project_id}/tables/"
     try:
-        table_id = json.loads(basic_show(profile, tables_path, table_name))["uuid"]
+        table_id = json.loads(basic_show(profile, tables_path_prefix, table_name))["uuid"]
     except IndexError as exc:
         raise ResourceNotFoundException(f"Table with name '{table_name}' not found.") from exc
 
-    transforms_path = f"{tables_path}{table_id}/transforms/"
-    ctx.obj = {"resource_path": transforms_path, "usercontext": profile}
+    # Construct the specific "subresource" path
+    resource_path = f"{tables_path_prefix}{table_id}/{plural_resource_name}/"
+    ctx.obj = {"resource_path": resource_path, "usercontext": profile}
 
-    if profile.transformname:
-        try:
-            _ = json.loads(basic_show(profile, transforms_path, profile.transformname))["uuid"]
-        except IndexError as exc:
-            raise ResourceNotFoundException(
-                f"Transform with name '{profile.transformname}' not found."
-            ) from exc
+    # Check for specific subresource name if provided in profile
+    specific_subresource_name = getattr(profile, f"{singular_resource_name}name", None)
+    if not specific_subresource_name:
+        return
+
+    try:
+        # Validate subresource existence
+        _ = json.loads(basic_show(profile, resource_path, specific_subresource_name))["uuid"]
+    except IndexError as exc:
+        raise ResourceNotFoundException(
+            f"{singular_resource_name.capitalize()} with name '{specific_subresource_name}' not found."
+        ) from exc
+
+
+def basic_transform(ctx: click.Context):
+    _prepare_table_subresource_context(
+        ctx,
+        plural_resource_name="transforms",
+        singular_resource_name="transform",
+    )
+
+
+def basic_view(ctx: click.Context):
+    _prepare_table_subresource_context(
+        ctx,
+        plural_resource_name="views",
+        singular_resource_name="view",
+    )
 
 
 class KeyAbsent:

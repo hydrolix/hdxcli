@@ -47,6 +47,7 @@ class ProfileUserContext:
     projectname: Optional[str] = None
     tablename: Optional[str] = None
     transformname: Optional[str] = None
+    viewname: Optional[str] = None
     batchname: Optional[str] = None
     altername: Optional[str] = None
     functionname: Optional[str] = None

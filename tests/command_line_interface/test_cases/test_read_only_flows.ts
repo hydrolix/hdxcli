@@ -33,6 +33,7 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table_gzip create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/gzip_transform.json test_gzip_transform",
                 "python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table_zip create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/zip_transform.json test_zip_transform",
                 "python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table_zlib create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/zlib_transform.json test_zlib_transform",
+                "python3 -m hdx_cli.main view --project test_ci_project --table test_ci_table create -f {HDXCLI_TESTS_DIR}/tests_data/views/view_settings.json test_ci_view",
                 "python3 -m hdx_cli.main dictionary --project test_ci_project files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_file.csv test_ci_dictionary_file",
                 "python3 -m hdx_cli.main dictionary --project test_ci_project create {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_settings.json test_ci_dictionary_file test_ci_dictionary",
                 # "python3 -m hdx_cli.main job batch --project test_ci_project --table test_ci_table ingest test_ci_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_ci_settings.json",
@@ -244,6 +245,48 @@ setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main transform --transform test_ci_transform show"]
 teardown = ["python3 -m hdx_cli.main unset"]
 expected_output_expr = '"name" in result and "string" in result and "test_ci_transform" in result'
+
+
+###################################################### View #######################################################
+[[test]]
+name = "Views can be created"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main view create -f {HDXCLI_TESTS_DIR}/tests_data/views/view_settings.json test_view"]
+teardown = ["python3 -m hdx_cli.main view delete --disable-confirmation-prompt test_view",
+            "python3 -m hdx_cli.main unset"]
+expected_output = 'Created view test_view'
+
+[[test]]
+name = "Views can be deleted"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
+         "python3 -m hdx_cli.main view create -f {HDXCLI_TESTS_DIR}/tests_data/views/view_settings.json test_view"]
+commands_under_test = ["python3 -m hdx_cli.main view delete --disable-confirmation-prompt test_view"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output = 'Deleted test_view'
+
+[[test]]
+name = "Views can be listed"
+commands_under_test = ["python3 -m hdx_cli.main view --project test_ci_project --table test_ci_table list"]
+expected_output_expr = '"test_ci_view" in result'
+
+[[test]]
+name = "Views settings can be shown"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main view --view test_ci_view settings"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output_expr = '"name" in result and "string" in result and "test_ci_view" in result'
+
+[[test]]
+name = "View settings.is_default can be shown"
+commands_under_test = ["python3 -m hdx_cli.main view --project test_ci_project --table test_ci_table --view test_ci_view settings settings.is_default"]
+expected_output = 'settings.is_default: False'
+
+[[test]]
+name = "Views can be shown"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main view --view test_ci_view show"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output_expr = '"name" in result and "test_ci_view" in result'
 
 
 ######################################################### Kafka ########################################################
