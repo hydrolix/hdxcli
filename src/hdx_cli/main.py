@@ -33,7 +33,7 @@ from hdx_cli.library_api.common.logging import get_logger, set_debug_logger, set
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.models import DEFAULT_TIMEOUT, ProfileLoadContext
 
-VERSION = "1.0.79"
+VERSION = "1.0.80"
 
 logger = get_logger()
 

@@ -55,10 +55,6 @@ def check_alter_jobs(profile: ProfileUserContext, is_only_resources: bool) -> No
         return
 
     alter_jobs = find_alter_jobs(profile)
-    # workaround for alter_jobs with pagination
-    if isinstance(alter_jobs, dict) and alter_jobs.get("results"):
-        alter_jobs = alter_jobs.get("results")
-
     is_alter_job_running = list(
         filter(
             lambda x: x.get("status") == "running"
