@@ -62,7 +62,11 @@ def find_batch_jobs(user_ctx: ProfileUserContext) -> list[dict]:
 
 
 def find_alter_jobs(user_ctx: ProfileUserContext) -> list[dict]:
-    return access_resource(user_ctx, [("jobs/alter", None)])
+    alter_jobs = access_resource(user_ctx, [("jobs/alter", None)])
+    # Workaround for paginated alter jobs when pagination parameters didn't exist.
+    if isinstance(alter_jobs, dict) and alter_jobs.get("results") is not None:
+        return alter_jobs.get("results")
+    return alter_jobs
 
 
 def find_transforms(user_ctx: ProfileUserContext) -> list[dict]:
