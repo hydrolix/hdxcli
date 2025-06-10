@@ -5,6 +5,7 @@ from trogon import tui
 
 from hdx_cli.auth.context_builder import load_user_context
 from hdx_cli.cli_interface.check_health import commands as check_health_
+from hdx_cli.cli_interface.resource_summary import commands as resource_summary_
 from hdx_cli.cli_interface.credential import commands as credentials_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
 from hdx_cli.cli_interface.function import commands as function_
@@ -177,6 +178,7 @@ hdx_cli.add_command(role_.role)
 hdx_cli.add_command(query_option_.query_option)
 hdx_cli.add_command(credentials_.credential)
 hdx_cli.add_command(check_health_.check_health)
+hdx_cli.add_command(resource_summary_.resource_summary)
 hdx_cli.add_command(version)
 
 
