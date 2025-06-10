@@ -906,3 +906,10 @@ expected_output = "Profile 'default' set project/table"
 name = "Unset can be used"
 commands_under_test = ["python3 -m hdx_cli.main unset"]
 expected_output = "Profile 'default' unset project/table"
+
+
+################################################## Resource Summary ##################################################
+[[test]]
+name = "Resource summary from config blob endpoint can be shown"
+commands_under_test = ["python3 -m hdx_cli.main resource-summary"]
+expected_output_expr = '"Summary" in result and "Project" in result and "Table" in result'
