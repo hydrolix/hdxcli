@@ -1,173 +1,258 @@
-from typing import List, Tuple, Union
+from typing import Optional
+from urllib.parse import urlparse
+from rich.console import Console
+from rich.table import Table
 
+import rich.box
 import click
 
-from ...library_api.common.exceptions import HdxCliException, QueryOptionNotFound
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
-from ...library_api.utility.file_handling import load_json_settings_file
-from ...models import ProfileUserContext
-from ..common.undecorated_click_commands import basic_get, basic_options, basic_update
+from hdx_cli.cli_interface.common.undecorated_click_commands import (
+    basic_get,
+    basic_update,
+    basic_options,
+)
+from hdx_cli.library_api.common.exceptions import HdxCliException, QueryOptionNotFound
+from hdx_cli.library_api.common.generic_resource import access_resource_detailed
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.file_handling import load_json_settings_file
+from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
 
 
-@click.group(help="Query options operations at org-level", name="query-option")
+def _build_resource_path(
+        profile: ProfileUserContext,
+        org_id: str,
+        project_name: Optional[str],
+        table_name: Optional[str],
+) -> str:
+    """Build the resource path based on the provided scope."""
+    # Table-level scope (most specific)
+    if project_name and table_name:
+        _, resource_url = access_resource_detailed(
+            profile, [("projects", project_name), ("tables", table_name)]
+        )
+        base_path = urlparse(resource_url).path
+        return f"{base_path}query_options/"
+
+    # Project-level scope
+    elif project_name:
+        _, resource_url = access_resource_detailed(
+            profile, [("projects", project_name)]
+        )
+        base_path = urlparse(resource_url).path
+        return f"{base_path}query_options/"
+
+    # Organization-level scope (default)
+    return f"/config/v1/orgs/{org_id}/query_options/"
+
+
+@click.group(name="query-option")
+@click.option("--project", "project_name", help="Target a specific project by name.")
+@click.option("--table", "table_name", help="Target a specific table by name (requires --project).")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
-def query_option(ctx: click.Context):
+def query_option(ctx: click.Context, project_name: Optional[str], table_name: Optional[str]):
+    """
+    Manage default query options for the organization, project, or table.
+
+    This command allows you to list, set, and unset query options
+    that will be applied to all queries within a specific scope.
+
+    \b
+    The scope is determined by the options provided:
+    - No options:                     Manages options at the organization level.
+    - --project [NAME]:               Manages options for a specific project.
+    - --project [NAME] --table [NAME]:Manages options for a specific table.
+
+    \b
+    Examples:
+      # List query options set at the organization level
+      hdxcli query-option list
+
+    \b
+      # Set an option for a project named 'my_project'
+      hdxcli query-option --project my_project set hdx_query_max_rows 3
+
+    \b
+      # Unset all options for a table 'users' within 'my_project'
+      hdxcli query-option --project my_project --table users unset --all
+    """
+    if table_name and not project_name:
+        raise click.UsageError("Cannot use --table without --project.")
+
     profile = ctx.parent.obj["usercontext"]
     org_id = profile.org_id
-    ctx.obj = {"resource_path": f"/config/v1/orgs/{org_id}/query_options/", "usercontext": profile}
+    resource_path = _build_resource_path(profile, org_id, project_name, table_name)
+
+    # Fetch common data once to avoid redundant API calls
+    current_settings = basic_get(profile, resource_path)
+    available_options = _available_query_options(profile, resource_path)
+
+    if not available_options:
+        raise HdxCliException("Failed to retrieve available query options.")
+
+    ctx.obj = {
+        "resource_path": resource_path,
+        "usercontext": profile,
+        "current_settings": current_settings,
+        "available_options": available_options,
+    }
 
 
-@click.command(help="Set query option(s).", name="set")
-@click.argument("query_option_name", default=None, required=False)
-@click.argument("query_option_value", default=None, required=False)
+@click.command(name="set")
+@click.argument("query_option_name", required=False)
+@click.argument("query_option_value", required=False)
 @click.option(
     "--from-file",
-    default=None,
     type=click.Path(exists=True, readable=True),
     callback=load_json_settings_file,
     help="Set query options from a JSON file.",
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def set_(
-    ctx: click.Context, query_option_name: str, query_option_value: Union[str, int], from_file: dict
-):
-    user_profile = ctx.parent.obj["usercontext"]
-    resource_path = ctx.parent.obj["resource_path"]
+def set_(ctx: click.Context, query_option_name: str, query_option_value: str, from_file: dict):
+    """
+    Set one or more query options for the specified scope.
 
+    Options can be set individually by providing a name and a value,
+    or in bulk from a JSON file using the --from-file option.
+
+    \b
+    Examples:
+      # Set a single option for project 'my_project'
+      hdxcli query-option --project my_project set hdx_query_max_rows 5
+
+    \b
+      # Set multiple options from a file for the organization
+      hdxcli query-option set --from-file ./options.json
+    """
     if not (query_option_name and query_option_value) and not from_file:
         raise click.BadParameter(
-            "You must provide either query_option_name and query_option_value or --from-file (JSON)."
+            "Provide either QUERY_OPTION_NAME and QUERY_OPTION_VALUE, or --from-file."
         )
 
-    response = _set(user_profile, resource_path, query_option_name, query_option_value, from_file)
-    logger.info(f"{response}")
+    if query_option_name and from_file:
+        raise click.BadParameter("Cannot use arguments and --from-file simultaneously.")
+
+    profile = ctx.obj["usercontext"]
+    resource_path = ctx.obj["resource_path"]
+    current_settings = ctx.obj["current_settings"]
+    available_options = ctx.obj["available_options"]
+
+    payload = current_settings.copy()
+    if "settings" not in payload:
+        payload["settings"] = {}
+    if "default_query_options" not in payload["settings"]:
+        payload["settings"]["default_query_options"] = {}
+
+    options_to_set = from_file if from_file else {query_option_name: query_option_value}
+
+    # Validate all options before applying
+    invalid_keys = [key for key in options_to_set if key not in available_options]
+    if invalid_keys:
+        raise QueryOptionNotFound(f"Invalid query option(s) {', '.join(invalid_keys)}.")
+
+    payload["settings"]["default_query_options"].update(options_to_set)
+
+    basic_update(profile, resource_path, body=payload)
+
+    if from_file:
+        msg = "Successfully set query options from file"
+    else:
+        msg = f"Successfully set query option '{query_option_name}' to '{query_option_value}'"
+    logger.info(msg)
 
 
-@click.command(help="Unset query option(s).")
-@click.argument("query_option_name", default=None, required=False)
-@click.option(
-    "--all", "all_query_options", is_flag=True, default=False, help="Unset all query options."
-)
+@click.command()
+@click.argument("query_option_name", required=False)
+@click.option("--all", "all_options", is_flag=True, help="Unset all query options for the scope.")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def unset(ctx: click.Context, query_option_name: str, all_query_options: bool):
-    user_profile = ctx.parent.obj["usercontext"]
-    resource_path = ctx.parent.obj["resource_path"]
+def unset(ctx: click.Context, query_option_name: Optional[str], all_options: bool):
+    """
+    Unset one or more query options for the specified scope.
 
-    if query_option_name is None and not all_query_options:
-        raise click.BadParameter("Either provide a QUERY_OPTION_NAME or --all option.")
+    Unset a single option by providing its name, or unset all options
+    for the current scope by using the --all flag.
 
-    response = _unset(user_profile, resource_path, query_option_name=query_option_name)
-    logger.info(f"{response}")
+    \b
+    Examples:
+      # Unset a single option for project 'my_project'
+      hdxcli query-option --project my_project unset hdx_query_max_rows
+
+    \b
+      # Unset all options for the organization
+      hdxcli query-option unset --all
+    """
+    if not query_option_name and not all_options:
+        raise click.BadParameter("Provide a QUERY_OPTION_NAME or use the --all flag.")
+    if query_option_name and all_options:
+        raise click.BadParameter("Cannot use an argument and --all simultaneously.")
+
+    profile = ctx.obj["usercontext"]
+    resource_path = ctx.obj["resource_path"]
+    current_settings = ctx.obj["current_settings"]
+
+    try:
+        options = current_settings["settings"]["default_query_options"]
+        if all_options:
+            options.clear()
+            msg = "Successfully unset all query options"
+        else:
+            del options[query_option_name]
+            msg = f"Successfully unset query option '{query_option_name}'"
 
 
-@click.command(help="List query options.", name="list")
+        basic_update(profile, resource_path, body=current_settings)
+        logger.info(msg)
+    except KeyError:
+        raise QueryOptionNotFound(f"Query option '{query_option_name}' is not set.")
+    except (TypeError, KeyError):
+        logger.info("No query options were set for this resource.")
+
+
+@click.command(name="list")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context):
-    resource_path = ctx.parent.obj["resource_path"]
-    profile = ctx.parent.obj["usercontext"]
-    _list(profile, resource_path)
+    """
+    List the configured query options for the current scope.
 
+    Displays a table of all query options that have been explicitly set
+    """
+    current_settings = ctx.obj["current_settings"]
+    available_options = ctx.obj["available_options"]
 
-def _set(
-    profile: ProfileUserContext,
-    resource_path: str,
-    query_option_name: str = None,
-    query_option_value: Union[str, int] = None,
-    from_file: dict = None,
-):
-    if not (available_options := _available_query_options(profile, resource_path)):
-        logger.error("There was an error catching available query options.")
+    set_options = current_settings.get("settings", {}).get("default_query_options", {})
+
+    if not set_options:
+        logger.info("No query options are configured for this scope.")
         return
 
-    result = basic_get(profile, resource_path)
-    if not result.get("settings") or "default_query_options" not in result.get("settings"):
-        raise HdxCliException("An error occurred while trying to get the query options.")
-
-    if query_option_name:
-        if query_option_name not in available_options:
-            raise QueryOptionNotFound(f"'{query_option_name}' is not a valid query option.")
-
-        result["settings"]["default_query_options"][query_option_name] = query_option_value
-    else:
-        if not all(key in available_options for key in from_file.keys()):
-            raise QueryOptionNotFound("There are invalid query options in the file.")
-
-        result["settings"]["default_query_options"].update(from_file)
-
-    basic_update(profile, resource_path, body=result)
-
-    return (
-        f"Set '{query_option_name}' query option"
-        if query_option_name
-        else "Set query options from file"
+    table = Table(
+        box=rich.box.HORIZONTALS,
+        show_edge=False,
+        show_lines=False
     )
+    table.add_column("Name")
+    table.add_column("Type")
+    table.add_column("Set Value", justify="right")
 
+    for name, value in set_options.items():
+        opt_type = available_options.get(name, {}).get("type", "N/A")
+        table.add_row(name, opt_type, str(value))
 
-def _unset(profile: ProfileUserContext, resource_path: str, query_option_name: str = None) -> str:
-    result = basic_get(profile, resource_path)
-    default_query_options = result.get("settings", {}).get("default_query_options")
-    if not default_query_options:
-        return "No query options found to unset."
-
-    data = result["settings"]
-    try:
-        if query_option_name:
-            del data["default_query_options"][query_option_name]
-        else:
-            del data["default_query_options"]
-    except KeyError as key_err:
-        raise QueryOptionNotFound(
-            f"{query_option_name} not found in the set query options."
-        ) from key_err
-
-    basic_update(profile, resource_path, body=result)
-    return (
-        f"Unset '{query_option_name}' query option"
-        if query_option_name
-        else "Unset all query options"
-    )
-
-
-def _list(profile: ProfileUserContext, resource_path: str) -> None:
-    result = basic_get(profile, resource_path)
-    default_query_options = result.get("settings", {}).get("default_query_options")
-    if not default_query_options:
-        return
-
-    if not (available_options := _available_query_options(profile, resource_path)):
-        logger.error("There was an error catching available query options.")
-        return
-
-    logger.info(f'{"-" * (55 + 15 + 25)}')
-    logger.info(_format_settings_header([("name", 55), ("type", 15), ("value", 25)]))
-    logger.info(f'{"-" * (55 + 15 + 25)}')
-    for setting_name, setting_val in available_options.items():
-        if default_query_options.get(setting_name) is not None:
-            logger.info(
-                f"{setting_name:<55}{setting_val['type']:<15}{default_query_options[setting_name]:<25}"
-            )
+    console = Console()
+    console.print(table)
 
 
 def _available_query_options(profile: ProfileUserContext, resource_path: str) -> dict:
+    """Fetch available query options via OPTIONS request."""
     response = basic_options(profile, resource_path, action="PUT")
-    settings = response.get("settings", {})
-    children = settings.get("children", {})
-    return children.get("default_query_options", {}).get("children")
-
-
-def _format_settings_header(headers_and_spacing: List[Tuple[str, int]]) -> str:
-    format_strings = []
-    for key, spacing in headers_and_spacing:
-        format_strings.append(f"{key:<{spacing}}")
-    return "".join(format_strings)
+    return response.get("settings", {}).get("children", {}).get("default_query_options", {}).get("children", {})
 
 
 query_option.add_command(set_)

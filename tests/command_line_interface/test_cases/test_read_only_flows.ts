@@ -841,58 +841,64 @@ expected_output_re = "Error: Invite with email 'user_not_exist@hydrolix.io' not 
 name = "Set query options from file"
 commands_under_test = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 teardown = ["python3 -m hdx_cli.main query-option unset --all"]
-expected_output = 'Set query options from file'
+expected_output = 'Successfully set query options from file'
 
 [[test]]
 name = "List query options"
 setup = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 commands_under_test = ["python3 -m hdx_cli.main query-option list"]
 teardown = ["python3 -m hdx_cli.main query-option unset --all"]
-expected_output_expr = '"hdx_query_max_columns_to_read" in result and "value" in result and "20" in result and "hdx_query_max_concurrent_partitions" in result'
+expected_output_expr = '"hdx_query_max_columns_to_read" in result and "20" in result and "hdx_query_max_concurrent_partitions" in result'
 
 [[test]]
-name = "Unset query options"
+name = "Unset all query options"
 setup = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/settings.json"]
 commands_under_test = ["python3 -m hdx_cli.main query-option unset --all"]
-expected_output = 'Unset all query options'
-
-# Assert False, click error. Works fine in the terminal
-#[[test]]
-#name = "Set nonexistence query options file"
-#commands_under_test = ["python3 -m hdx_cli.main query-option set --from-file {HDXCLI_TESTS_DIR}/tests_data/query-options/inexistent_settings.json"]
-#expected_output_expr = '"Error: Invalid value for" in result and "does not exist." in result'
+expected_output = 'Successfully unset all query options'
 
 [[test]]
-name = "Set query options from name"
+name = "Set query option from name"
 commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions 10"]
 teardown = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
-expected_output = "Set 'hdx_query_max_concurrent_partitions' query option"
+expected_output = "Successfully set query option 'hdx_query_max_concurrent_partitions' to '10'"
 
 [[test]]
-name = "Unset query options from name"
+name = "Unset query option from name"
 setup = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions 10"]
 commands_under_test = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
-expected_output = "Unset 'hdx_query_max_concurrent_partitions' query option"
+expected_output = "Successfully unset query option 'hdx_query_max_concurrent_partitions'"
 
 [[test]]
-name = "Set query options nonexistence name"
+name = "Set query option nonexistence name"
 commands_under_test = ["python3 -m hdx_cli.main query-option set option_nonexistence 10"]
-expected_output = "Error: 'option_nonexistence' is not a valid query option."
+expected_output = "Error: Invalid query option(s) option_nonexistence."
 
 [[test]]
-name = "Unset query options not set from name"
+name = "Unset query option not set from name"
 commands_under_test = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
-expected_output = 'No query options found to unset.'
+expected_output = "Error: Query option 'hdx_query_max_concurrent_partitions' is not set."
 
 [[test]]
 name = "Set query from name without value"
 commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions"]
-expected_output = 'Error: You must provide either query_option_name and query_option_value or --from-file (JSON).'
+expected_output = 'Error: Provide either QUERY_OPTION_NAME and QUERY_OPTION_VALUE, or --from-file.'
 
 [[test]]
 name = "Set query from name with not accepted value"
 commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_timerange_required 6"]
 expected_output = 'Error: Must be a valid boolean.'
+
+[[test]]
+name = "Set query option from name at project level"
+commands_under_test = ["python3 -m hdx_cli.main query-option --project test_ci_project set hdx_query_max_concurrent_partitions 10"]
+teardown = ["python3 -m hdx_cli.main query-option --project test_ci_project unset hdx_query_max_concurrent_partitions"]
+expected_output = "Successfully set query option 'hdx_query_max_concurrent_partitions' to '10'"
+
+[[test]]
+name = "Set query option from name at table level"
+commands_under_test = ["python3 -m hdx_cli.main query-option --project test_ci_project --table test_ci_table set hdx_query_max_concurrent_partitions 10"]
+teardown = ["python3 -m hdx_cli.main query-option --project test_ci_project --table test_ci_table unset hdx_query_max_concurrent_partitions"]
+expected_output = "Successfully set query option 'hdx_query_max_concurrent_partitions' to '10'"
 
 
 ##################################################### Set/Unset ######################################################
