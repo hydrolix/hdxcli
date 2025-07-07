@@ -289,6 +289,39 @@ teardown = ["python3 -m hdx_cli.main unset"]
 expected_output_expr = '"name" in result and "test_ci_view" in result'
 
 
+###################################################### Column #######################################################
+[[test]]
+name = "Columns can be listed"
+commands_under_test = ["python3 -m hdx_cli.main column --project test_ci_project --table test_ci_table_csv list"]
+expected_output_expr = '"_timestamp" in result'
+
+[[test]]
+name = "Column can be shown"
+commands_under_test = ["python3 -m hdx_cli.main column --project test_ci_project --table test_ci_table_csv --column _timestamp show"]
+expected_output_expr = '"name" in result and "_timestamp" in result and "current_name" in result'
+
+[[test]]
+name = "Column can be shown by passing argument"
+commands_under_test = ["python3 -m hdx_cli.main column --project test_ci_project --table test_ci_table_csv show _timestamp"]
+expected_output_expr = '"name" in result and "_timestamp" in result and "current_name" in result'
+
+[[test]]
+name = "Column allows to add a new name"
+commands_under_test = ["python3 -m hdx_cli.main column --project test_ci_project --table test_ci_table_csv --column _timestamp add-name renamed_column"]
+expected_output = "Added new name 'renamed_column' to column '_timestamp'"
+
+[[test]]
+name = "Column alias can be added"
+commands_under_test = ["python3 -m hdx_cli.main column --project test_ci_project --table test_ci_table_csv add-alias new_column 'plus(_numeric,_uint64)'"]
+expected_output = "Added new alias column 'new_column' to table 'test_ci_table_csv'"
+
+[[test]]
+name = "Column alias can be deleted"
+setup = ["python3 -m hdx_cli.main column --project test_ci_project --table test_ci_table_csv add-alias new_column_v2 'plus(_numeric,_uint64)'"]
+commands_under_test = ["python3 -m hdx_cli.main column --project test_ci_project --table test_ci_table_csv delete new_column_v2 --disable-confirmation-prompt"]
+expected_output = "Deleted new_column_v2"
+
+
 ######################################################### Kafka ########################################################
 # [[test]]
 # name = "Kafka sources can be created"
