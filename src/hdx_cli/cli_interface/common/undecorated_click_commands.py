@@ -363,13 +363,15 @@ def _prepare_table_subresource_context(
     if not specific_subresource_name:
         return
 
-    try:
-        # Validate subresource existence
-        _ = json.loads(basic_show(profile, resource_path, specific_subresource_name))["uuid"]
-    except IndexError as exc:
+    # Validate subresource existence
+    specific_subresource = json.loads(basic_show(profile, resource_path, specific_subresource_name))
+    if not specific_subresource:
         raise ResourceNotFoundException(
             f"{singular_resource_name.capitalize()} with name '{specific_subresource_name}' not found."
-        ) from exc
+        )
+
+    # Store the found resource object in the context
+    ctx.obj["specific_resource"] = specific_subresource
 
 
 def basic_transform(ctx: click.Context):
@@ -385,6 +387,14 @@ def basic_view(ctx: click.Context):
         ctx,
         plural_resource_name="views",
         singular_resource_name="view",
+    )
+
+
+def basic_column(ctx: click.Context):
+    _prepare_table_subresource_context(
+        ctx,
+        plural_resource_name="columns",
+        singular_resource_name="column",
     )
 
 

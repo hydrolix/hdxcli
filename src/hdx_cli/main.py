@@ -25,6 +25,7 @@ from hdx_cli.cli_interface.stream import commands as stream_
 from hdx_cli.cli_interface.svc_account import commands as service_account_
 from hdx_cli.cli_interface.table import commands as table_
 from hdx_cli.cli_interface.transform import commands as transform_
+from hdx_cli.cli_interface.column import commands as column_
 from hdx_cli.cli_interface.user import commands as user_
 from hdx_cli.cli_interface.view import commands as view_
 from hdx_cli.config.initial_setup import first_time_use_config, is_first_time_use
@@ -34,7 +35,7 @@ from hdx_cli.library_api.common.logging import get_logger, set_debug_logger, set
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.models import DEFAULT_TIMEOUT, ProfileLoadContext
 
-VERSION = "1.0.80"
+VERSION = "1.0.81"
 
 logger = get_logger()
 
@@ -160,6 +161,7 @@ hdx_cli.add_command(table_.table)
 hdx_cli.add_command(shadow_.shadow)
 hdx_cli.add_command(transform_.transform)
 hdx_cli.add_command(view_.view)
+hdx_cli.add_command(column_.column)
 hdx_cli.add_command(set_commands.set_default_resources)
 hdx_cli.add_command(set_commands.unset_default_resources)
 hdx_cli.add_command(job_.job)
