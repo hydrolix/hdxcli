@@ -24,6 +24,8 @@ def report_error_and_exit(exctype=Exception, exit_code=-1):
         def report_wrapper(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
+            except click.Abort:
+                raise
             except exctype as exc:
                 logger.debug(f"{exc}")
                 if isinstance(exc, HttpException):

@@ -36,6 +36,7 @@ sqlglot = "^10.5.10"
 trogon = "^0.6.0"
 pydantic = "^2.5.3"
 tqdm = "^4.66.4"
+pyjwt = "^2.10.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.1.3"
