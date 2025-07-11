@@ -1,4 +1,5 @@
 import functools
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from hdx_cli.auth.api import login
@@ -6,12 +7,14 @@ from hdx_cli.auth.auth import authenticate_user
 from hdx_cli.auth.service_account import prompt_and_configure_service_account
 from hdx_cli.auth.session import fail_if_token_expired, load_session_data, save_session_data
 from hdx_cli.auth.utils import chain_calls_ignore_exc
+from hdx_cli.cli_interface.common.cached_operations import find_orgs
 from hdx_cli.config.paths import HDX_CONFIG_DIR, PROFILE_CONFIG_FILE
 from hdx_cli.config.profile_settings import load_config_parameters, load_static_profile_config
 from hdx_cli.library_api.common.exceptions import HdxCliException
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.models import (
     DEFAULT_TIMEOUT,
+    AuthInfo,
     BasicProfileConfig,
     ProfileLoadContext,
     ProfileUserContext,
@@ -21,6 +24,43 @@ logger = get_logger()
 
 
 def load_user_context(load_context: ProfileLoadContext, **args) -> ProfileUserContext:
+    # --- Handle direct access token for stateless authentication ---
+    if access_token := args.get("access_token"):
+        logger.debug("Using provided access token, bypassing standard auth flow.")
+        temp_context = load_static_profile_config(load_context)
+
+        # Create a temporal context to fetch the organization ID
+        # The org_id is None at this stage
+        temp_auth = AuthInfo(
+            token=access_token,
+            token_type="Bearer",
+            expires_at=datetime.now() + timedelta(days=1),  # Fictional expiration
+            method="cli_token",
+            org_id=None,
+        )
+        temp_context.auth = temp_auth
+
+        # Use the temporal context to find the org_id
+        orgs = find_orgs(temp_context)
+        if not orgs:
+            raise HdxCliException("Could not determine organization ID with the provided token.")
+
+        org_id = orgs[0].get("uuid")
+        if not org_id:
+            raise HdxCliException("Organization data is malformed and does not contain a UUID.")
+
+        # Create the final, complete context with the org_id
+        temp_auth.org_id = org_id
+        user_context = temp_context
+
+        if scheme_from_arg := args.get("uri_scheme"):
+            user_context.profile_config.scheme = str(scheme_from_arg)
+        if timeout_from_arg := args.get("timeout"):
+            user_context.timeout = int(timeout_from_arg)
+        else:
+            user_context.timeout = DEFAULT_TIMEOUT
+        return user_context
+
     load_set_params = functools.partial(load_config_parameters, load_context=load_context)
     user_context = chain_calls_ignore_exc(
         load_session_data,

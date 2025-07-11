@@ -124,6 +124,7 @@ def ensure_logged_in(func):
             profile_context,
             username=user_options.get("username"),
             password=user_options.get("password"),
+            access_token=user_options.get("access_token"),
             profile_config_file=user_options.get("profile_config_file"),
             uri_scheme=user_options.get("uri_scheme"),
             timeout=user_options.get("timeout"),
