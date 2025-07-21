@@ -107,6 +107,10 @@ def find_roles(user_ctx: ProfileUserContext) -> list[dict]:
     return access_resource(user_ctx, [("roles", None)], base_path="/config/v1/")
 
 
+def find_orgs(user_ctx: ProfileUserContext) -> list[dict]:
+    return access_resource(user_ctx, [("orgs", None)], base_path="/config/v1/")
+
+
 def find_service_accounts(user_ctx: ProfileUserContext) -> list[dict]:
     return access_resource(user_ctx, [("service_accounts", None)], base_path="/config/v1/")
 

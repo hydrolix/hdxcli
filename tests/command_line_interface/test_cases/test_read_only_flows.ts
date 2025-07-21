@@ -42,15 +42,17 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 # "python3 -m hdx_cli.main sources siem --project test_ci_project --table test_ci_table create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_ci_siem_source",
                 "python3 -m hdx_cli.main function --project test_ci_project create -s '(x,k,b)->k*x+b' test_ci_function",
                 "python3 -m hdx_cli.main storage create -f {HDXCLI_TESTS_DIR}/tests_data/storages/storage_ci_settings.json test_ci_storage",
-                "python -m hdx_cli.main role create test_ci_role --permission change_table",
-                "python -m hdx_cli.main user invite send test_ci_invite_user@hydolix.io --role test_ci_role",
+                "python3 -m hdx_cli.main role create test_ci_role --permission change_table",
+                "python3 -m hdx_cli.main user invite send test_ci_invite_user@hydolix.io --role test_ci_role",
+                "python3 -m hdx_cli.main service-account create test_ci_service_account --role read_only",
                 "python3 -m hdx_cli.main unset"
                 ]
 
 global_teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_ci_storage",
                    "python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
-                   "python -m hdx_cli.main role delete --disable-confirmation-prompt test_ci_role",
-                   "python -m hdx_cli.main user delete --disable-confirmation-prompt test_ci_invite_user@hydolix.io",
+                   "python3 -m hdx_cli.main role delete --disable-confirmation-prompt test_ci_role",
+                   "python3 -m hdx_cli.main user delete --disable-confirmation-prompt test_ci_invite_user@hydolix.io",
+                   "python3 -m hdx_cli.main service-account delete --disable-confirmation-prompt test_ci_service_account",
                    "python3 -m hdx_cli.main unset"]
 
 
@@ -867,6 +869,67 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 name = "Invite to a user not exist can be show"
 commands_under_test = ["python3 -m hdx_cli.main user invite --user user_not_exist@hydrolix.io show"]
 expected_output_re = "Error: Invite with email 'user_not_exist@hydrolix.io' not found."
+
+
+################################################### Service Account ####################################################
+[[test]]
+name = "A service account can be created"
+commands_under_test = ["python3 -m hdx_cli.main service-account create test_sa_create --role read_only"]
+teardown = ["python3 -m hdx_cli.main service-account delete test_sa_create --disable-confirmation-prompt"]
+expected_output = "Created service account 'test_sa_create'"
+
+[[test]]
+name = "A service account can be created with a token of a specific duration"
+commands_under_test = ["python3 -m hdx_cli.main service-account create test_sa_create_with_duration --role read_only --generate-token 30d"]
+teardown = ["python3 -m hdx_cli.main service-account delete test_sa_create_with_duration --disable-confirmation-prompt"]
+expected_output_expr = "'Created service account' in result and 'Token successfully generated:' in result and '~29 days' in result"
+
+[[test]]
+name = "Service Accounts can be listed"
+commands_under_test = ["python3 -m hdx_cli.main service-account list"]
+expected_output_expr = "'test_ci_service_account' in result and 'read_only' in result"
+
+[[test]]
+name = "A service account's details can be shown"
+commands_under_test = ["python3 -m hdx_cli.main service-account show test_ci_service_account"]
+expected_output_expr = "'name' in result and 'test_ci_service_account' in result and 'uuid' in result"
+
+[[test]]
+name = "A service account can be deleted"
+setup = ["python3 -m hdx_cli.main service-account create test_sa_delete --role read_only"]
+commands_under_test = ["python3 -m hdx_cli.main service-account delete test_sa_delete --disable-confirmation-prompt"]
+expected_output = "Deleted test_sa_delete"
+
+[[test]]
+name = "A token can be generated for a service account"
+commands_under_test = ["python3 -m hdx_cli.main service-account generate-token test_ci_service_account"]
+expected_output_expr = "'Token successfully generated:' in result and 'Access Token:' in result"
+
+[[test]]
+name = "A token with a specific duration can be generated for an existing service account"
+commands_under_test = ["python3 -m hdx_cli.main service-account generate-token test_ci_service_account --duration 30d"]
+expected_output_expr = "'Token successfully generated:' in result and 'Access Token:' in result and '~29 days' in result"
+
+[[test]]
+name = "All tokens for a service account can be revoked"
+commands_under_test = ["python3 -m hdx_cli.main service-account revoke-tokens test_ci_service_account --yes"]
+expected_output = "All tokens for service account 'test_ci_service_account' have been revoked"
+
+[[test]]
+name = "A new role can be assigned to a service account"
+commands_under_test = ["python3 -m hdx_cli.main service-account assign-role test_ci_service_account --role operator"]
+expected_output = "Added role(s) to 'test_ci_service_account'"
+
+[[test]]
+name = "A role can be removed from a service account"
+setup = ["python3 -m hdx_cli.main service-account assign-role test_ci_service_account --role user_admin"]
+commands_under_test = ["python3 -m hdx_cli.main service-account remove-role test_ci_service_account --role user_admin"]
+expected_output = "Removed role(s) from 'test_ci_service_account'"
+
+[[test]]
+name = "Generating a token with an invalid duration format fails gracefully"
+commands_under_test = ["python3 -m hdx_cli.main service-account generate-token test_ci_service_account --duration 30x"]
+expected_output = "Error: Invalid duration format: '30x'. Use 'd' (days), 'h' (hours), 'm' (minutes), or 'y' (years)."
 
 
 ################################################### query-options ####################################################

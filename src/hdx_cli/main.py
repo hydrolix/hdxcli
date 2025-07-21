@@ -74,6 +74,12 @@ def configure_logger(debug=False):
     help="Login password. If provided and the access token is expired, it will be used.",
 )
 @click.option(
+    "--access-token",
+    metavar="ACCESS_TOKEN",
+    default=None,
+    help="Provide a raw access token to use for authentication, bypassing all other methods.",
+)
+@click.option(
     "--profile-config-file",
     type=click.Path(path_type=Path),
     hidden=True,
@@ -107,6 +113,7 @@ def hdx_cli(
     profile: str,
     username: str,
     password: str,
+    access_token: str,
     profile_config_file: Path,
     uri_scheme: str,
     timeout: int,
@@ -129,6 +136,7 @@ def hdx_cli(
     user_options = {
         "username": username,
         "password": password,
+        "access_token": access_token,
         "profile_config_file": profile_config_file,
         "uri_scheme": uri_scheme,
         "timeout": timeout,

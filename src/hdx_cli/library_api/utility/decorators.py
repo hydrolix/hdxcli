@@ -24,6 +24,8 @@ def report_error_and_exit(exctype=Exception, exit_code=-1):
         def report_wrapper(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
+            except click.Abort:
+                raise
             except exctype as exc:
                 logger.debug(f"{exc}")
                 if isinstance(exc, HttpException):
@@ -122,6 +124,7 @@ def ensure_logged_in(func):
             profile_context,
             username=user_options.get("username"),
             password=user_options.get("password"),
+            access_token=user_options.get("access_token"),
             profile_config_file=user_options.get("profile_config_file"),
             uri_scheme=user_options.get("uri_scheme"),
             timeout=user_options.get("timeout"),
