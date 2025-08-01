@@ -85,6 +85,12 @@ def service_account(ctx: click.Context, service_account_name: str):
     metavar="[DURATION]",
     help="Generate a token after creation. Optionally, provide a duration (e.g., '30d', '1y').",
 )
+@click.option(
+    "--set-as-auth",
+    is_flag=True,
+    help="Set the generated token as the authentication method for the current profile. "
+         "This will overwrite any existing credentials.",
+)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(
@@ -92,6 +98,7 @@ def create(
     resource_name: str,
     roles: Tuple[str],
     generate_token_duration: str,
+    set_as_auth: bool,
 ):
     """Create a new {resource}.
 
@@ -128,6 +135,11 @@ def create(
         click.echo("\nToken successfully generated:")
         _print_token_details(token_data)
 
+        if set_as_auth:
+            set_token_as_auth(user_profile, token_data)
+            click.echo(
+                f"\nUpdated profile '{user_profile.profilename}' to use this token for authentication"
+            )
 
 
 @click.command(cls=HdxCommand, name="list")
@@ -179,16 +191,20 @@ def list_service_account(ctx: click.Context):
     is_flag=True,
     help="Display the full token response in JSON format.",
 )
+@click.option(
+    "--set-as-auth",
+    is_flag=True,
+    help="Set the generated token as the authentication method for the current profile. "
+         "This will overwrite any existing credentials.",
+)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def generate_token(ctx: click.Context, service_account_name: str, duration: str, as_json: bool):
-    """
-    Generates a new access token for a service account.
 def generate_token(
     ctx: click.Context,
     resource_name: str,
     duration: str,
     as_json: bool,
+    set_as_auth: bool,
 ):
     """Generate a new access token for a {resource}.
 
@@ -220,6 +236,11 @@ def generate_token(
         click.echo("Token successfully generated:")
         _print_token_details(token_data)
 
+    if set_as_auth:
+        set_token_as_auth(user_profile, token_data)
+        click.echo(
+            f"\nUpdated profile '{user_profile.profilename}' to use this token for authentication"
+        )
 
 
 @click.command(cls=HdxCommand)
