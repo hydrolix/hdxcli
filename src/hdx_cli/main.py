@@ -1,10 +1,12 @@
 from pathlib import Path
 
 import click
+from importlib.metadata import version, PackageNotFoundError
 from trogon import tui
 
 from hdx_cli.auth.context_builder import load_user_context
 from hdx_cli.cli_interface.check_health import commands as check_health_
+from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
 from hdx_cli.cli_interface.resource_summary import commands as resource_summary_
 from hdx_cli.cli_interface.credential import commands as credentials_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
@@ -28,6 +30,7 @@ from hdx_cli.cli_interface.transform import commands as transform_
 from hdx_cli.cli_interface.column import commands as column_
 from hdx_cli.cli_interface.user import commands as user_
 from hdx_cli.cli_interface.view import commands as view_
+from hdx_cli.cli_interface.docs import commands as docs_
 from hdx_cli.config.initial_setup import first_time_use_config, is_first_time_use
 from hdx_cli.library_api.common.config_constants import PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.exceptions import ConfigurationExistsException
@@ -35,7 +38,10 @@ from hdx_cli.library_api.common.logging import get_logger, set_debug_logger, set
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.models import DEFAULT_TIMEOUT, ProfileLoadContext
 
-VERSION = "1.0.81"
+try:
+    VERSION = version("hdxcli")
+except PackageNotFoundError:
+    VERSION = "0.0.0-dev"
 
 logger = get_logger()
 
@@ -48,12 +54,9 @@ def configure_logger(debug=False):
 
 
 # pylint: disable=line-too-long
-@tui(help="Open textual user interface")
-@click.group(
-    help="hdxcli is a tool to perform operations against Hydrolix cluster resources such as tables,"
-    + " projects and transforms via different profiles. hdxcli supports profile configuration management "
-    + " to perform operations on different profiles and sets of projects and tables."
-)
+
+@tui(help="Open a Textual User Interface (TUI) for the CLI.")
+@click.group(cls=HdxGroup)
 @click.option(
     "--profile",
     metavar="PROFILENAME",
@@ -89,7 +92,8 @@ def configure_logger(debug=False):
 @click.option(
     "--uri-scheme",
     default=None,
-    type=click.Choice(["http", "https"]),
+    type=click.Choice(["http", "https"], case_sensitive=False),
+    metavar="[http, https]",
     help="Specify the URI scheme to use.",
 )
 @click.option(
@@ -120,7 +124,19 @@ def hdx_cli(
     debug: bool,
 ):
     """
-    Command-line entry point for hdx cli interface
+    The official command-line interface for Hydrolix.
+
+    \b
+    `hdxcli` allows you to interact with and manage your Hydrolix cluster
+    resources, such as projects, tables, users, and service accounts,
+    directly from your terminal.
+
+    \b
+    It uses connection profiles to manage different cluster environments
+    and provides a comprehensive set of commands for resource management
+    and administration.
+
+    Use 'hdxcli [COMMAND] --help' for more information on a specific command.
     """
     configure_logger(debug)
     if ctx.invoked_subcommand in ("version", "init"):
@@ -144,18 +160,60 @@ def hdx_cli(
     ctx.obj["useroptions"] = user_options
 
 
-@click.command(help="Initialize hdxcli configuration")
+@click.command(cls=HdxCommand, name="init")
 @report_error_and_exit(exctype=Exception)
 def init():
+    """
+    Initialize the HDXCLI configuration for first-time use.
+
+    \b
+    This command guides you through creating the initial configuration
+    file and setting up your 'default' profile. It is intended to be
+    run only once. If a configuration already exists, the command
+    will exit with an error to prevent overwriting settings.
+    ---
+    **Example Output**
+
+    The following is a sample of the interactive `init` session:
+    ```
+    $ hdxcli init
+    No configuration found for your Hydrolix cluster.
+    Let's create the 'default' profile to get you started.
+
+    ----- Configuring Profile [default] -----
+
+    ? Enter the host address for the profile: host.hydrolix.dev
+    ? Use TLS (https) for connection? Yes
+
+    The configuration for 'default' profile has been created.
+    Please login to profile 'default' (host.hydrolix.dev) to continue.
+    Username: user@hydrolix.io
+    Password for [user@hydrolix.io]:
+
+    ----- Service Account Configuration -----
+    A Service Account can be configured for automated access.
+    ? How would you like to authenticate for this profile? Create a new Service Account
+    ? What is the name for the new Service Account? user_sa
+    ? Select roles to assign: ['user_admin']
+    ? Enter token duration (e.g., 30d, 1y) or leave blank for default (1 year): 180d
+
+    Profile 'default' is now configured to use Service Account 'user_sa'.
+    ----- End of Service Account Configuration -----
+
+    Configuration complete. You can now use hdxcli to manage your cluster.
+    ```
+    """
     if not is_first_time_use():
         raise ConfigurationExistsException(
-            "Configuration already exists for accessing your Hydrolix cluster. "
-            "Please run the 'edit' command to update the configuration."
+            "Configuration already exists. "
+            "Use 'hdxcli profile edit' to modify an existing profile."
         )
 
     profile_load_ctx = first_time_use_config()
     if profile_load_ctx:
-        load_user_context(profile_load_ctx)
+        user_context = load_user_context(profile_load_ctx)
+        if user_context:
+            logger.info("Configuration complete. You can now use hdxcli to manage your cluster.")
 
 
 @click.command(help="Print hdxcli version")
@@ -170,8 +228,8 @@ hdx_cli.add_command(shadow_.shadow)
 hdx_cli.add_command(transform_.transform)
 hdx_cli.add_command(view_.view)
 hdx_cli.add_command(column_.column)
-hdx_cli.add_command(set_commands.set_default_resources)
-hdx_cli.add_command(set_commands.unset_default_resources)
+hdx_cli.add_command(set_commands.set_context)
+hdx_cli.add_command(set_commands.unset_context)
 hdx_cli.add_command(job_.job)
 hdx_cli.add_command(stream_.stream)
 hdx_cli.add_command(function_.function)
@@ -179,7 +237,7 @@ hdx_cli.add_command(dictionary_.dictionary)
 hdx_cli.add_command(storage_.storage)
 hdx_cli.add_command(pool_.pool)
 hdx_cli.add_command(profile_.profile)
-hdx_cli.add_command(sources_.sources)
+hdx_cli.add_command(sources_.source)
 hdx_cli.add_command(migrate_.migrate)
 hdx_cli.add_command(integration_.integration)
 hdx_cli.add_command(user_.user)
@@ -190,6 +248,7 @@ hdx_cli.add_command(credentials_.credential)
 hdx_cli.add_command(check_health_.check_health)
 hdx_cli.add_command(resource_summary_.resource_summary)
 hdx_cli.add_command(version)
+hdx_cli.add_command(docs_.docs)
 
 
 def main():

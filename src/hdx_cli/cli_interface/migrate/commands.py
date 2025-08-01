@@ -2,16 +2,17 @@ from datetime import datetime
 
 import click
 
-from ...auth.context_builder import get_profile
-from ...config.profile_settings import is_valid_hostname
-from ...library_api.common.exceptions import InvalidHostnameException
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
-from .data import migrate_data
-from .helpers import MigrationData, get_catalog
-from .rc.rc_manager import RcloneAPIConfig
-from .resources import create_resources, get_resources
-from .validator import validations
+from hdx_cli.auth.context_builder import get_profile
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand
+from hdx_cli.cli_interface.migrate.data import migrate_data
+from hdx_cli.cli_interface.migrate.helpers import MigrationData, get_catalog
+from hdx_cli.cli_interface.migrate.rc.rc_manager import RcloneAPIConfig
+from hdx_cli.cli_interface.migrate.resources import get_resources, create_resources
+from hdx_cli.cli_interface.migrate.validator import validations
+from hdx_cli.config.profile_settings import is_valid_hostname
+from hdx_cli.library_api.common.exceptions import InvalidHostnameException
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
 
 logger = get_logger()
 
@@ -35,41 +36,49 @@ def validate_hostname(ctx, params, hostname: str) -> str:
     return hostname
 
 
-@click.command(
-    help="Migrate a table and its data to a target cluster. This command allows you "
-    "to migrate Hydrolix tables, including their data, between clusters or "
-    "even within the same cluster."
-    "The migration process creates the project, table, and transforms at "
-    "the target location. It then copies the partitions from the source bucket "
-    "to the target bucket."
-)
+@click.command(cls=HdxCommand)
 @click.argument(
     "source_table",
     metavar="SOURCE_TABLE",
-    required=True,
-    type=str,
     callback=validate_tablename_format,
 )
 @click.argument(
     "target_table",
     metavar="TARGET_TABLE",
-    required=True,
-    type=str,
     callback=validate_tablename_format,
 )
-@click.argument(
-    "rc_host", metavar="RCLONE_HOST", required=True, type=str, callback=validate_hostname
+@click.option(
+    "--target-profile",
+    "-tp",
+    "target_profile_name",
+    default=None,
+    help="Name of the pre-configured profile for the target cluster.",
 )
-@click.option("--target-profile", "-tp", "target_profile_name", required=False, default=None)
-@click.option("--target-hostname", "-h", required=False, default=None)
-@click.option("--target-username", "-u", required=False, default=None)
-@click.option("--target-password", "-p", required=False, default=None)
+@click.option(
+    "--target-hostname",
+    "-h",
+    default=None,
+    help="Hostname of the target cluster.",
+)
+@click.option(
+    "--target-username",
+    "-u",
+    default=None,
+    help="Username for the target cluster.",
+)
+@click.option(
+    "--target-password",
+    "-p",
+    default=None,
+    help="Password for the target cluster.",
+)
 @click.option(
     "--target-uri-scheme",
     "-s",
-    required=False,
     default=None,
     type=click.Choice(["http", "https"], case_sensitive=False),
+    metavar="[http, https]",
+    help="URI scheme for the target cluster (http or https).",
 )
 @click.option(
     "--allow-merge",
@@ -77,19 +86,29 @@ def validate_hostname(ctx, params, hostname: str) -> str:
     is_flag=True,
     is_eager=True,
     default=False,
-    help="Allow migration with merge process activated in the source table. " "Default is False.",
+    help="Allow migration even if the source table has the merge process enabled.",
 )
 @click.option(
     "--only",
-    cls=CustomDateTime,
-    type=click.Choice(["resources", "data"]),
-    help='The migration type: "resources" or "data".',
-    required=False,
+    type=click.Choice(["resources", "data"], case_sensitive=False),
+    metavar="[resources, data]",
+    help="Limit the migration to 'resources' (project, table, etc.) or 'data' (partitions).",
+)
+@click.option(
+    "--with-functions",
+    is_flag=True,
+    default=False,
+    help="Include functions in the resource migration.",
+)
+@click.option(
+    "--with-dictionaries",
+    is_flag=True,
+    default=False,
+    help="Include dictionaries in the resource migration.",
 )
 @click.option(
     "--from-date",
     cls=CustomDateTime,
-    required=False,
     type=click.DateTime(formats=["%Y-%m-%d %H:%M:%S"]),
     default=None,
     help="Minimum timestamp for filtering partitions in YYYY-MM-DD HH:MM:SS format.",
@@ -97,7 +116,6 @@ def validate_hostname(ctx, params, hostname: str) -> str:
 @click.option(
     "--to-date",
     cls=CustomDateTime,
-    required=False,
     type=click.DateTime(formats=["%Y-%m-%d %H:%M:%S"]),
     default=None,
     help="Maximum timestamp for filtering partitions in YYYY-MM-DD HH:MM:SS format.",
@@ -107,28 +125,30 @@ def validate_hostname(ctx, params, hostname: str) -> str:
     type=bool,
     is_flag=True,
     default=False,
-    help="Perform a dry migration without moving partitions. "
-    "Both clusters must share the bucket(s) where the partitions are stored.",
+    help="Reuse existing data partitions instead of copying them. Requires shared storage.",
+)
+@click.option(
+    "--rc-host",
+    default=None,
+    help="The hostname or IP address of the Rclone remote server.",
+    callback=validate_hostname,
 )
 @click.option(
     "--rc-user",
-    type=str,
-    required=False,
     default=None,
-    help="The username for authenticating with the Rclone server.",
+    help="The username for authenticating with the Rclone remote server.",
 )
 @click.option(
     "--rc-pass",
-    type=str,
-    required=False,
     default=None,
-    help="The password for authenticating with the Rclone server.",
+    help="The password for authenticating with the Rclone remote server.",
 )
 @click.option(
     "--concurrency",
     default=20,
     type=click.IntRange(1, 50),
-    help="Number of concurrent requests during file migration. Default is 20.",
+    help="Number of concurrent requests during file migration. Default to 20.",
+    hidden=True,
 )
 @click.option(
     "--temp-catalog",
@@ -137,6 +157,7 @@ def validate_hostname(ctx, params, hostname: str) -> str:
     default=False,
     help="Use a previously downloaded catalog stored in a temporary file, "
     "instead of downloading it again.",
+    hidden=True,
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -145,7 +166,6 @@ def migrate(
     ctx: click.Context,
     source_table: str,
     target_table: str,
-    rc_host: str,
     target_profile_name: str,
     target_hostname: str,
     target_username: str,
@@ -153,21 +173,85 @@ def migrate(
     target_uri_scheme: str,
     allow_merge: bool,
     only: str,
+    with_functions: bool,
+    with_dictionaries: bool,
     from_date: datetime,
     to_date: datetime,
     reuse_partitions: bool,
+    rc_host: str,
     rc_user: str,
     rc_pass: str,
     concurrency: int,
     temp_catalog: bool,
 ):
+    """Migrate a table and its dependencies to a target cluster.
+
+    \b
+    This command orchestrates a table migration, which can involve two main stages:
+    1. **Resource Creation**: Replicates the source project, table, and transforms
+       on the target cluster. Optionally, it can also migrate associated
+       functions and dictionaries.
+    2. **Data Migration**: Copies the table's data from the source storage
+       to the target and updates the catalog to make the data queryable.
+
+    \b
+    **Arguments**:
+      - `SOURCE_TABLE`: The source table to migrate, in 'project.table' format.
+      - `TARGET_TABLE`: The destination for the migration, in 'project.table' format.
+
+    \b
+    **Key Options**:
+    - Target Cluster: Specify the destination with `--target-profile` or with individual
+      connection details (`--target-hostname`, `--target-username`, etc.).
+    \b
+    - Migration Scope (`--only`):
+      - 'resources': Migrates only the project, table, and other definitions.
+      - 'data': Migrates only the data, assuming resources already exist.
+      - If omitted, a full migration (resources and data) is performed.
+    \b
+    - Data Handling:
+      - `--reuse-partitions`: For clusters sharing storage. Migrates the table
+        definition but reuses the existing data, avoiding a data copy.
+      - `--from-date`/`--to-date`: Filter the data to be migrated by a date range.
+    \b
+    - Rclone Remote:
+      - `--rc-host`, `--rc-user`, `--rc-pass`: Connection details for the Rclone
+        server that will perform the data transfer. Required for any migration
+        that copies data.
+
+    \b
+    Examples:
+      # Perform a full migration from a staging to a production project, including functions and dictionaries
+      hdxcli --profile stage migrate staging_proj.logs prod_proj.logs --target-profile prod --rc-host rclone.host --rc-user rclone.user --rc-pass rclone.pass
+
+    \b
+      # Migrate only the resources (project, table, etc.), without copying data
+      hdxcli --profile stage migrate staging_proj.logs prod_proj.logs --target-profile prod --only resources
+
+    \b
+      # Migrate only data for a specific date range, assuming resources already exist
+      hdxcli --profile stage migrate staging_proj.logs prod_proj.logs --target-profile prod --only data --from-date "2025-01-01 00:00:00" --rc-host rclone.host --rc-user rclone.user --rc-pass rclone.pass
+
+    \b
+      # Perform a migration between clusters that share the same storage backend, avoiding data copy
+      hdxcli --profile stage migrate staging_proj.logs prod_proj.logs --target-profile prod --reuse-partitions
+    """
     source_profile = ctx.parent.obj["usercontext"]
-    if target_profile_name is None and not (
-        target_hostname or target_username or target_password or target_uri_scheme
-    ):
+    has_target_profile = target_profile_name is not None
+    has_all_cluster_options = all([target_hostname, target_username, target_password, target_uri_scheme])
+
+    if not has_target_profile and not has_all_cluster_options:
         raise click.BadParameter(
-            "You must provide either --target-profile or a set of target data including "
-            "hostname, username, schema, and password to proceed with the migration."
+            "You must provide either --target-profile or all target connection options "
+            "(--target-hostname, --target-username, --target-password, --target-uri-scheme)."
+        )
+
+    # Validate rclone parameters when data migration is needed
+    if only != "resources" and not reuse_partitions and not all([rc_host, rc_user, rc_pass]):
+        raise click.BadParameter(
+            "The options --rc-host, --rc-user, and --rc-pass are required "
+            "for migrations that include data transfer. Please provide them or use "
+            "--only resources or --reuse-partitions."
         )
 
     target_profile = get_profile(
@@ -228,7 +312,15 @@ def migrate(
     # 'only' parameter has 3 possible values: 'resources', 'data', None
     # with these two if statements, it handles all the possible combinations
     if only != "data":
-        create_resources(target_profile, target_data, source_profile, source_data, reuse_partitions)
+        create_resources(
+            target_profile,
+            target_data,
+            source_profile,
+            source_data,
+            reuse_partitions,
+            migrate_functions=with_functions,
+            migrate_dictionaries=with_dictionaries
+        )
     if only != "resources":
         migrate_data(
             source_profile,

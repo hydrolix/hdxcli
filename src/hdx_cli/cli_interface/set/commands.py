@@ -1,52 +1,70 @@
 import click
 
-from ...config.profile_settings import load_static_profile_config, save_profile_config
-from ...library_api.common.exceptions import ResourceNotFoundException
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import report_error_and_exit, with_profiles_context
-from ...models import ProfileLoadContext, ProfileUserContext
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand
+from hdx_cli.config.profile_settings import load_static_profile_config, save_profile_config
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import report_error_and_exit, with_profiles_context
+from hdx_cli.models import ProfileLoadContext, ProfileUserContext
 
 logger = get_logger()
 
 
-@click.command(help="Set project and/or table to apply subsequent commands on it", name="set")
-@click.argument("projectname", metavar="PROJECT_NAME", required=False, default=None)
-@click.argument("tablename", metavar="TABLE_NAME", required=False, default=None)
+@click.command(cls=HdxCommand, name="set")
+@click.argument("project_name", metavar="PROJECT_NAME", required=True)
+@click.argument("table_name", metavar="TABLE_NAME", required=False, default=None)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @with_profiles_context
-def set_default_resources(
+def set_context(
     ctx: click.Context,
     profile_context: ProfileLoadContext,
     config_profiles: dict,
-    projectname: str,
-    tablename: str,
+    project_name: str,
+    table_name: str,
 ):
-    profile_context = ctx.parent.obj["profilecontext"]
+    """Set the default project and table for the current profile.
+
+    \b
+    This command stores the provided project and table names in the current
+    profile, allowing other commands to use them by default without needing
+    the `--project` or `--table` options.
+
+    \b
+    Examples:
+      # Set the default project
+      {full_command_prefix} set web_proj
+
+    \b
+      # Set the default project and table
+      {full_command_prefix} set web_proj dns_logs
+    """
     user_context: ProfileUserContext = load_static_profile_config(profile_context)
-
-    if not projectname:
-        raise ResourceNotFoundException("No project/table names provided.")
-
-    user_context.projectname = projectname
-    user_context.tablename = tablename
+    user_context.projectname = project_name
+    user_context.tablename = table_name
     save_profile_config(user_context, initial_profile=config_profiles, logout=False)
-    logger.info(f"Profile '{user_context.profilename}' set project/table")
+
+    logger.info(f"Default context set for profile '{user_context.profilename}'")
 
 
-@click.command(help="Remove any set project/table", name="unset")
+@click.command(cls=HdxCommand, name="unset")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @with_profiles_context
-def unset_default_resources(
+def unset_context(
     ctx: click.Context,
     profile_context: ProfileLoadContext,
     config_profiles: dict,
 ):
-    profile_context = ctx.parent.obj["profilecontext"]
+    """Clear the default project and table from the current profile.
+
+    \b
+    Examples:
+      # Unset the default project and table
+      {full_command_prefix} unset
+    """
     user_context: ProfileUserContext = load_static_profile_config(profile_context)
 
     user_context.projectname = None
     user_context.tablename = None
     save_profile_config(user_context, initial_profile=config_profiles, logout=False)
-    logger.info(f"Profile '{user_context.profilename}' unset project/table")
+    logger.info(f"Default context cleared for profile '{user_context.profilename}'")

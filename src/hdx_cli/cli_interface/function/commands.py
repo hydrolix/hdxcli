@@ -1,49 +1,49 @@
-"""Commands relative to function handling operations"""
-
 import click
 
-from ...library_api.common.exceptions import LogicException
-from ...library_api.common.generic_resource import access_resource
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import (
-    ensure_logged_in,
-    no_rollback_option,
+from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.migration.resource_migrations import migrate_resource_config
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
+from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
+from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
+from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
+from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.library_api.common.exceptions import LogicException
+from hdx_cli.library_api.common.generic_resource import access_resource
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import (
     report_error_and_exit,
-    skip_group_logic_on_help,
+    ensure_logged_in,
     target_cluster_options,
+    no_rollback_option
 )
-from ...library_api.utility.file_handling import load_json_settings_file
-from ...models import ProfileUserContext
-from ..common.migration.resource_migrations import migrate_resource_config
-from ..common.misc_operations import settings as command_settings
-from ..common.rest_operations import delete as command_delete
-from ..common.rest_operations import list_ as command_list
-from ..common.rest_operations import show as command_show
-from ..common.undecorated_click_commands import basic_create
+from hdx_cli.library_api.utility.file_handling import read_json_from_file
+from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
 
 
-@click.group(help="Function-related operations")
+@click.group(cls=HdxGroup)
 @click.option(
     "--project",
     "project_name",
     help="Use or override project set in the profile.",
-    metavar="PROJECTNAME",
+    metavar="PROJECT_NAME",
     default=None,
 )
 @click.option(
     "--function",
     "function_name",
     help="Perform operation on the passed function.",
-    metavar="FUNCTIONNAME",
+    metavar="FUNCTION_NAME",
     default=None,
 )
 @click.pass_context
-@skip_group_logic_on_help
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def function(ctx: click.Context, project_name: str, function_name: str):
+    """This group of commands allows creating, listing, showing, deleting,
+    and migrating functions. A project context is required for all
+    operations."""
     user_profile = ctx.parent.obj["usercontext"]
     ProfileUserContext.update_context(
         user_profile, projectname=project_name, functionname=function_name
@@ -65,27 +65,31 @@ def function(ctx: click.Context, project_name: str, function_name: str):
     }
 
 
-@click.command(help="Create sql function.")
+@click.command(cls=HdxCommand)
+@click.argument("resource_name")
 @click.option(
     "--sql-from-file",
     "-f",
     type=click.Path(exists=True, readable=True),
-    callback=load_json_settings_file,
-    help="Create the body of the sql from a json description as in the POST request in "
-    "https://docs.hydrolix.io/docs/custom-functions."
-    """For example:
-              '{
-                "sql": "(x, k, b) -> k*x + b;",
-                "name": "linear_equation"
-              }'"""
-    ". 'name' will be replaced by FUNCTION_NAME",
     default=None,
+    help="Path to a JSON file with the function definition.",
 )
 @click.option("--inline-sql", "-s", help="Use inline sql in the command-line", default=None)
-@click.argument("function_name", metavar="FUNCTION_NAME")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create(ctx: click.Context, function_name: str, sql_from_file: dict, inline_sql: str):
+def create(ctx: click.Context, resource_name: str, sql_from_file: str, inline_sql: str):
+    """A {resource} can be created either from an inline SQL string
+    or from a JSON file containing the {resource} definition.
+
+    \b
+    Examples:
+      # Create a {resource} from an inline SQL string
+      {full_command_prefix} create {example_name} --inline-sql "(url) -> domain(url)"
+
+    \b
+      # Create a {resource} from a JSON file
+      {full_command_prefix} create {example_name} --sql-from-file path/to/func.json
+    """
     if inline_sql and sql_from_file:
         raise LogicException(
             "Only one of the options --inline-sql and --sql-from-file can be used."
@@ -98,25 +102,18 @@ def create(ctx: click.Context, function_name: str, sql_from_file: dict, inline_s
     resource_path = ctx.parent.obj["resource_path"]
     profile = ctx.parent.obj["usercontext"]
     body = {}
-    if inline_sql:
-        body["sql"] = inline_sql
+    if sql_from_file:
+        body = read_json_from_file(sql_from_file)
     else:
-        body = sql_from_file
-    basic_create(profile, resource_path, function_name, body=body)
-    logger.info(f"Created function {function_name}")
+        body["sql"] = inline_sql
+
+    basic_create(profile, resource_path, resource_name, body=body)
+    logger.info(f"Created {ctx.parent.command.name} {resource_name}")
 
 
-@click.command(
-    help=(
-        "Migrate a function to a target project and profile.\n\n"
-        "This command migrates a function from the current source profile to the specified "
-        "target project and target profile. The target profile can be provided directly using "
-        "the --target-profile option, or by specifying the target cluster details such as "
-        "hostname, username, password, and URI scheme."
-    )
-)
-@click.argument("target_project_name", metavar="TARGET_PROJECT_NAME", required=True, default=None)
-@click.argument("new_function_name", metavar="FUNCTION_NAME", required=True, default=None)
+@click.command(cls=HdxCommand)
+@click.argument("target_project_name", metavar="TARGET_PROJECT_NAME")
+@click.argument("new_function_name", metavar="NEW_FUNCTION_NAME")
 @target_cluster_options
 @no_rollback_option
 @click.pass_context
@@ -132,16 +129,35 @@ def migrate(
     target_cluster_uri_scheme: str,
     no_rollback: bool,
 ):
+    """Migrate a {resource} to a different project.
+
+    \b
+    Migrates a {resource} from a source context (in the current profile)
+    to a target project, which can be in the same or a different cluster.
+    Authentication for the target cluster can be provided via a separate profile
+    using `--target-profile` or by specifying credentials directly.
+
+    \b
+    By default, any failure during the process will trigger a rollback of the
+    changes made. Use the `--no-rollback` flag to disable this behavior.
+
+    \b
+    Examples:
+      # Migrate '{example_name}' to a new project 'my_target_project'
+      {full_command_prefix} --{resource} {example_name} migrate my_target_project my_new_{resource}
+    """
     source_profile = ctx.parent.obj["usercontext"]
 
     if not source_profile.functionname:
-        raise click.BadParameter("No source function provided.")
-    if target_profile is None and not (
-        target_cluster_hostname
-        and target_cluster_username
-        and target_cluster_password
-        and target_cluster_uri_scheme
-    ):
+        raise click.BadParameter(
+            "A source function must be specified with the --function option.",
+            param_hint="--function"
+        )
+
+    has_target_profile = target_profile is not None
+    has_all_cluster_options = all([target_cluster_hostname, target_cluster_username,
+                                   target_cluster_password, target_cluster_uri_scheme])
+    if not has_target_profile and not has_all_cluster_options:
         raise click.BadParameter(
             "Either provide a --target-profile or all four target cluster options."
         )

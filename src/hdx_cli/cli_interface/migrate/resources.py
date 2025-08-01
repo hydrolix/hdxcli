@@ -40,6 +40,8 @@ def create_resources(
     source_profile: ProfileUserContext,
     source_data: MigrationData,
     reuse_partitions: bool = False,
+    migrate_functions: bool = False,
+    migrate_dictionaries: bool = False,
 ) -> None:
     logger.info(f'{" Resource Creation ":=^50}')
     logger.info(f"Target Cluster: {target_profile.hostname}")
@@ -53,11 +55,11 @@ def create_resources(
         raise HdxCliException("The source and target resources must have the same UUID.")
 
     # FUNCTIONS
-    if source_data.functions:
+    if migrate_functions and source_data.functions:
         _create_functions(target_profile, source_data.functions)
 
     # DICTIONARIES
-    if source_data.dictionaries:
+    if migrate_dictionaries and source_data.dictionaries:
         _create_dictionaries(target_profile, source_profile, source_data.dictionaries)
 
     # TABLE

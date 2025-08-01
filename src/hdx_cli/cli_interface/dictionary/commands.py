@@ -1,52 +1,49 @@
-"""Commands relative to dictionary handling operations"""
-
 import click
 
-from ...library_api.common.exceptions import (
-    MissingSettingsException,
-    ResourceNotFoundException,
-)
-from ...library_api.common.generic_resource import access_resource
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import (
-    ensure_logged_in,
-    no_rollback_option,
+from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.migration.resource_migrations import migrate_resource_config
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_create_file, basic_delete
+from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
+from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
+from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
+from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.library_api.common.exceptions import ResourceNotFoundException, MissingSettingsException
+from hdx_cli.library_api.common.generic_resource import access_resource
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import (
     report_error_and_exit,
-    skip_group_logic_on_help,
+    ensure_logged_in,
     target_cluster_options,
+    no_rollback_option
 )
-from ...library_api.utility.file_handling import load_bytes_file, load_json_settings_file
-from ...models import ProfileUserContext
-from ..common.migration.resource_migrations import migrate_resource_config
-from ..common.misc_operations import settings as command_settings
-from ..common.rest_operations import delete as command_delete
-from ..common.rest_operations import list_ as command_list
-from ..common.rest_operations import show as command_show
-from ..common.undecorated_click_commands import basic_create, basic_create_file, basic_delete
+from hdx_cli.library_api.utility.file_handling import read_bytes_from_file, read_json_from_file
+from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
 
 
-@click.group(help="Dictionary-related operations")
+@click.group(cls=HdxGroup)
 @click.option(
     "--project",
     "project_name",
     help="Use or override project set in the profile.",
-    metavar="PROJECTNAME",
+    metavar="PROJECT_NAME",
     default=None,
 )
 @click.option(
     "--dictionary",
     "dictionary_name",
     help="Perform operation on the passed dictionary.",
-    metavar="DICTIONARYNAME",
+    metavar="DICTIONARY_NAME",
     default=None,
 )
 @click.pass_context
-@skip_group_logic_on_help
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def dictionary(ctx: click.Context, project_name: str, dictionary_name: str):
+    """This group of commands allows creating, listing, showing, deleting,
+    and migrating dictionaries. A project context is required for all
+    operations."""
     user_profile = ctx.parent.obj["usercontext"]
     ProfileUserContext.update_context(
         user_profile, projectname=project_name, dictionaryname=dictionary_name
@@ -66,115 +63,58 @@ def dictionary(ctx: click.Context, project_name: str, dictionary_name: str):
     ctx.obj = {"resource_path": resource_path, "usercontext": user_profile}
 
 
-@click.group(help="Files operations")
-@click.pass_context
-@skip_group_logic_on_help
-@report_error_and_exit(exctype=Exception)
-def files(ctx: click.Context):
-    user_profile = ctx.parent.obj["usercontext"]
-    resource_path = f'{ctx.obj["resource_path"]}files'
-    ctx.obj = {"resource_path": resource_path, "usercontext": user_profile}
-
-
-@click.command(
-    help="Create dictionary. 'dictionary_settings_file' contains the settings of "
-    "the dictionary. The filename and name in settings will be replaced by "
-    "'dictionary_filename' and 'dictionary_name' respectively."
-)
+@click.command(cls=HdxCommand)
 @click.argument(
-    "dictionary_settings_file",
-    metavar="DICTIONARYSETTINGSFILE",
+    "dict_settings_file_path",
+    metavar="DICT_SETTINGS_FILE_PATH",
     type=click.Path(exists=True, readable=True),
-    callback=load_json_settings_file,
 )
-@click.argument("dictionary_filename")
-@click.argument("dictionary_name")
+@click.argument("dict_file_name", metavar="DICT_FILE_NAME")
+@click.argument("resource_name")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create_dict(
+def create(
     ctx: click.Context,
-    dictionary_settings_file: dict,
-    dictionary_filename: str,
-    dictionary_name: str,
+    dict_settings_file_path: str,
+    dict_file_name: str,
+    resource_name: str,
 ):
-    profile = ctx.parent.obj["usercontext"]
-    resource_path = ctx.parent.obj["resource_path"]
+    """Create a new {resource} definition.
 
-    if not dictionary_settings_file.get("settings"):
-        raise MissingSettingsException("Missing 'settings' field in 'DICTIONARYSETTINGSFILE'")
+    \b
+    This command creates a {resource} by combining a settings file
+    with the name of a data file that has been previously uploaded.
 
-    dictionary_settings_file["settings"]["filename"] = dictionary_filename
-    basic_create(profile, resource_path, dictionary_name, body=dictionary_settings_file)
-    logger.info(f"Created {dictionary_name}")
+    \b
+    - SETTINGS_FILE_PATH: Path to a JSON file with dictionary settings.
+    - DICT_FILE_NAME: The name of the data file already uploaded via `files upload`.
+    - DICTIONARY_NAME: The name for the new dictionary.
 
+    \b
+    Examples:
+      # Create a dictionary named 'country_codes' using 'countries' and a settings file
+      {full_command_prefix} create ./settings.json countries country_codes
+    """
+    profile = ctx.obj["usercontext"]
+    resource_path = ctx.obj["resource_path"]
+    body = read_json_from_file(dict_settings_file_path)
 
-@click.command(help="Upload a dictionary file.")
-@click.option(
-    "--body-from-file-type",
-    "-t",
-    type=click.Choice(("json", "verbatim")),
-    help="How to interpret the body from option. ",
-    metavar="BODYFROMFILETYPE",
-    default="json",
-)
-@click.argument(
-    "dictionary_file_to_upload",
-    metavar="DICTIONARYFILE",
-    type=click.Path(exists=True, readable=True),
-    callback=load_bytes_file,
-)
-@click.argument("dictionary_filename", metavar="DICTIONARYFILENAME")
-@click.pass_context
-@report_error_and_exit(exctype=Exception)
-def upload_file_dict(
-    ctx: click.Context,
-    dictionary_file_to_upload: bytes,
-    dictionary_filename: str,
-    body_from_file_type: str,
-):
-    profile = ctx.parent.obj["usercontext"]
-    resource_path = ctx.parent.obj["resource_path"]
-    basic_create_file(
-        profile,
-        resource_path,
-        dictionary_filename,
-        file_content=dictionary_file_to_upload,
-        file_type=body_from_file_type,
-    )
-    logger.info(f"Uploaded dictionary file {dictionary_filename}")
+    if not body.get("settings"):
+        raise MissingSettingsException("Missing 'settings' field in 'DICT_SETTINGS_FILE_PATH'")
+
+    body["settings"]["filename"] = dict_file_name
+    basic_create(profile, resource_path, resource_name, body=body)
+    logger.info(f"Created {ctx.parent.command.name} {resource_name}")
 
 
-@click.command(help="Delete dictionary file.")
-@click.argument("dictionary_filename")
-@click.pass_context
-@report_error_and_exit(exctype=Exception)
-def dict_file_delete(ctx: click.Context, dictionary_filename):
-    profile = ctx.parent.obj["usercontext"]
-    resource_path = ctx.parent.obj["resource_path"]
-    hostname = profile.hostname
-    scheme = profile.scheme
-    resource_url = f"{scheme}://{hostname}{resource_path}/{dictionary_filename}"
-    basic_delete(profile, resource_path, dictionary_filename, url=resource_url)
-    logger.info(f"Deleted {dictionary_filename}")
-
-
-@click.command(
-    help=(
-        "Migrate a dictionary to a target project and profile.\n\n"
-        "This command migrates a dictionary from the current source profile to the specified "
-        "target project and target profile. The target profile can be provided directly using "
-        "the --target-profile option, or by specifying the target cluster details such as "
-        "hostname, username, password, and URI scheme."
-    ),
-    name="migrate",
-)
-@click.argument("target_project_name", metavar="TARGET_PROJECT_NAME", required=True, default=None)
-@click.argument("new_dictionary_name", metavar="NEW_DICTIONARY_NAME", required=True, default=None)
+@click.command(cls=HdxCommand)
+@click.argument("target_project_name", metavar="TARGET_PROJECT_NAME")
+@click.argument("new_dictionary_name", metavar="NEW_DICTIONARY_NAME")
 @target_cluster_options
 @no_rollback_option
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def migrate_dictionary(
+def migrate(
     ctx: click.Context,
     target_project_name: str,
     new_dictionary_name: str,
@@ -185,16 +125,37 @@ def migrate_dictionary(
     target_cluster_uri_scheme: str,
     no_rollback: bool,
 ):
+    """Migrate a {resource} to a different project.
+
+    \b
+    Migrates a {resource} from a source context (in the current profile)
+    to a target project, which can be in the same or a different cluster.
+    Authentication for the target cluster can be provided via a separate profile
+    using `--target-profile` or by specifying credentials directly.
+
+    \b
+    By default, any failure during the process will trigger a rollback of the
+    changes made. Use the `--no-rollback` flag to disable this behavior.
+
+    \b
+    Examples:
+      # Migrate '{example_name}' to a new project 'my_target_project'
+      {full_command_prefix} --{resource} {example_name} migrate my_target_project my_new_{resource}
+    """
     source_profile = ctx.parent.obj["usercontext"]
 
     if not source_profile.dictionaryname:
-        raise click.BadParameter("No source dictionary provided.")
-    if target_profile is None and not (
-        target_cluster_hostname
-        and target_cluster_username
-        and target_cluster_password
-        and target_cluster_uri_scheme
-    ):
+        raise click.BadParameter(
+            "A source dictionary must be specified with the --dictionary option.",
+            param_hint="--dictionary",
+        )
+
+    has_target_profile = target_profile is not None
+    has_all_cluster_options = all(
+        [target_cluster_hostname, target_cluster_username, target_cluster_password, target_cluster_uri_scheme]
+    )
+
+    if not has_target_profile and not has_all_cluster_options:
         raise click.BadParameter(
             "Either provide a --target-profile or all four target cluster options."
         )
@@ -217,14 +178,88 @@ def migrate_dictionary(
     logger.info("All resources migrated successfully")
 
 
-dictionary.add_command(create_dict, name="create")
+@click.group(cls=HdxGroup)
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def files(ctx: click.Context):
+    """Manage dictionary data files."""
+    user_profile = ctx.parent.obj["usercontext"]
+    resource_path = f'{ctx.obj["resource_path"]}files'
+    ctx.obj = {"resource_path": resource_path, "usercontext": user_profile}
+
+
+@click.command(cls=HdxCommand)
+@click.argument(
+    "file_path_to_upload",
+    metavar="FILE_PATH_TO_UPLOAD",
+    type=click.Path(exists=True, readable=True)
+)
+@click.argument("dict_file_name", metavar="DICT_FILE_NAME")
+@click.option(
+    "--body-from-file-type",
+    "-t",
+    type=click.Choice(('json', 'verbatim'), case_sensitive=False),
+    metavar="[json, verbatim]",
+    help="How to interpret the body from the file. Defaults to 'json'.",
+    default="json",
+)
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def files_upload(
+    ctx: click.Context,
+    file_path_to_upload: str,
+    dict_file_name: str,
+    body_from_file_type: str,
+):
+    """Upload a dictionary data file.
+
+    \b
+    Examples:
+      # Upload a local CSV file to be used as a data source for a dictionary
+      hdxcli dictionary --project my_project files upload ./local_countries.csv countries -t verbatim
+    """
+    profile = ctx.parent.obj["usercontext"]
+    resource_path = ctx.parent.obj["resource_path"]
+    file_content = read_bytes_from_file(file_path_to_upload)
+    basic_create_file(
+        profile,
+        resource_path,
+        dict_file_name,
+        file_content=file_content,
+        file_type=body_from_file_type,
+    )
+    logger.info(f"Uploaded dictionary file {dict_file_name}")
+
+
+@click.command(cls=HdxCommand)
+@click.argument("file_name", metavar="FILE_NAME")
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def files_delete(ctx: click.Context, file_name: str):
+    """Delete a dictionary data file.
+
+    \b
+    Examples:
+      # Delete the file named 'my_dictionary_file'
+      hdxcli dictionary --project my_project files delete my_dictionary_file
+    """
+    profile = ctx.parent.obj["usercontext"]
+    resource_path = ctx.parent.obj["resource_path"]
+    hostname = profile.hostname
+    scheme = profile.scheme
+    resource_url = f"{scheme}://{hostname}{resource_path}/{file_name}"
+    basic_delete(profile, resource_path, file_name, url=resource_url)
+    logger.info(f"Deleted dictionary file {file_name}")
+
+
+dictionary.add_command(create, name="create")
 dictionary.add_command(files)
-files.add_command(upload_file_dict, name="upload")
+files.add_command(files_upload, name="upload")
 files.add_command(command_list)
-files.add_command(dict_file_delete, name="delete")
+files.add_command(files_delete, name="delete")
 
 dictionary.add_command(command_list)
 dictionary.add_command(command_delete)
 dictionary.add_command(command_show)
 dictionary.add_command(command_settings)
-dictionary.add_command(migrate_dictionary)
+dictionary.add_command(migrate)

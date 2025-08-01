@@ -98,12 +98,12 @@ name = "Project statistics can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main project stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = '"summary" in result and "name" in result and "test_ci_project" in result and "total_partitions" in result'
+expected_output_expr = '"Name" in result and "test_ci_project" in result and "Total Partitions" in result and "Total Rows" in result'
 
 [[test]]
 name = "Project activities can be shown"
 commands_under_test = ["python3 -m hdx_cli.main project --project test_ci_project activity"]
-expected_output_expr = '"created" in result and "user" in result and "action" in result and "create:project" in result'
+expected_output_expr = '"Created" in result and "User" in result and "Action" in result and "create:project" in result'
 
 
 ######################################################### Table #########################################################
@@ -128,9 +128,9 @@ commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project 
 expected_output_expr = '"test_ci_table" in result'
 
 [[test]]
-name = "Tables can be truncated"
+name = "Tables can be truncated using --yes option to avoid confirmation prompt"
 setup = ["python3 -m hdx_cli.main set test_ci_project"]
-commands_under_test = ["python3 -m hdx_cli.main table truncate test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main table truncate test_ci_table --yes"]
 teardown = ["python3 -m hdx_cli.main unset"]
 expected_output = 'Truncated table test_ci_table'
 
@@ -167,12 +167,12 @@ name = "Table statistics can be shown"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table stats"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_expr = '"name" in result and "total_partitions" in result and "test_ci_project.test_ci_table" in result'
+expected_output_expr = '"Name" in result and "test_ci_project.test_ci_table" in result and "Total Partitions" in result and "Total Rows" in result'
 
 [[test]]
 name = "Table activities can be shown"
 commands_under_test = ["python3 -m hdx_cli.main table --project test_ci_project --table test_ci_table activity"]
-expected_output_expr = '"created" in result and "user" in result and "action" in result and "create:table" in result'
+expected_output_expr = '"Created" in result and "User" in result and "Action" in result and "create:table" in result'
 
 #################################################### Summary Table #####################################################
 [[test]]
@@ -557,35 +557,35 @@ name = "Stream ingest can be created using CSV file"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table_csv"]
 commands_under_test = ["python3 -m hdx_cli.main stream --transform test_csv_transform ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.csv"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'Created stream ingest'
+expected_output_expr = '"Successfully ingested data from " in result'
 
 [[test]]
 name = "Stream ingest can be created using JSON file"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table_json"]
 commands_under_test = ["python3 -m hdx_cli.main stream --transform test_json_transform ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.json"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'Created stream ingest'
+expected_output_expr = '"Successfully ingested data from " in result'
 
 [[test]]
 name = "Stream ingest can be created using GZIP compressed file"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table_gzip"]
 commands_under_test = ["python3 -m hdx_cli.main stream --transform test_gzip_transform ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.gz"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'Created stream ingest'
+expected_output_expr = '"Successfully ingested data from " in result'
 
 [[test]]
 name = "Stream ingest can be created using ZIP compressed file"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table_zip"]
 commands_under_test = ["python3 -m hdx_cli.main stream --transform test_zip_transform ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.zip"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'Created stream ingest'
+expected_output_expr = '"Successfully ingested data from " in result'
 
 [[test]]
 name = "Stream ingest can be created using ZLIB compressed file"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table_zlib"]
 commands_under_test = ["python3 -m hdx_cli.main stream --transform test_zlib_transform ingest {HDXCLI_TESTS_DIR}/tests_data/data/data.zlib"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = 'Created stream ingest'
+expected_output_expr = '"Successfully ingested data from " in result'
 
 
 ####################################################### Function #######################################################
@@ -636,7 +636,7 @@ setup = ["python3 -m hdx_cli.main set test_ci_project"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary create {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_settings.json test_ci_dictionary_file test_dictionary"]
 teardown = ["python3 -m hdx_cli.main dictionary delete --disable-confirmation-prompt test_dictionary",
             "python3 -m hdx_cli.main unset"]
-expected_output = 'Created test_dictionary'
+expected_output = 'Created dictionary test_dictionary'
 
 [[test]]
 name = "Dictionaries can be deleted"
@@ -677,12 +677,12 @@ expected_output = 'Uploaded dictionary file test_dictionary_file'
 name = "Dictionary files can be deleted"
 setup = ["python3 -m hdx_cli.main dictionary --project test_ci_project files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_file.csv test_dictionary_file"]
 commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project files delete test_dictionary_file"]
-expected_output = 'Deleted test_dictionary_file'
+expected_output = 'Deleted dictionary file test_dictionary_file'
 
 [[test]]
 name = "Dictionary files can be listed"
 commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project files list"]
-expected_output = 'test_ci_dictionary_file'
+expected_output_re = '.*?test_ci_dictionary_file.*'
 
 ######################################################## Role ##########################################################
 
@@ -707,7 +707,7 @@ name = "add user to a role"
 setup = ["python -m hdx_cli.main role create new_role --permission change_table"]
 commands_under_test = ["python -m hdx_cli.main role add-user --user test_ci_invite_user@hydolix.io new_role"]
 teardown = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
-expected_output = 'Added user(s) to new_role role'
+expected_output = 'Added user(s) to role new_role'
 
 # Known bug -> HDX-6985
 #[[test]]
@@ -726,12 +726,12 @@ expected_output = "Error: Cannot find users for emails: nonexistent_user@hydroli
 name = "Delete role"
 setup = ["python -m hdx_cli.main role create new_role --permission change_table"]
 commands_under_test = ["python -m hdx_cli.main role delete --disable-confirmation-prompt new_role"]
-expected_output_re = 'Deleted new_role'
+expected_output = 'Deleted new_role'
 
 [[test]]
-name = "list permission"
-commands_under_test = ["python -m hdx_cli.main role permission list"]
-expected_output_expr = '"Scope type" in result and "user" in result and "pool" in result and "role" in result and "invite" in result'
+name = "List permissions"
+commands_under_test = ["python -m hdx_cli.main role list-permissions"]
+expected_output_expr = '"Scope Type" in result and "Permissions" in result and "org" in result and "project" in result and "table" in result'
 
 
 ####################################################### Profile ########################################################
@@ -744,14 +744,14 @@ expected_output_re = '.*?default.*'
 name = "Profiles can be shown"
 setup = ["python3 -m hdx_cli.main --profile default unset"]
 commands_under_test = ["python3 -m hdx_cli.main profile show default"]
-expected_output_expr = '"hostname" in result and "scheme" in result and "projectname" not in result and "tablename" not in result'
+expected_output_expr = '"Hostname" in result and "Scheme" in result and "Projectname" not in result and "Tablename" not in result'
 
 [[test]]
 name = "Profile can be shown with preset project/table"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main profile show default"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output_re = '.*?projectname: test_ci_project.*'
+expected_output_expr = '"test_ci_project" in result and "test_ci_table" in result'
 
 
 ######################################################## User #########################################################
@@ -798,21 +798,19 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 [[test]]
 name = "Delete user invite"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
-commands_under_test = ["python3 -m hdx_cli.main user delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
-expected_output = 'Deleted user_invite_cli@hydrolix.io'
-# teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+commands_under_test = ["python3 -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
+expected_output = 'Deleted invite user_invite_cli@hydrolix.io'
 
 [[test]]
 name = "Remove role to a non exist user"
 commands_under_test = ["python3 -m hdx_cli.main user remove-role not_exist@hydrolix.io -r super_admin"]
 expected_output = "Error: User with email 'not_exist@hydrolix.io' not found."
-# teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
 name = "User can be show"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user --user user_invite_cli@hydrolix.io show"]
-expected_output_expr = '"email" in result and "user_invite_cli@hydrolix.io" in result and "super_admin" in result'
+expected_output_expr = '"name" in result and "super_admin" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
@@ -851,23 +849,23 @@ teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.
 name = "Delete the user invite"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
 commands_under_test = ["python3 -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
-expected_output = 'Deleted user_invite_cli@hydrolix.io'
+expected_output = 'Deleted invite user_invite_cli@hydrolix.io'
 
 [[test]]
 name = "Delete the invite for the nonexistent user"
-commands_under_test = ["python3 -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
-expected_output = "Error: Invite with email 'user_invite_cli@hydrolix.io' not found."
+commands_under_test = ["python3 -m hdx_cli.main user invite delete any_user_invite@hydrolix.io --disable-confirmation-prompt"]
+expected_output = "Error: Invite with email 'any_user_invite@hydrolix.io' not found."
 
 [[test]]
 name = "Invite can be show"
 setup = ["python3 -m hdx_cli.main user invite send user_invite_cli@hydrolix.io -r super_admin"]
-commands_under_test = ["python3 -m hdx_cli.main user invite --user user_invite_cli@hydrolix.io show"]
+commands_under_test = ["python3 -m hdx_cli.main user invite show user_invite_cli@hydrolix.io"]
 expected_output_expr = '"user_invite_cli@hydrolix.io" in result and "roles" in result and "super_admin" in result and "pending" in result'
 teardown = ["python -m hdx_cli.main user invite delete user_invite_cli@hydrolix.io --disable-confirmation-prompt"]
 
 [[test]]
 name = "Invite to a user not exist can be show"
-commands_under_test = ["python3 -m hdx_cli.main user invite --user user_not_exist@hydrolix.io show"]
+commands_under_test = ["python3 -m hdx_cli.main user invite show user_not_exist@hydrolix.io"]
 expected_output_re = "Error: Invite with email 'user_not_exist@hydrolix.io' not found."
 
 
@@ -954,60 +952,61 @@ expected_output = 'Successfully unset all query options'
 
 [[test]]
 name = "Set query option from name"
-commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions 10"]
-teardown = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
-expected_output = "Successfully set query option 'hdx_query_max_concurrent_partitions' to '10'"
+commands_under_test = ["python3 -m hdx_cli.main query-option set --option hdx_query_max_concurrent_partitions 10"]
+teardown = ["python3 -m hdx_cli.main query-option unset --all"]
+expected_output = "Successfully set query option(s)"
 
 [[test]]
 name = "Unset query option from name"
-setup = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions 10"]
+setup = ["python3 -m hdx_cli.main query-option set --option hdx_query_max_concurrent_partitions 10"]
 commands_under_test = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
 expected_output = "Successfully unset query option 'hdx_query_max_concurrent_partitions'"
 
 [[test]]
 name = "Set query option nonexistence name"
-commands_under_test = ["python3 -m hdx_cli.main query-option set option_nonexistence 10"]
+commands_under_test = ["python3 -m hdx_cli.main query-option set --option option_nonexistence 10"]
 expected_output = "Error: Invalid query option(s) option_nonexistence."
 
 [[test]]
 name = "Unset query option not set from name"
 commands_under_test = ["python3 -m hdx_cli.main query-option unset hdx_query_max_concurrent_partitions"]
-expected_output = "Error: Query option 'hdx_query_max_concurrent_partitions' is not set."
-
-[[test]]
-name = "Set query from name without value"
-commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_max_concurrent_partitions"]
-expected_output = 'Error: Provide either QUERY_OPTION_NAME and QUERY_OPTION_VALUE, or --from-file.'
+expected_output = "No query options are configured for this scope."
 
 [[test]]
 name = "Set query from name with not accepted value"
-commands_under_test = ["python3 -m hdx_cli.main query-option set hdx_query_timerange_required 6"]
+commands_under_test = ["python3 -m hdx_cli.main query-option set --option hdx_query_timerange_required 6"]
 expected_output = 'Error: Must be a valid boolean.'
 
 [[test]]
 name = "Set query option from name at project level"
-commands_under_test = ["python3 -m hdx_cli.main query-option --project test_ci_project set hdx_query_max_concurrent_partitions 10"]
+commands_under_test = ["python3 -m hdx_cli.main query-option --project test_ci_project set --option hdx_query_max_concurrent_partitions 10"]
 teardown = ["python3 -m hdx_cli.main query-option --project test_ci_project unset hdx_query_max_concurrent_partitions"]
-expected_output = "Successfully set query option 'hdx_query_max_concurrent_partitions' to '10'"
+expected_output = "Successfully set query option(s)"
 
 [[test]]
 name = "Set query option from name at table level"
-commands_under_test = ["python3 -m hdx_cli.main query-option --project test_ci_project --table test_ci_table set hdx_query_max_concurrent_partitions 10"]
+commands_under_test = ["python3 -m hdx_cli.main query-option --project test_ci_project --table test_ci_table set --option hdx_query_max_concurrent_partitions 10"]
 teardown = ["python3 -m hdx_cli.main query-option --project test_ci_project --table test_ci_table unset hdx_query_max_concurrent_partitions"]
-expected_output = "Successfully set query option 'hdx_query_max_concurrent_partitions' to '10'"
+expected_output = "Successfully set query option(s)"
 
 
 ##################################################### Set/Unset ######################################################
 [[test]]
-name = "Set can be used"
+name = "Set default project can be used"
+commands_under_test = ["python3 -m hdx_cli.main set test_ci_project"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output = "Default context set for profile 'default'"
+
+[[test]]
+name = "Set default project and table can be used"
 commands_under_test = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 teardown = ["python3 -m hdx_cli.main unset"]
-expected_output = "Profile 'default' set project/table"
+expected_output = "Default context set for profile 'default'"
 
 [[test]]
 name = "Unset can be used"
 commands_under_test = ["python3 -m hdx_cli.main unset"]
-expected_output = "Profile 'default' unset project/table"
+expected_output = "Default context cleared for profile 'default'"
 
 
 ################################################## Resource Summary ##################################################

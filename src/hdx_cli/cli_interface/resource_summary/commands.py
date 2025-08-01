@@ -2,6 +2,7 @@ from typing import Optional, Union
 
 import click
 
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_get
 from hdx_cli.library_api.common.exceptions import ConfigurationNotFoundException
 from hdx_cli.library_api.common.logging import get_logger
@@ -27,21 +28,22 @@ def get_resource_count(profile: ProfileUserContext, path: str) -> int:
     return 0
 
 
-@click.command(
-    name="resource-summary",
-)
+@click.command(cls=HdxCommand, name="resource-summary")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
-def resource_summary(
-        ctx: click.Context,
-):
-    """
-    Summarizes the count of resources accessible to the current user.
+def resource_summary(ctx: click.Context):
+    """Summarize the count of all resources in the organization.
 
-    This command provides a list of the number of projects,
-    tables, transforms, views, and other resources that your user
-    has permission to view.
+    \b
+    This command provides a quick overview of the total number of projects,
+    tables, transforms, views, and other key resources that the current
+    user has permission to view.
+
+    \b
+    Examples:
+      # Display a summary of all resources
+      {full_command_prefix} resource-summary
     """
     profile = ctx.parent.obj["usercontext"]
     resource_map = _resource_summary(profile)

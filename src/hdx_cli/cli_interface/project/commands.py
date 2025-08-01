@@ -1,32 +1,31 @@
-"""Commands relative to project resource."""
-
 import click
 
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import (
-    ensure_logged_in,
-    no_rollback_option,
+from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.migration.resource_migrations import migrate_resource_config
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
+from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
+from hdx_cli.cli_interface.common.rest_operations import activity as command_activity
+from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
+from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
+from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.cli_interface.common.rest_operations import stats as command_stats
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import (
     report_error_and_exit,
+    ensure_logged_in,
     target_cluster_options,
+    no_rollback_option,
 )
-from ...models import ProfileUserContext
-from ..common.migration.resource_migrations import migrate_resource_config
-from ..common.misc_operations import settings as command_settings
-from ..common.rest_operations import activity as command_activity
-from ..common.rest_operations import delete as command_delete
-from ..common.rest_operations import list_ as command_list
-from ..common.rest_operations import show as command_show
-from ..common.rest_operations import stats as command_stats
-from ..common.undecorated_click_commands import basic_create
+from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
 
 
-@click.group(help="Project-related operations")
+@click.group(cls=HdxGroup)
 @click.option(
     "--project",
     "project_name",
-    metavar="PROJECTNAME",
+    metavar="PROJECT_NAME",
     default=None,
     help="Use or override project set in the profile.",
 )
@@ -34,44 +33,40 @@ logger = get_logger()
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def project(ctx: click.Context, project_name: str):
+    """Provides commands to create, list, show, delete, and migrate
+    projects. It also includes tools for managing project settings
+    and viewing activity logs."""
     user_profile = ctx.parent.obj["usercontext"]
     ProfileUserContext.update_context(user_profile, projectname=project_name)
     org_id = user_profile.org_id
     ctx.obj = {"resource_path": f"/config/v1/orgs/{org_id}/projects/", "usercontext": user_profile}
 
 
-@click.command(help="Create project.")
-@click.argument("project_name", metavar="PROJECTNAME", required=True)
+@click.command(cls=HdxCommand)
+@click.argument("resource_name")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create(ctx: click.Context, project_name: str):
+def create(ctx: click.Context, resource_name: str):
+    """Creates a new, empty {resource} in your Hydrolix cluster.
+
+    \b
+    Examples:
+      # Create a new {resource} named 'my_project'
+      {full_command_prefix} create {example_name}
+    """
     user_profile = ctx.parent.obj["usercontext"]
     resource_path = ctx.parent.obj["resource_path"]
-    basic_create(user_profile, resource_path, project_name)
-    logger.info(f"Created project {project_name}")
+    basic_create(user_profile, resource_path, resource_name)
+    logger.info(f"Created {ctx.parent.command.name} {resource_name}")
 
 
-@click.command(
-    help=(
-        "Migrate a project and its associated resources.\n\n"
-        "This command migrates a project from the source profile to the specified target profile "
-        "or cluster. By default, all resources associated with the project are also migrated, "
-        "including tables (and their associated transforms).\n\n"
-        "Options allow you to customize the migration:\n"
-        "- Use --dictionaries (-D) to include dictionaries in the migration.\n"
-        "- Use --functions (-F) to include functions in the migration.\n"
-        "- Use --only (-O) to migrate only the project, skipping all dependencies.\n\n"
-        "Provide a target profile using --target-profile or specify cluster details "
-        "(hostname, username, password, and URI scheme)."
-    )
-)
-@click.argument("new_project_name", metavar="NEW_PROJECT_NAME", required=True, default=None)
+@click.command(cls=HdxCommand)
+@click.argument("new_project_name")
 @target_cluster_options
 @no_rollback_option
 @click.option(
     "-O",
     "--only",
-    required=False,
     default=False,
     is_flag=True,
     help="Migrate only the project, skipping dependencies.",
@@ -79,7 +74,6 @@ def create(ctx: click.Context, project_name: str):
 @click.option(
     "-D",
     "--dictionaries",
-    required=False,
     default=False,
     is_flag=True,
     help="Migrate dictionaries associated with the project.",
@@ -87,7 +81,6 @@ def create(ctx: click.Context, project_name: str):
 @click.option(
     "-F",
     "--functions",
-    required=False,
     default=False,
     is_flag=True,
     help="Migrate functions associated with the project.",
@@ -107,16 +100,44 @@ def migrate(
     dictionaries: bool,
     functions: bool,
 ):
+    """Migrate a {resource} and its associated resources.
+
+    \b
+    This command migrates a {resource} from the source profile to a specified
+    target profile or cluster. By default, all associated resources are also
+    migrated (e.g., tables and their transforms).
+    Authentication for the target cluster can be provided via a separate profile
+    using `--target-profile` or by specifying credentials directly.
+
+    \b
+    Options allow for customizing the migration:
+    - `--dictionaries`: Include associated dictionaries.
+    - `--functions`:    Include associated functions.
+    - `--only`:         Migrate only the {resource}, skipping all dependencies.
+
+    \b
+    By default, any failure during the process will trigger a rollback of the
+    changes made. Use the `--no-rollback` flag to disable this behavior.
+
+    \b
+    Examples:
+      # Migrate '{example_name}' to 'new_proj' on a target profile
+      {full_command_prefix} --{resource} {example_name} migrate new_proj --target-profile prod_cluster
+
+    \b
+      # Migrate only the {resource} '{example_name}' and its dictionaries, on a target profile
+      {full_command_prefix} --{resource} {example_name} migrate new_proj --only --dictionaries --target-profile prod_cluster
+    """
     source_profile = ctx.parent.obj["usercontext"]
 
     if not source_profile.projectname:
-        raise click.BadParameter("No source project name provided.")
-    if target_profile is None and not (
-        target_cluster_hostname
-        and target_cluster_username
-        and target_cluster_password
-        and target_cluster_uri_scheme
-    ):
+        raise click.BadParameter("A source project must be specified with the --project option.",
+                                 param_hint="--project")
+
+    has_target_profile = target_profile is not None
+    has_all_cluster_options = all([target_cluster_hostname, target_cluster_username,
+                                   target_cluster_password, target_cluster_uri_scheme])
+    if not has_target_profile and not has_all_cluster_options:
         raise click.BadParameter(
             "Either provide a --target-profile or all four target cluster options."
         )
