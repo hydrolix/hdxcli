@@ -1,6 +1,8 @@
 import json
 
 import click
+from rich.console import Console
+from rich.table import Table
 
 from hdx_cli.cli_interface.common.cached_operations import find_alter_jobs
 from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
@@ -14,6 +16,7 @@ from hdx_cli.library_api.utility.functions import heuristically_get_resource_kin
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
+console = Console()
 
 
 @click.group(cls=HdxGroup)
@@ -228,11 +231,15 @@ def list_alter_jobs(
     if not filtered_and_reduced_data:
         return
 
-    logger.info(f'{"-" * (20 + 40 + 15)}')
-    logger.info(f'{"name":20}' f'{"table":40}' f'{"status":15}')
-    logger.info(f'{"-" * (20 + 40 + 15)}')
-    for alter_job in filtered_and_reduced_data:
-        logger.info(f"{alter_job[0]:<20}" f"{alter_job[1]:<40}" f"{alter_job[2]:<15}")
+    table = Table(show_header=True, box=None, padding=(0, 1), header_style="bold", pad_edge=False)
+    table.add_column("Name")
+    table.add_column("Table")
+    table.add_column("Status")
+
+    for job in filtered_and_reduced_data:
+        table.add_row(job[0], job[1], job[2])
+
+    console.print(table)
 
 
 alter.add_command(command_delete)
