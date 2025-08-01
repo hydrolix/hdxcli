@@ -1,4 +1,8 @@
 import click
+from InquirerPy import inquirer
+from rich.columns import Columns
+from rich.console import Console
+from rich.table import Table
 
 from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
@@ -12,6 +16,7 @@ from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
+console = Console()
 
 
 @click.group(cls=HdxGroup)
@@ -43,10 +48,13 @@ def credential(ctx: click.Context, credential_name: str):
 @click.argument("credential_type")
 @click.option("--description", required=False, help="Credential description.")
 @click.option(
-    "--details",
+    "--detail",
+     "details",
     required=False,
     default=None,
-    help='Credential details as a JSON string (e.g., \'{"key1": "value1", "key2": "value2"}\').',
+    nargs=2,
+    multiple=True,
+    help="A key-value pair for a credential detail. Use multiple times for multiple details.",
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -87,38 +95,20 @@ def create(
     credential_type_info = credential_types[credential_type]
     required_fields = credential_type_info.get("fields", {})
 
-    # Parse JSON string for --details if provided
-    if details:
-        try:
-            details = json.loads(details)
-        except json.JSONDecodeError as exc:
-            raise click.BadParameter(
-                "Invalid format for --details. It should be a valid JSON string."
-            ) from exc
-    else:
-        details = {}
+    details = dict(details) if details else {}
 
-    # Prompt for any missing required fields
-    for field, props in required_fields.items():
-        if field not in details:
-            attempts = 0
-            while attempts < 3:
-                logger.info(
-                    f"Enter value for '{field}' "
-                    f"({'Required' if props['required'] else 'Optional'}): [!i]"
-                )
-                value = input().strip()
-                if not value and props.get("required"):
-                    logger.info(f"'{field}' is required. Please provide a value.")
-                    attempts += 1
-                elif value:
-                    details[field] = value
-                    break
-                else:
-                    break
-            else:
-                logger.info("Too many failed attempts. Canceling operation.")
-                return
+    try:
+        # Prompt for any missing required fields
+        for field, props in required_fields.items():
+            if field not in details and props.get("required"):
+                details[field] = inquirer.text(
+                    message=f"Enter value for '{field}':",
+                    validate=lambda val: bool(val),
+                    invalid_message=f"'{field}' is required. Please provide a value.",
+                ).execute()
+    except KeyboardInterrupt:
+        logger.info("\nOperation cancelled by user.")
+        return
 
     body = {
         "description": description,
@@ -153,23 +143,32 @@ def list_types(ctx: click.Context, cloud: str):
     credential_types = access_resource(profile, [("credentials/types", None)])
 
     cloud = cloud.lower() if cloud else None
+
+    table = Table(show_header=True, box=None, padding=(0, 1), header_style="bold", pad_edge=False)
+    table.add_column("Name", style="dim", no_wrap=True)
+    table.add_column("Cloud")
+    table.add_column("Required Parameters")
+
     for cred, info_cred in credential_types.items():
         cloud_name = info_cred.get("cloud", "unknown")
         cloud_name = cloud_name.lower() if cloud_name else None
         if cloud and cloud_name != cloud:
             continue
 
-        logger.info(f"\nName: {cred}\nCloud: {cloud_name}")
         parameters = info_cred.get("fields", {})
-        param_lines = [
-            f"  - {name} ({'required' if details.get('required') else 'optional'})"
-            for name, details in sorted(
-                parameters.items(), key=lambda x: not x[1].get("required", False)
-            )
-        ]
+        required_params = [name for name, details in parameters.items() if details.get("required")]
 
-        if param_lines:
-            logger.info("\n".join(param_lines))
+        if not required_params:
+            table.add_row(cred, cloud_name, "[dim]No required parameters.[/dim]")
+            continue
+
+        permission_renderable = Columns(required_params, equal=True, column_first=True)
+        table.add_row(cred, cloud_name, permission_renderable)
+
+    if not table.rows:
+        logger.info(f"No credential types found for cloud '{cloud}'.")
+        return
+    console.print(table)
 
 
 credential.add_command(command_list)
