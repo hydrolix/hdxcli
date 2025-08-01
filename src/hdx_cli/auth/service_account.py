@@ -93,9 +93,7 @@ def _prompt_for_new_sa(user_context: ProfileUserContext) -> Optional[Tuple[str, 
         return None
 
 
-def prompt_and_configure_service_account(
-    user_context: ProfileUserContext, cache_dir_path: Path
-) -> None:
+def prompt_and_configure_service_account(user_context: ProfileUserContext) -> None:
     """Prompts the user about Service Account usage and configures it if chosen."""
     logger.info("\n----- Service Account Configuration -----")
     logger.info("A Service Account can be configured for automated access.")
@@ -106,7 +104,7 @@ def prompt_and_configure_service_account(
     except HttpException:
         logger.info("Service Accounts feature not available on this cluster.")
         logger.info("Continuing with user credentials for this profile.")
-        logger.info("\n----- End of Service Account Configuration -----\n")
+        logger.info("----- End of Service Account Configuration -----\n")
         return
 
     try:
@@ -126,7 +124,7 @@ def prompt_and_configure_service_account(
                 sa_id, duration = values
                 sa_name = next((acc["name"] for acc in find_service_accounts(user_context) if acc["uuid"] == sa_id), "Unknown")
                 logger.info(f"Configuring Service Account '{sa_name}'...")
-                _set_service_account_token(user_context, sa_id, cache_dir_path, duration)
+                _set_service_account_token(user_context, sa_id, duration)
                 logger.info(f"Profile '{user_context.profilename}' is now configured to use Service Account '{sa_name}'.")
             else:
                 logger.info("No Service Account selected. Continuing with user credentials.")
@@ -142,7 +140,7 @@ def prompt_and_configure_service_account(
                     raise HdxCliException("Service Account creation failed. Please check permissions.")
 
                 logger.info(f"Service Account '{new_sa_name}' created. Generating token...")
-                _set_service_account_token(user_context, svc_account_id, cache_dir_path, duration)
+                _set_service_account_token(user_context, svc_account_id, duration)
                 logger.info(f"Profile '{user_context.profilename}' is now configured to use Service Account '{new_sa_name}'.")
             else:
                 logger.info("Service Account creation cancelled. Continuing with user credentials.")
@@ -156,13 +154,12 @@ def prompt_and_configure_service_account(
         logger.debug(f"An error occurred during Service Account configuration: {e}")
         logger.info("Configuration failed. Continuing with user credentials.")
 
-    logger.info("\n----- End of Service Account Configuration -----\n")
+    logger.info("----- End of Service Account Configuration -----\n")
 
 
 def _set_service_account_token(
     user_context: ProfileUserContext,
     svc_account_id: str,
-    cache_dir_path: Path,
     duration: Optional[str] = None,
 ) -> None:
     """
@@ -172,7 +169,7 @@ def _set_service_account_token(
 
     # Calculate a safe expiration time, leaving a 2% buffer
     token_expiration_time = datetime.now() + timedelta(
-        seconds=token_data["expires_in"] * 0.98
+        seconds=token_data["expires_in"] * 0.95
     )
     # Update user_context with the new token
     user_context.auth.token = token_data["access_token"]
@@ -180,4 +177,4 @@ def _set_service_account_token(
     user_context.auth.method = "service_account"
 
     # Update the profile cache file with the new token/method
-    save_session_data(user_context, cache_dir_path)
+    save_session_data(user_context)
