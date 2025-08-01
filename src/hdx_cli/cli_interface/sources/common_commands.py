@@ -2,12 +2,13 @@ from urllib.parse import urlparse
 
 import click
 
-from ...library_api.common.exceptions import HdxCliException
-from ...library_api.common.generic_resource import access_resource_detailed
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import report_error_and_exit
-from ...library_api.utility.file_handling import load_json_settings_file
-from ..common.undecorated_click_commands import basic_create
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
+from hdx_cli.library_api.common.exceptions import HdxCliException
+from hdx_cli.library_api.common.generic_resource import access_resource_detailed
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import report_error_and_exit
+from hdx_cli.library_api.utility.file_handling import read_json_from_file
 
 logger = get_logger()
 
@@ -29,20 +30,26 @@ def any_source_impl(ctx: click.Context, source_name: str):
     ctx.obj = {"resource_path": sources_path, "usercontext": user_profile}
 
 
-@click.command(
-    help="Create source. 'source_filename' contains the settings. "
-    "name in settings will be replaced by 'source_name'"
-)
+@click.command(cls=HdxCommand)
+@click.argument("resource_name", required=True)
 @click.argument(
-    "source_filename",
+    "settings_filename",
+    required=True,
+    default=None,
     type=click.Path(exists=True, readable=True),
-    callback=load_json_settings_file,
 )
-@click.argument("source_name")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def create(ctx: click.Context, source_filename: dict, source_name: str):
+def create(ctx: click.Context, settings_filename: str, resource_name: str):
+    """Creates a new {resource} source from a JSON configuration file.
+
+    \b
+    Examples:
+      # Create a {resource} source
+      {full_command_prefix} create {example_name} path/to/{resource}-settings.json
+    """
     user_profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
-    basic_create(user_profile, resource_path, source_name, body=source_filename)
-    logger.info(f"Created source {source_name}")
+    settings_body = read_json_from_file(settings_filename)
+    basic_create(user_profile, resource_path, resource_name, body=settings_body)
+    logger.info(f"Created {ctx.parent.command.name} source {resource_name}")

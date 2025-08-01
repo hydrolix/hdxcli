@@ -2,34 +2,37 @@ import json
 import uuid
 
 import click
+from rich.console import Console
+from rich.columns import Columns
+from rich.table import Table
 
-from hdx_cli.cli_interface.role.utils import (
-    Policy,
-    Role,
-    get_available_scope_type_list,
-    get_role_data_from_standard_input,
-    modify_role_data_from_standard_input,
-)
-
-from ...library_api.common.exceptions import LogicException, ResourceNotFoundException
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
-from ...models import ProfileUserContext
-from ..common.cached_operations import find_users
-from ..common.rest_operations import delete as command_delete
-from ..common.rest_operations import list_ as command_list
-from ..common.rest_operations import show as command_show
-from ..common.undecorated_click_commands import (
+from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.cached_operations import find_users, find_permissions
+from hdx_cli.cli_interface.common.undecorated_click_commands import (
     basic_create,
     basic_show,
     basic_update,
-    generic_basic_list,
 )
+from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
+from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
+from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from .utils import (
+    get_available_scope_type_list,
+    get_role_data_from_standard_input,
+    Policy,
+    Role,
+    modify_role_data_from_standard_input,
+)
+from hdx_cli.library_api.common.exceptions import ResourceNotFoundException, LogicException
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
+console = Console()
 
 
-@click.group(help="Role-related operations")
+@click.group(cls=HdxGroup)
 @click.option(
     "--role",
     "role_name",
@@ -41,6 +44,8 @@ logger = get_logger()
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def role(ctx: click.Context, role_name: str):
+    """Commands to create, edit, and manage user roles and
+    their permissions."""
     user_profile = ctx.parent.obj["usercontext"]
     ProfileUserContext.update_context(user_profile, rolename=role_name)
     ctx.obj = {"resource_path": "/config/v1/roles/", "usercontext": user_profile}
@@ -72,22 +77,11 @@ def validate_scope_type(ctx, param, value):
     return value
 
 
-@click.command(
-    help="Create a new role. You can create a role by providing command-line "
-    "options or interactively.\n\n"
-    "Command-line options: "
-    "Use flags like `-t`, `-i`, and `-p` to specify the scope type, "
-    "scope ID (UUID), and permissions respectively.\n\n"
-    "Interactive mode: "
-    "If no options are provided, the HDXCLI will prompt you with questions "
-    "to configure the new role."
-)
-@click.argument("role_name", metavar="ROLENAME", required=True)
+@click.command(cls=HdxCommand)
+@click.argument("resource_name")
 @click.option(
     "--scope-type",
     "-t",
-    "scope_type",
-    metavar="SCOPE_TYPE",
     required=False,
     default=None,
     help="Type of scope for the role.",
@@ -96,9 +90,6 @@ def validate_scope_type(ctx, param, value):
 @click.option(
     "--scope-id",
     "-i",
-    "scope_id",
-    metavar="SCOPE_ID",
-    type=str,
     required=False,
     default=None,
     help="Identifier for the scope (UUID).",
@@ -113,66 +104,111 @@ def validate_scope_type(ctx, param, value):
     default=None,
     help="Specify permissions for the new role (can be used multiple times).",
 )
+@click.option(
+    "--interactive",
+    is_flag=True,
+    help="Enter interactive mode to be guided through role creation.",
+)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(
-    ctx: click.Context, role_name: str, scope_type: str, scope_id: str, permissions: list[str]
+    ctx: click.Context,
+    resource_name: str,
+    scope_type: str,
+    scope_id: str,
+    permissions: list[str],
+    interactive: bool,
 ):
+    """Create a new {resource}.
+
+    \b
+    This command supports two modes for creating a {resource}:
+    1.  Command-Line: Provide all policy details via options. This mode
+         supports the creation of a {resource} with a single policy.
+    2.  Interactive: Use the `--interactive` flag for a guided setup.
+
+    \b
+    Examples:
+      # Create a {resource} with a single global permission
+      {full_command_prefix} create my_read_role --permission read_table
+
+    \b
+      # Create a {resource} with project-scoped permissions
+      {full_command_prefix} create my_project_role --scope-type project --scope-id <uuid> --permission add_table
+
+    \b
+      # Start the interactive guide to create a {resource}
+      {full_command_prefix} create my_interactive_role --interactive
+    """
     profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
 
-    if not scope_type and not scope_id and not permissions:
-        # Interactive way
-        role_obj = get_role_data_from_standard_input(profile, resource_path, role_name)
-    elif permissions and ((scope_type and scope_id) or (not scope_type and not scope_id)):
-        # Command-line way (making sure the necessary data is provided)
+    role_obj = None
+    if interactive:
+        role_obj = get_role_data_from_standard_input(profile, resource_path, resource_name)
+    elif permissions:
+        if scope_type and not scope_id:
+            raise click.BadOptionUsage("scope_id", "--scope-id is required when --scope-type is used.")
+        if scope_id and not scope_type:
+            raise click.BadOptionUsage("scope_type", "--scope-type is required when --scope-id is used.")
         policy_obj = Policy(scope_type=scope_type, scope_id=scope_id, permissions=list(permissions))
-        role_obj = Role(name=role_name, policies=[policy_obj])
+        role_obj = Role(name=resource_name, policies=[policy_obj])
     else:
         # Handle all unexpected cases
         raise click.BadParameter(
-            "Please provide either command-line options or "
-            "enter interactive mode to create the role."
+            "To create a role, you must either use the --interactive "
+            "flag or provide at least one --permission."
         )
 
     if role_obj:
         basic_create(
             profile,
             resource_path,
-            role_obj.name,
+            resource_name,
             body=role_obj.model_dump(by_alias=True, exclude_none=True),
         )
-        logger.info(f"Created role {role_obj.name}")
+        logger.info(f"Created {ctx.parent.command.name} {role_obj.name}")
     else:
-        logger.info("Role creation was cancelled")
+        logger.info(f"{ctx.parent.command.name.capitalize()} creation was cancelled")
 
 
-@click.command(help="Modify an existing role.")
-@click.argument("role_name", metavar="ROLE_NAME", required=True)
+@click.command(cls=HdxCommand)
+@click.argument("resource_name")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def edit(ctx: click.Context, role_name: str):
+def edit(ctx: click.Context, resource_name: str):
+    """Modify an existing {resource} interactively.
+
+    \b
+    This command starts an interactive session to guide you through
+    modifying a {resource}, including its name and policies.
+
+    \b
+    Examples:
+      # Start the interactive editor for '{example_name}'
+      {full_command_prefix} edit {example_name}
+    """
     profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
-    json_data = json.loads(basic_show(profile, resource_path, role_name))
+    json_data = json.loads(basic_show(profile, resource_path, resource_name))
     role_obj = Role(**json_data)
     role_to_update = modify_role_data_from_standard_input(profile, resource_path, role_obj)
 
     if not role_to_update:
-        logger.info("Update was cancelled")
+        logger.info(f"{ctx.parent.command.name.capitalize()} update was cancelled.")
         return
 
     basic_update(
         profile,
         resource_path,
-        resource_name=role_name,
+        resource_name=resource_name,
         body=role_to_update.model_dump(by_alias=True, exclude_none=True),
     )
-    logger.info(f"Updated role {role_name}")
+    logger.info(f"Updated {ctx.parent.command.name} {role_to_update.name}")
 
 
-@click.command(name="add-user", help="Add users to a role.")
-@click.argument("role_name", metavar="ROLE_NAME")
+@click.command(cls=HdxCommand, name="add-user")
+@click.argument("resource_name")
 @click.option(
     "-u",
     "--user",
@@ -184,42 +220,47 @@ def edit(ctx: click.Context, role_name: str):
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def add(ctx: click.Context, role_name: str, users):
+def add_user(ctx: click.Context, resource_name: str, users):
+    """Add one or more users to a {resource}.
+
+    \b
+    Examples:
+      # Add 'user@example.com' to the '{example_name}' {resource}
+      {full_command_prefix} add-user {example_name} --user user@example.com
+    """
     profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
-    _manage_users_from_role(profile, resource_path, role_name, users, action="add")
-    logger.info(f"Added user(s) to {role_name} role")
+    _manage_users_from_role(profile, resource_path, resource_name, users, action="add")
+    logger.info(f"Added user(s) to {ctx.parent.command.name} {resource_name}")
 
 
-@click.command(name="remove-user", help="Remove users from a role.")
-@click.argument("role_name", metavar="ROLE_NAME")
+@click.command(cls=HdxCommand, name="remove-user")
+@click.argument("resource_name")
 @click.option(
     "-u",
     "--user",
     "users",
     multiple=True,
-    default=None,
     required=True,
     help="Specify users to remove from a role (can be used multiple times).",
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def remove(ctx: click.Context, role_name: str, users):
+def remove_user(ctx: click.Context, resource_name: str, users):
+    """Remove one or more users from a {resource}.
+
+    \b
+    Examples:
+      # Remove 'user@example.com' from the '{example_name}' {resource}
+      {full_command_prefix} remove-user {example_name} --user user@example.com
+    """
     profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
-    _manage_users_from_role(profile, resource_path, role_name, users, action="remove")
-    logger.info(f"Removed user(s) from {role_name} role")
+    _manage_users_from_role(profile, resource_path, resource_name, users, action="remove")
+    logger.info(f"Removed user(s) from {ctx.parent.command.name} {resource_name}")
 
 
-@click.group(help="Permission-related operations")
-@click.pass_context
-@report_error_and_exit(exctype=Exception)
-def permission(ctx: click.Context):
-    user_profile = ctx.parent.obj["usercontext"]
-    ctx.obj = {"resource_path": "/config/v1/roles/permissions", "usercontext": user_profile}
-
-
-@click.command(help="List permissions.", name="list")
+@click.command(cls=HdxCommand, name="list-permissions")
 @click.option(
     "--scope-type",
     "-t",
@@ -229,49 +270,46 @@ def permission(ctx: click.Context):
     default=None,
     help="Filter the permissions by a specific scope type.",
 )
-@click.option("--page", "-p", type=int, default=1, help="Page number.")
-@click.option("--page-size", "-s", type=int, default=None, help="Number of items per page.")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-def list_(ctx: click.Context, scope_type: str, page: int, page_size: int):
-    resource_path = ctx.parent.obj["resource_path"]
+def list_permissions(ctx: click.Context, scope_type: str):
+    """Lists all available permissions that can be assigned
+    to a role, optionally filtered by a scope type.
+
+    \b
+    Examples:
+      # List all permissions available for the 'project' scope
+      {full_command_prefix} list-permissions --scope-type project
+    """
     profile = ctx.parent.obj["usercontext"]
-    _permission_list(profile, resource_path, scope_type, page, page_size)
+    permissions_role = find_permissions(profile)
 
+    if scope_type:
+        permissions_role = [p for p in permissions_role if p.get("scope_type") == scope_type]
 
-def _permission_list(
-    profile: ProfileUserContext,
-    resource_path: str,
-    scope_type: str,
-    page: int,
-    page_size: int,
-):
-    response = generic_basic_list(profile, resource_path, page=page, page_size=page_size)
+    if not permissions_role:
+        message = "No permissions found."
+        if scope_type:
+            message = f"No permissions found for scope type '{scope_type}'."
+        logger.info(message)
+        return
 
-    count, current_count, current, num_pages = None, None, None, None
-    if "results" in response:
-        permissions_role = response.get("results", [])
-        count = response.get("count", 0)
-        current_count = len(permissions_role)
-        current = response.get("current", 0)
-        num_pages = response.get("num_pages", 0)
-    else:
-        # If not paginated, assume the response is the list of resources.
-        permissions_role = response
+    table = Table(box=None, show_header=True, padding=(0, 1), header_style="bold", pad_edge=False)
+    table.add_column("Scope Type", style="dim", no_wrap=True)
+    table.add_column("Permissions")
 
-    logged = False
-    for resource in permissions_role:
-        current_scope = resource.get("scope_type")
-        if scope_type and current_scope != scope_type:
+    for resource in sorted(permissions_role, key=lambda x: x.get("scope_type")):
+        scope = resource.get("scope_type")
+        perms = resource.get("permissions", [])
+
+        if not perms:
+            table.add_row(scope, "[dim]No permissions for this scope.[/dim]")
             continue
 
-        logged = True
-        logger.info(f"Scope type: {current_scope}")
-        for perm in resource.get("permissions", []):
-            logger.info(f"  {perm}")
+        permission_renderable = Columns(perms, equal=True, column_first=True)
+        table.add_row(scope, permission_renderable)
 
-    if logged and count not in (None, 0):
-        logger.info(f"Listed {current_count} of {count} permissions [page {current}/{num_pages}]")
+    console.print(table)
 
 
 def _get_user_uuids_by_emails(profile: ProfileUserContext, user_emails: list[str]) -> list[str]:
@@ -322,9 +360,8 @@ def _manage_users_from_role(
 role.add_command(command_list)
 role.add_command(create)
 role.add_command(edit)
-role.add_command(add)
-role.add_command(remove)
+role.add_command(add_user)
+role.add_command(remove_user)
 role.add_command(command_delete)
 role.add_command(command_show)
-role.add_command(permission)
-permission.add_command(list_)
+role.add_command(list_permissions)

@@ -1,31 +1,36 @@
 import click
 
-from ...library_api.common.exceptions import ResourceNotFoundException
-from ...library_api.common.generic_resource import access_resource_detailed
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
-from ...models import ProfileUserContext
-from ..common.undecorated_click_commands import basic_update
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_update
+from hdx_cli.library_api.common.exceptions import ResourceNotFoundException
+from hdx_cli.library_api.common.generic_resource import access_resource_detailed
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.models import ProfileUserContext
 from . import const, utils
 from .cleaner import table as table_cleaner
 
 logger = get_logger()
 
 
-@click.command(
-    name="check-health",
-    help="Checks the integrity of transforms and auto-views in a Hydrolix cluster. "
-    "If no arguments are provided, all projects and tables will be checked. "
-    "You can optionally specify a PROJECT_NAME to check only that project,"
-    "or both PROJECT_NAME and TABLE_NAME to narrow it down to a specific table.",
+@click.command(cls=HdxCommand, name="check-health")
+@click.argument(
+    "project_name",
+    metavar="PROJECT_NAME",
+    required=False,
+    default=None,
 )
-@click.argument("project_name", metavar="PROJECT_NAME", required=False, default=None, type=str)
-@click.argument("table_name", metavar="TABLE_NAME", required=False, default=None, type=str)
+@click.argument(
+    "table_name",
+    metavar="TABLE_NAME",
+    required=False,
+    default=None,
+)
 @click.option(
     "--repair",
     is_flag=True,
     default=False,
-    help="Automatically repair problems with transforms when possible.",
+    help="Attempt to automatically repair detected issues.",
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -36,12 +41,34 @@ def check_health(
     table_name: str,
     repair: bool,
 ):
-    """
-    This command checks the integrity of the transforms and auto-views.
+    """Check the integrity of transforms and autoviews.
 
-    - If no arguments are provided, it checks the entire org.
-    - If a project_name is provided, it checks transforms within that project.
-    - If both project_name and table_name are provided, it checks only transforms within that table.
+    \b
+    This command inspects transforms and autoviews for common integrity
+    issues, such as datatype or indexing mismatches.
+
+    \b
+    Usage Scenarios:
+    - No arguments: Checks all transforms in all projects.
+    - With PROJECT_NAME: Limits the check to a specific project.
+    - With PROJECT_NAME and TABLE_NAME: Limits the check to a single table.
+
+    \b
+    The `--repair` flag will attempt to automatically fix any detected issues
+    that are safely repairable.
+
+    \b
+    Examples:
+      # Check the entire organization
+      {full_command_prefix} check-health
+
+    \b
+      # Check a specific project and attempt to repair issues
+      {full_command_prefix} check-health my_project --repair
+
+    \b
+      # Check a single table within a project
+      {full_command_prefix} check-health my_project my_table
     """
     parent = getattr(ctx, "parent")
     if parent is None:
