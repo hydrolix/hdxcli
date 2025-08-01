@@ -107,17 +107,12 @@ def load_user_context(load_context: ProfileLoadContext, **args) -> ProfileUserCo
         user_context = current_processing_context
         user_context.auth = auth_info
 
-        cache_dir_path = (
-            Path(args.get("profile_config_file")).parent
-            if args.get("profile_config_file")
-            else HDX_CONFIG_DIR
-        )
-        save_session_data(user_context, cache_dir_path)
+        save_session_data(user_context)
 
         # --- Service Account Prompt ---
         # Ask about Service Account only if username/password were NOT provided as CLI args.
         if not (cli_username and cli_password):
-            prompt_and_configure_service_account(user_context, cache_dir_path)
+            prompt_and_configure_service_account(user_context)
 
     scheme_from_arg = args.get("uri_scheme")
     timeout_from_arg = args.get("timeout")
