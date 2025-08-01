@@ -1,9 +1,14 @@
 import json
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import click
 from requests import JSONDecodeError
+from rich.console import Console
+from rich.rule import Rule
+from rich.table import Table
+from rich.text import Text
 
 from ...library_api.common import rest_operations as rest_ops
 from ...library_api.common.exceptions import (
@@ -18,7 +23,17 @@ from ...models import AuthInfo, ProfileUserContext
 from .cached_operations import *  # pylint:disable=wildcard-import,unused-wildcard-import
 
 logger = get_logger()
+console = Console()
 DEFAULT_INDENTATION = 4
+
+
+@dataclass
+class PaginatedResponse:
+    """A normalized structure for API list responses."""
+    results: List[Dict[str, Any]]
+    count: int
+    current_page: int
+    num_pages: int
 
 
 def basic_get(
@@ -274,48 +289,25 @@ def basic_show(
     Returns:
         str: JSON string of the resource.
     """
-    hostname = profile.hostname
-    scheme = profile.scheme
-    timeout = profile.timeout
-    list_url = f"{scheme}://{hostname}{resource_path}"
-    auth_info: AuthInfo = profile.auth
-    headers = {
-        "Authorization": f"{auth_info.token_type} {auth_info.token}",
-        "Accept": "application/json",
-    }
-
     indentation = DEFAULT_INDENTATION if indent else None
-    has_next = True
-    while has_next:
-        response = rest_ops.get(list_url, headers=headers, timeout=timeout, params=params)
+    current_params = params.copy() if params else {}
 
-        # If the response is paginated, it should contain the "results" key.
-        if "results" in response:
-            resources = response.get("results", [])
-        else:
-            # If not paginated, assume the response is the list of resources.
-            resources = response
+    while True:
+        raw_response = generic_basic_list(profile, resource_path, **current_params)
+        paginated_response = _get_paginated_resources(raw_response)
 
-        for resource in resources:
+        for resource in paginated_response.results:
             if resource.get(filter_field) == resource_name:
                 return json.dumps(resource, indent=indentation)
 
-        # If the response is not paginated, break out of the loop.
-        if "results" not in response:
+        # Decide if we should fetch the next page
+        if paginated_response.current_page < paginated_response.num_pages:
+            current_params["page"] = paginated_response.current_page + 1
+        else:
+            # No more pages to check
             break
 
-        # Pagination handling:
-        # Update the "page" parameter to get the next page if available.
-        next_page = response.get("next", 0)
-        current_page = response.get("current", 0)
-        num_pages = response.get("num_pages", 0)
-
-        has_next = next_page != 0 and current_page < num_pages
-        if not params:
-            params = {"page": next_page}
-        else:
-            params["page"] = next_page
-
+    # If the loop completes without finding the resource
     _, resource_kind = heuristically_get_resource_kind(resource_path)
     message = (
         f"{resource_kind.capitalize()} with {filter_field} '{resource_name}' not found."
@@ -684,35 +676,42 @@ def basic_list(
     Returns:
         None.
     """
-    response = generic_basic_list(profile, resource_path, **params)
+    raw_response = generic_basic_list(profile, resource_path, **params)
+    paginated_response = _get_paginated_resources(raw_response)
 
-    count, current_count, current, num_pages = None, None, None, None
-    # If the response is paginated, it should contain the "results" key.
-    if "results" in response:
-        resources = response.get("results", [])
-        count = response.get("count", 0)
-        current_count = len(resources)
-        current = response.get("current", 0)
-        num_pages = response.get("num_pages", 0)
-    else:
-        # If not paginated, assume the response is the list of resources.
-        resources = response
+    if not paginated_response.results:
+        plural, _ = heuristically_get_resource_kind(resource_path)
+        logger.info(f"No {plural} found.")
+        return
 
-    for resource in resources:
+    table = Table(box=None, show_header=True, padding=(0, 1), header_style="bold", pad_edge=False)
+    table.add_column("Name")
+
+    for resource in paginated_response.results:
         if isinstance(resource, str):
-            logger.info(resource)
+            table.add_row(resource)
         else:
+            name = resource.get(filter_field, "[N/A]")
             if (settings := resource.get("settings")) and settings.get("is_default"):
-                logger.info(f"{resource[filter_field]} (default)")
+                table.add_row(f"{name} (default)")
             else:
-                logger.info(f"{resource[filter_field]}")
+                table.add_row(name)
 
-    if count not in (None, 0):
+    console.print(table)
+
+    if paginated_response.count > 0:
         plural, singular = heuristically_get_resource_kind(resource_path)
-        resource_name = plural if count > 1 else singular
-        logger.info(
-            f"Listed {current_count} of {count} {resource_name} [page {current}/{num_pages}]"
+        resource_name = plural if paginated_response.count != 1 else singular
+
+        # Build the footer message
+        footer_text = Text(style="dim")
+        footer_text.append(
+            f"Listed {len(paginated_response.results)} of {paginated_response.count} {resource_name}"
         )
+        if paginated_response.num_pages > 1:
+            footer_text.append(f" [page {paginated_response.current_page}/{paginated_response.num_pages}]")
+
+        console.print(footer_text)
 
 
 def generic_basic_list(
@@ -744,6 +743,27 @@ def generic_basic_list(
         "Accept": "application/json",
     }
     return rest_ops.get(url, headers=headers, timeout=timeout, params=params)
+
+
+_KEY_LABELS = {
+    "name": "Name",
+    "total_partitions": "Total Partitions",
+    "total_rows": "Total Rows",
+    "total_data_size": "Total Data (bytes)",
+    "total_storage_size": "Total Storage (bytes)",
+    "total_raw_data_size": "Total Raw Data (bytes)",
+}
+
+
+def _create_stats_table(stats_dict: Dict[str, Any]) -> Table:
+    """Creates a rich Table for displaying statistics."""
+    table = Table(show_header=False, box=None, padding=(0, 1))
+    table.add_column("Key", style="dim")
+    table.add_column("Value")
+    for key, value in stats_dict.items():
+        label = _KEY_LABELS.get(key, key.replace('_', ' ').title())
+        table.add_row(f"{label}:", str(value))
+    return table
 
 
 def basic_stats(
@@ -790,20 +810,54 @@ def basic_stats(
     }
     stats = rest_ops.get(url, headers=headers, timeout=timeout, params=params)
 
-    logger.info(json.dumps(stats, indent=DEFAULT_INDENTATION if indent else None))
+    if indent:
+        logger.info(json.dumps(stats, indent=DEFAULT_INDENTATION))
+        return
+
+    # Handle project-specific stats format
+    if "summary" in stats and "tables" in stats:
+        console.print(_create_stats_table(stats["summary"]))
+        for table_stats in stats.get("tables", []):
+            console.print(Rule(style="dim"))
+            console.print(_create_stats_table(table_stats))
+    else:
+        # Handle single-resource stats (like a table)
+        console.print(_create_stats_table(stats))
+
+
+def _get_activity_username(activity: Dict[str, Any]) -> str:
+    """Extracts the username from different activity log structures."""
+    # Path for table-like activities
+    log = activity.get("log", {})
+    username = (
+        log.get("context", {}).get("user", {}).get("snapshot", {}).get("username")
+    )
+    if username:
+        return username
+
+    # Path for project-like activities
+    username = log.get("user", {}).get("username")
+    if username:
+        return username
+
+    # Direct path as a fallback
+    username = activity.get("username")
+    if username:
+        return username
+
+    return "unknown"
 
 
 def _format_activities(activities: list) -> list:
     simplified = []
     for act in activities:
         timestamp = act.get("created")
-        user = act.get("log", {}).get("user", {}).get("username", "unknown")
+        user = _get_activity_username(act)
         action = act.get("action", "unknown")
 
         try:
-            timestamp_formatted = datetime.fromisoformat(timestamp.rstrip("Z")).strftime(
-                "%Y-%m-%d %H:%M"
-            )
+            dt_obj = datetime.fromisoformat(timestamp.rstrip("Z"))
+            timestamp_formatted = dt_obj.strftime("%Y-%m-%d %H:%M")
         except (ValueError, TypeError, AttributeError):
             timestamp_formatted = "invalid date"
 
@@ -852,33 +906,54 @@ def basic_activity(
         "Authorization": f"{auth_info.token_type} {auth_info.token}",
         "Accept": "application/json",
     }
+
     response = rest_ops.get(url, headers=headers, timeout=timeout, params=params)
+    paginated_response = _get_paginated_resources(response)
 
-    count, current_count, current, num_pages = None, None, None, None
-    # If the response is paginated, it should contain the "results" key.
-    if "results" in response:
-        activities = response.get("results", [])
-        count = response.get("count", 0)
-        current_count = len(activities)
-        current = response.get("current", 0)
-        num_pages = response.get("num_pages", 0)
-    else:
-        # If not paginated, assume the response is the list of resources.
-        activities = response
-
-    if not activities:
+    if not paginated_response.results:
+        logger.info("No activity found.")
         return
 
-    simplified_activities = _format_activities(activities)
-    logger.info(f'{"-" * (20 + 35 + 25)}')
-    logger.info(_format_settings_header([("created", 20), ("user", 35), ("action", 25)]))
-    logger.info(f'{"-" * (20 + 35 + 25)}')
-    for act in simplified_activities:
-        logger.info(f"{act['timestamp']:19} {act['user']:34} {act['action']:24}")
+    simplified_activities = _format_activities(paginated_response.results)
 
-    if count is not None:
-        logger.info("")
-        logger.info(f"Showed {current_count} of {count} activities [page {current}/{num_pages}]")
+    table = Table(box=None, show_header=True, padding=(0, 1), header_style="bold", pad_edge=False)
+    table.add_column("Created", style="dim")
+    table.add_column("User")
+    table.add_column("Action", overflow="fold")
+
+    for act in simplified_activities:
+        table.add_row(act["timestamp"], act["user"], act["action"])
+
+    console.print(table)
+
+    if paginated_response.count > 0:
+        footer_text = Text(style="dim")
+        footer_text.append(
+            f"Listed {len(paginated_response.results)} of {paginated_response.count} activities"
+        )
+        if paginated_response.num_pages > 1:
+            footer_text.append(f" [page {paginated_response.current_page}/{paginated_response.num_pages}]")
+        console.print(footer_text)
+
+
+def _get_paginated_resources(response: Dict[str, Any]) -> PaginatedResponse:
+    """Normalizes a paginated or non-paginated API list response into a consistent object."""
+    if "results" in response:
+        # Standard paginated response
+        return PaginatedResponse(
+            results=response.get("results", []),
+            count=response.get("count", 0),
+            current_page=response.get("current", 1),
+            num_pages=response.get("num_pages", 1),
+        )
+    # Non-paginated response (treat it as a single page)
+    results = response if isinstance(response, list) else []
+    return PaginatedResponse(
+        results=results,
+        count=len(results),
+        current_page=1,
+        num_pages=1,
+    )
 
 
 def basic_options(profile: ProfileUserContext, resource_path: str, action: str = "POST") -> dict:
