@@ -1,6 +1,8 @@
 import json
 
 import click
+from rich.console import Console
+from rich.table import Table
 
 from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_transform, basic_create
@@ -10,6 +12,7 @@ from hdx_cli.library_api.common import rest_operations as rest_ops
 from hdx_cli.models import ProfileLoadContext, ProfileUserContext
 
 logger = get_logger()
+console = Console()
 
 _RAW_HOSTNAME = "raw.githubusercontent.com"
 _REPO_USER = "hydrolix/transforms"
@@ -70,11 +73,20 @@ def list_(ctx: click.Context):
       hdxcli integration transform list
     """
     results = _github_list(ctx)
-    for obj in results:
-        name = obj["name"]
-        description = obj["description"]
-        vendor = obj["vendor"]
-        logger.info(f"{name: <20} {description: <70} from {vendor: <40}")
+
+    if not results:
+        logger.info("No integration transforms found.")
+        return
+
+    table = Table(show_header=True, box=None, padding=(0, 1), header_style="bold", pad_edge=False)
+    table.add_column("Name")
+    table.add_column("Description")
+    table.add_column("Vendor")
+
+    for item in results:
+        table.add_row(item.get("name"), item.get("description"), item.get("vendor"))
+
+    console.print(table)
 
 
 def _basic_show(ctx: click.Context, transform_name: str, indent: bool = False):
