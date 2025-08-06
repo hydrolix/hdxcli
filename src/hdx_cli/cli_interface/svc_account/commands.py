@@ -100,11 +100,9 @@ def create(
     generate_token_duration: str,
     set_as_auth: bool,
 ):
-    """Create a new {resource}.
-
-    \b
-    This command creates a new {resource} and assigns one or more roles to it.
-    An access token can be generated immediately by using the `--generate-token` flag.
+    """This command creates a new {resource} and assigns one
+    or more roles to it. An access token can be generated
+    immediately by using the `--generate-token` flag.
 
     \b
     Examples:
@@ -147,8 +145,6 @@ def create(
 @report_error_and_exit(exctype=Exception)
 def list_service_account(ctx: click.Context):
     """List all available {resource_plural}.
-
-    \b
     Displays a table with the names of all {resource_plural} and the roles
     assigned to them.
 
@@ -207,8 +203,6 @@ def generate_token(
     set_as_auth: bool,
 ):
     """Generate a new access token for a {resource}.
-
-    \b
     The {resource} name can be specified via argument or the global `--sa` option.
 
     \b
@@ -255,7 +249,6 @@ def generate_token(
 def revoke_tokens(ctx: click.Context, resource_name: str, yes: bool):
     """Revoke all active tokens for a {resource}.
 
-    \b
     This is a security-sensitive operation that invalidates all existing
     tokens for the specified {resource}, forcing any application
     using them to re-authenticate with a new token.

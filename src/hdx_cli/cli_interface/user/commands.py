@@ -32,7 +32,7 @@ console = Console()
 @click.pass_context
 @ensure_logged_in
 def user(ctx: click.Context, user_email: str):
-    """This command group handles the administration of user accounts.
+    """This command handles the administration of user accounts.
     Provides functionality to list, show, delete, and manage roles
     for existing users, and to manage their invitations."""
     user_profile = ctx.parent.obj["usercontext"]
@@ -46,9 +46,8 @@ def user(ctx: click.Context, user_email: str):
 def list_users(ctx: click.Context):
     """List all {resource_plural}.
 
-    \b
-    Displays a list of all {resource_plural}, excluding service accounts. The output
-    includes the user's email and their assigned roles.
+    Displays a list of all {resource_plural}, excluding service accounts.
+    The output includes the user's email and their assigned roles.
 
     \b
     Examples:
@@ -89,7 +88,6 @@ def list_users(ctx: click.Context):
 def show(ctx: click.Context, resource_email: str, indent: bool):
     """Show details for a specific {resource}.
 
-    \b
     Displays the full configuration of a specific {resource}.
     It will use the invite specified with the `--{resource}` option.
 
@@ -134,10 +132,8 @@ _confirmation_prompt = partial(
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: bool):
-    """Deletes the specified {resource}.
-
-    \b
-    Permanently deletes the specified {resource}. This action is irreversible.
+    """Permanently deletes the specified {resource}. This action
+    is irreversible.
 
     \b
     Examples:
@@ -168,8 +164,6 @@ def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: 
 @report_error_and_exit(exctype=Exception)
 def assign(ctx: click.Context, resource_email: str, roles: list):
     """Assign one or more roles to a {resource}.
-
-    \b
     This command adds roles to an existing {resource}.
 
     \b
@@ -204,8 +198,6 @@ def assign(ctx: click.Context, resource_email: str, roles: list):
 @report_error_and_exit(exctype=Exception)
 def remove(ctx: click.Context, resource_email: str, roles: list):
     """Remove one or more roles from a {resource}.
-
-    \b
     This command removes existing roles from a {resource}.
 
     \b
@@ -247,8 +239,6 @@ def remove(ctx: click.Context, resource_email: str, roles: list):
 @click.pass_context
 def invite(ctx: click.Context, user_email: str):
     """Provides commands for managing user invitations.
-
-    \b
     Includes commands to send, resend, list, show, and delete user
     invitations.
     """
@@ -271,8 +261,6 @@ def invite(ctx: click.Context, user_email: str):
 @report_error_and_exit(exctype=Exception)
 def send(ctx: click.Context, resource_email: str, roles: Tuple[str]):
     """Create and send a new {resource}.
-
-    \b
     Sends an email invitation to a new user with a specific set of roles.
 
     \b
@@ -295,8 +283,6 @@ def send(ctx: click.Context, resource_email: str, roles: Tuple[str]):
 @report_error_and_exit(exctype=Exception)
 def resend(ctx: click.Context, resource_email: str):
     """Resend an existing {resource}.
-
-    \b
     Resends an invitation to a user, typically when the original invitation
     has expired or was not received.
 
@@ -322,7 +308,6 @@ def resend(ctx: click.Context, resource_email: str):
 def list_invites(ctx: click.Context, pending: bool):
     """List all {resource_plural}.
 
-    \b
     Displays a list of all user invitations, showing their email and status. The
     list can be filtered for only pending invitations with the `--pending` flag.
 

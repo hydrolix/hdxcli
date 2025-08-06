@@ -131,13 +131,11 @@ def migrate(
 ):
     """Migrate a {resource} to a different project.
 
-    \b
     Migrates a {resource} from a source context (in the current profile)
     to a target project, which can be in the same or a different cluster.
     Authentication for the target cluster can be provided via a separate profile
     using `--target-profile` or by specifying credentials directly.
 
-    \b
     By default, any failure during the process will trigger a rollback of the
     changes made. Use the `--no-rollback` flag to disable this behavior.
 

@@ -101,7 +101,6 @@ def storage(ctx: click.Context, storage_name: str):
     "--io-perf-mode",
     default=None,
     type=click.Choice(["aggressive", "moderate", "moderate"], case_sensitive=False),
-    metavar="[aggressive, moderate, moderate]",
     help="I/O performance mode for the storage bucket.",
 )
 @click.pass_context

@@ -39,7 +39,6 @@ _confirmation_prompt = partial(
 def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: bool) -> None:
     """Delete a specific {resource}.
 
-    \b
     This is a permanent action and cannot be undone. You will be prompted
     for confirmation unless `--disable-confirmation-prompt` is used.
 
@@ -117,9 +116,7 @@ def show(ctx: click.Context, resource_name: str, indent: bool) -> None:
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def activity(ctx: click.Context, resource_name: str, page: int, page_size: int) -> None:
-    """Display the activity of the specific {resource}.
-
-    Shows the log of recent activities for the provided {resource}.
+    """Shows the log of recent activities for the provided {resource}.
 
     \b
     Examples:
@@ -149,9 +146,7 @@ def activity(ctx: click.Context, resource_name: str, page: int, page_size: int) 
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def stats(ctx: click.Context, resource_name:str, indent: bool) -> None:
-    """Display statistics for the specific {resource}.
-
-    Shows usage and other statistics for the provided {resource}.
+    """Shows usage and other statistics for the provided {resource}.
 
     \b
     Examples:

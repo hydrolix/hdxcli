@@ -73,7 +73,6 @@ def table(ctx: click.Context, project_name: str, table_name: str):
     "-t",
     "table_type",
     type=click.Choice(("turbine", "summary"), case_sensitive=False),
-    metavar="[turbine, summary]",
     default="turbine",
     help="Specify the table type. Default: turbine.",
 )
@@ -110,7 +109,6 @@ def create(
 ):
     """Create a new {resource}.
 
-    \b
     Creates a standard (turbine) or a summary {resource}. For summary
     {resource_plural}, an SQL query must be provided via `--sql-query` or
     `--sql-query-file`.
@@ -180,7 +178,6 @@ def _truncate_table(profile: ProfileUserContext, resource_path: str, resource_na
 def truncate(ctx: click.Context, resource_name: str, yes: bool):
     """Remove all data from a {resource}.
 
-    \b
     This action permanently deletes all rows from the {resource} but preserves
     the resource and its settings. This operation cannot be undone.
 
@@ -230,7 +227,6 @@ def migrate(
 ):
     """Migrate a {resource} and its transforms to a different project.
 
-    \b
     Migrates a {resource} from a source context (current profile) to a target
     project, which can be in the same or a different cluster. All associated
     transforms are also migrated or use the `--only` flag to migrate only
@@ -238,7 +234,6 @@ def migrate(
     Authentication for the target cluster can be provided via a separate profile
     using `--target-profile` or by specifying credentials directly.
 
-    \b
     By default, any failure during the process will trigger a rollback of the
     changes made. Use the `--no-rollback` flag to disable this behavior.
 

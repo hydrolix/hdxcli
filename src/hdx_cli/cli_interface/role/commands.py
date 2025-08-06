@@ -119,13 +119,12 @@ def create(
     permissions: list[str],
     interactive: bool,
 ):
-    """Create a new {resource}.
+    """Create a new {resource}. This command supports two modes
+    for creating a {resource}:
 
     \b
-    This command supports two modes for creating a {resource}:
-    1.  Command-Line: Provide all policy details via options. This mode
-         supports the creation of a {resource} with a single policy.
-    2.  Interactive: Use the `--interactive` flag for a guided setup.
+    1. *Command-Line*: Define a single policy by providing its details as options.
+    2. *Interactive*: Use the `--interactive` flag for a guided setup.
 
     \b
     Examples:
@@ -179,7 +178,6 @@ def create(
 def edit(ctx: click.Context, resource_name: str):
     """Modify an existing {resource} interactively.
 
-    \b
     This command starts an interactive session to guide you through
     modifying a {resource}, including its name and policies.
 

@@ -38,8 +38,6 @@ def get_resource_count(profile: ProfileUserContext, path: str) -> int:
 @ensure_logged_in
 def resource_summary(ctx: click.Context):
     """Summarize the count of all resources in the organization.
-
-    \b
     This command provides a quick overview of the total number of projects,
     tables, transforms, views, and other key resources that the current
     user has permission to view.

@@ -66,11 +66,9 @@ def create(
     details: tuple,
 ):
     """Create a new {resource}.
-
-    \b
-    This command can be run interactively. If required details are missing,
-    you will be prompted to enter them. You can also provide details
-    non-interactively using the `--detail` option multiple times.
+    The command prompts for any required details not provided as options.
+    For fully non-interactive use, all details must be specified
+    using the `--detail` option.
 
     \b
     Examples:

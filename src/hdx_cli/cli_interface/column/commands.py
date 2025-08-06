@@ -40,13 +40,11 @@ logger = get_logger()
 def column(ctx: click.Context, project_name: str, table_name: str, column_name: str):
     """Commands to manage table columns.
 
-    \b
     Provides commands to list all columns, show details for a specific
     one, or delete any existing alias column. It also includes specialized
     commands to create new alias columns from an expression (`add-alias`)
     and to add alternative names to existing columns (`add-name`).
 
-    \b
     A project and table context is required for all operations.
     """
     user_profile = ctx.parent.obj["usercontext"]

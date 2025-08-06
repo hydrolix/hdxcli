@@ -102,7 +102,6 @@ def migrate(
 ):
     """Migrate a {resource} and its associated resources.
 
-    \b
     This command migrates a {resource} from the source profile to a specified
     target profile or cluster. By default, all associated resources are also
     migrated (e.g., tables and their transforms).
@@ -112,10 +111,9 @@ def migrate(
     \b
     Options allow for customizing the migration:
     - `--dictionaries`: Include associated dictionaries.
-    - `--functions`:    Include associated functions.
-    - `--only`:         Migrate only the {resource}, skipping all dependencies.
+    - `--functions`: Include associated functions.
+    - `--only`: Migrate only the {resource}, skipping all dependencies.
 
-    \b
     By default, any failure during the process will trigger a rollback of the
     changes made. Use the `--no-rollback` flag to disable this behavior.
 
