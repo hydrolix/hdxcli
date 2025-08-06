@@ -30,8 +30,7 @@ def docs(ctx: click.Context, target_dir: str, resource: str = None):
 
     \b
     TARGET_DIR: The directory where the .md files will be saved.
-    RESOURCE_NAME: (Optional) The specific command or group to document.
-                   If omitted, all documentation is generated.
+    RESOURCE_NAME: (Optional) The specific command or group to document. If omitted, all documentation is generated.
 
     \b
     Examples:
@@ -60,23 +59,34 @@ def docs(ctx: click.Context, target_dir: str, resource: str = None):
 def _generate_full_docs(root_ctx: click.Context, output_path: Path):
     """Generates the full set of structured documentation files."""
     logger.info(f"Starting full documentation export to '{output_path}'...")
+
     for doc_group in DOC_STRUCTURE:
         group_filename = doc_group["filename"]
-        group_title = doc_group["title"]
-        group_description = doc_group["description"]
         command_names = doc_group["commands"]
+        frontmatter_data = doc_group.get("frontmatter", {})
+
+        # frontmatter
+        frontmatter_parts = ["---"]
+        for key, value in frontmatter_data.items():
+            if isinstance(value, bool):
+                frontmatter_parts.append(f'{key}: {str(value).lower()}')
+            else:
+                frontmatter_parts.append(f'{key}: "{value}"')
+        frontmatter_parts.append("---")
+        frontmatter = "\n".join(frontmatter_parts)
 
         version_line = f"> _hdxcli v{VERSION}_"
-        md_parts = [f"# {group_title}\n\n{version_line}\n\n{group_description}"]
+        body_parts = [f"{version_line}"]
 
         for command_name in command_names:
             command = root_ctx.command.get_command(root_ctx, command_name)
             if command and hasattr(command, 'to_markdown'):
                 cmd_ctx = click.Context(command, info_name=command_name, parent=root_ctx)
                 md_content = command.to_markdown(cmd_ctx)
-                md_parts.append(md_content)
+                body_parts.append(md_content)
 
-        final_md_content = "\n\n---\n\n".join(md_parts)
+        final_md_content = f"{frontmatter}\n\n" + "\n\n---\n\n".join(body_parts)
+
         file_path = output_path / group_filename
         file_path.write_text(final_md_content, encoding="utf-8")
         logger.info(f"Successfully generated '{file_path}'.")
