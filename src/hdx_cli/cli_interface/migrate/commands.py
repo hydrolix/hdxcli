@@ -77,7 +77,6 @@ def validate_hostname(ctx, params, hostname: str) -> str:
     "-s",
     default=None,
     type=click.Choice(["http", "https"], case_sensitive=False),
-    metavar="[http, https]",
     help="URI scheme for the target cluster (http or https).",
 )
 @click.option(
@@ -91,7 +90,6 @@ def validate_hostname(ctx, params, hostname: str) -> str:
 @click.option(
     "--only",
     type=click.Choice(["resources", "data"], case_sensitive=False),
-    metavar="[resources, data]",
     help="Limit the migration to 'resources' (project, table, etc.) or 'data' (partitions).",
 )
 @click.option(
@@ -188,10 +186,10 @@ def migrate(
 
     \b
     This command orchestrates a table migration, which can involve two main stages:
-    1. **Resource Creation**: Replicates the source project, table, and transforms
+    1. *Resource Creation*: Replicates the source project, table, and transforms
        on the target cluster. Optionally, it can also migrate associated
        functions and dictionaries.
-    2. **Data Migration**: Copies the table's data from the source storage
+    2. *Data Migration*: Copies the table's data from the source storage
        to the target and updates the catalog to make the data queryable.
 
     \b
@@ -205,8 +203,8 @@ def migrate(
       connection details (`--target-hostname`, `--target-username`, etc.).
     \b
     - Migration Scope (`--only`):
-      - 'resources': Migrates only the project, table, and other definitions.
-      - 'data': Migrates only the data, assuming resources already exist.
+      - *resources*: Migrates only the project, table, and other definitions.
+      - *data*: Migrates only the data, assuming resources already exist.
       - If omitted, a full migration (resources and data) is performed.
     \b
     - Data Handling:

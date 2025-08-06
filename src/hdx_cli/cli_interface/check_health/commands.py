@@ -42,18 +42,15 @@ def check_health(
     repair: bool,
 ):
     """Check the integrity of transforms and autoviews.
-
-    \b
     This command inspects transforms and autoviews for common integrity
-    issues, such as datatype or indexing mismatches.
+    issues, such as datatype mismatches.
 
     \b
-    Usage Scenarios:
+    **Usage Scenarios**:
     - No arguments: Checks all transforms in all projects.
-    - With PROJECT_NAME: Limits the check to a specific project.
-    - With PROJECT_NAME and TABLE_NAME: Limits the check to a single table.
+    - With `PROJECT_NAME`: Limits the check to a specific project.
+    - With `PROJECT_NAME` and `TABLE_NAME`: Limits the check to a single table.
 
-    \b
     The `--repair` flag will attempt to automatically fix any detected issues
     that are safely repairable.
 

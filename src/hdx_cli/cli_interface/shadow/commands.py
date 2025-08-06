@@ -37,8 +37,8 @@ logger = get_logger()
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def shadow(ctx: click.Context, project_name: str):
-    """Shadow tables allow safe testing of transform changes by re-ingesting a
-    small data sample from a source table."""
+    """Shadow tables allow safe testing of transform changes by
+    re-ingesting a small data sample from a source table."""
     user_profile = ctx.parent.obj.get("usercontext")
     ProfileUserContext.update_context(user_profile, projectname=project_name)
 
@@ -118,7 +118,6 @@ def create(
 ):
     """Create a new shadow table.
 
-    \b
     This command creates a new shadow table and a corresponding transform based
     on a source table and transform. It requires the source context to be
     specified via options.
@@ -202,7 +201,6 @@ _confirmation_prompt = partial(
 def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: bool):
     """Delete a {resource} table.
 
-    \b
     This command removes the {resource} table settings from the source transform
     and then deletes the {resource} table itself.
 
@@ -323,9 +321,8 @@ def _get_source_transform_of_shadow_table(
 
 
 def _update_source_transform(user_profile: ProfileUserContext, transform: dict) -> None:
-    """Update the source transform of the shadow table. It takes the transform path
-    from the URL.
-    """
+    """Update the source transform of the shadow table. It takes
+    the transform path from the URL."""
     url = transform.get("url")
     update_resource_path = urlparse(url).path
     basic_update(user_profile, update_resource_path, body=transform)

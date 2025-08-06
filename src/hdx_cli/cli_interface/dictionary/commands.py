@@ -81,14 +81,14 @@ def create(
 ):
     """Create a new {resource} definition.
 
-    \b
     This command creates a {resource} by combining a settings file
     with the name of a data file that has been previously uploaded.
 
     \b
-    - SETTINGS_FILE_PATH: Path to a JSON file with dictionary settings.
-    - DICT_FILE_NAME: The name of the data file already uploaded via `files upload`.
-    - DICTIONARY_NAME: The name for the new dictionary.
+    **Arguments**:
+    - `SETTINGS_FILE_PATH`: Path to a JSON file with dictionary settings.
+    - `DICT_FILE_NAME`: The name of the data file already uploaded via `files upload`.
+    - `DICTIONARY_NAME`: The name for the new dictionary.
 
     \b
     Examples:
@@ -127,13 +127,11 @@ def migrate(
 ):
     """Migrate a {resource} to a different project.
 
-    \b
     Migrates a {resource} from a source context (in the current profile)
     to a target project, which can be in the same or a different cluster.
     Authentication for the target cluster can be provided via a separate profile
     using `--target-profile` or by specifying credentials directly.
 
-    \b
     By default, any failure during the process will trigger a rollback of the
     changes made. Use the `--no-rollback` flag to disable this behavior.
 
@@ -199,7 +197,6 @@ def files(ctx: click.Context):
     "--body-from-file-type",
     "-t",
     type=click.Choice(('json', 'verbatim'), case_sensitive=False),
-    metavar="[json, verbatim]",
     help="How to interpret the body from the file. Defaults to 'json'.",
     default="json",
 )

@@ -24,7 +24,6 @@ def set_context(
 ):
     """Set the default project and table for the current profile.
 
-    \b
     This command stores the provided project and table names in the current
     profile, allowing other commands to use them by default without needing
     the `--project` or `--table` options.

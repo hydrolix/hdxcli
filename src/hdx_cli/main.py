@@ -93,7 +93,6 @@ def configure_logger(debug=False):
     "--uri-scheme",
     default=None,
     type=click.Choice(["http", "https"], case_sensitive=False),
-    metavar="[http, https]",
     help="Specify the URI scheme to use.",
 )
 @click.option(
@@ -166,12 +165,12 @@ def init():
     """
     Initialize the HDXCLI configuration for first-time use.
 
-    \b
     This command guides you through creating the initial configuration
     file and setting up your 'default' profile. It is intended to be
     run only once. If a configuration already exists, the command
     will exit with an error to prevent overwriting settings.
-    ---
+
+    \f
     **Example Output**
 
     The following is a sample of the interactive `init` session:

@@ -132,9 +132,8 @@ def apply(
 ):
     """Apply a public integration {resource} to your project.
 
-    \b
-    This command fetches a public transform by its INTEGRATION_TRANSFORM_NAME
-    and creates it in your project with the new TRANSFORM_NAME.
+    This command fetches a public transform by its `INTEGRATION_TRANSFORM_NAME`
+    and creates it in your project with the new `TRANSFORM_NAME`.
 
     \b
     Examples:

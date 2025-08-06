@@ -95,7 +95,8 @@ def create(
     memory: int,
     storage: int,
 ):
-    """Allocates resources (CPU, memory, storage) to create a new service {resource}.
+    """Allocates resources (CPU, memory, storage) to create a
+    new service {resource}.
 
     \b
     Examples:

@@ -73,12 +73,10 @@ def ingest(
 ):
     """Create an ingest job from a settings file.
 
-    \b
     This command creates a batch ingest job based on a JSON configuration file.
     The file defines the data source (e.g., a cloud storage bucket), and other
     job-specific settings.
 
-    \b
     You can override the destination project, table, and transform specified
     within the settings file by using the `--project`, `--table`, and `--transform`
     options.

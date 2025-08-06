@@ -134,7 +134,6 @@ def profile_edit(
 @click.option(
     "--scheme",
     type=click.Choice(("http", "https"), case_sensitive=False),
-    metavar="[http, https]",
     help="Protocol for the connection.",
 )
 @click.pass_context
@@ -148,10 +147,8 @@ def profile_add(
     hostname: str,
     scheme: str,
 ):
-    """Add a new {resource}.
-
-    \b
-    This command can be run interactively or by providing all options.
+    """Add a new {resource}. This command can be run interactively
+    or by providing all options.
 
     \b
     Examples:

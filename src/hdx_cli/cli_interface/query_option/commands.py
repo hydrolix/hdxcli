@@ -57,16 +57,14 @@ def _build_resource_path(
 @ensure_logged_in
 def query_option(ctx: click.Context, project_name: Optional[str], table_name: Optional[str]):
     """Manage default query options.
-
-    \b
     This command allows you to list, set, and unset query options that will be
     applied to all queries within a specific scope.
 
     \b
     The scope is determined by the options provided:
-    - No options:                     Manages options at the organization level.
-    - `--project [NAME]`:               Manages options for a specific project.
-    - `--project [NAME] --table [NAME]`:Manages options for a specific table.
+    - No options: Manages options at the organization level.
+    - `--project [NAME]`: Manages options for a specific project.
+    - `--project [NAME] --table [NAME]`: Manages options for a specific table.
     """
     if table_name and not project_name:
         raise click.UsageError("Cannot use --table without --project.")
@@ -100,8 +98,6 @@ def query_option(ctx: click.Context, project_name: Optional[str], table_name: Op
 @report_error_and_exit(exctype=Exception)
 def set_(ctx: click.Context, options_to_set: tuple, from_file_path: str):
     """Set one or more query options for the specified scope.
-
-    \b
     Options can be set individually using `--option`,
     or in bulk from a JSON file using the `--from-file` option.
 
@@ -165,8 +161,6 @@ def set_(ctx: click.Context, options_to_set: tuple, from_file_path: str):
 @report_error_and_exit(exctype=Exception)
 def unset(ctx: click.Context, query_option_name: Optional[str], all_options: bool):
     """Unset one or more query options for the specified scope.
-
-    \b
     Unset a single option by name, or unset all options
     for the current scope by using the `--all` flag.
 
@@ -217,7 +211,7 @@ def list_(ctx: click.Context):
       # List all query options for the organization
       {full_command_prefix} list
 
-      \b
+    \b
       # List all query options for 'my_project'
       {full_command_prefix} --project my_project list
     """

@@ -64,7 +64,6 @@ def stream(ctx: click.Context, project_name: str, table_name: str, transform_nam
 def ingest(ctx: click.Context, data_file_path: str):
     """Ingest data from a file into a table.
 
-    \b
     This command sends the contents of a local file to the ingest endpoint.
     It automatically applies the default transform for the target table,
     unless a specific transform is provided via the `--transform` option.
