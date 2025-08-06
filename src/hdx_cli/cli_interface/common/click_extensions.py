@@ -10,8 +10,10 @@ logger = get_logger()
 
 
 def _get_depth(ctx: click.Context) -> int:
-    """Calculates the nesting depth of a command context."""
-    depth = 0
+    """Calculates the nesting depth of a command context for
+    Markdown title generation."""
+    # Start from 1 to avoid H1 title
+    depth = 1
     current_ctx = ctx
     while current_ctx.parent:
         depth += 1
@@ -32,6 +34,34 @@ _RESOURCE_CONTEXT_OPTIONS = {
     "siem": ["project", "table"],
     "stream": ["project", "table"],
 }
+
+
+def _generate_options_table(command: click.Command, ctx: click.Context) -> str:
+    """Generates a Markdown table for a command's options."""
+    opts = [p.get_help_record(ctx) for p in command.get_params(ctx) if
+            p.get_help_record(ctx) and '--help' not in p.opts]
+
+    if not opts:
+        return ""
+
+    format_args = _create_format_args(ctx)
+    table_parts = [
+        "**Options**",
+        "",  # Adds a blank line before the table
+        "| Option | Description |",
+        "|:-------|:------------|"
+    ]
+    for opt, desc in opts:
+        try:
+            formatted_desc = desc.format(**format_args)
+        except KeyError:
+            formatted_desc = desc
+        sanitized_desc = formatted_desc.replace('|', '\\|').replace('\n', ' ')
+        sanitized_opt = opt.replace('|', '\\|')
+        table_parts.append(f"| `{sanitized_opt}` | {sanitized_desc} |")
+
+    table_parts.append("")  # Adds a blank line after the table
+    return "\n".join(table_parts)
 
 
 def _get_full_command_prefix(ctx: click.Context) -> str:
@@ -81,24 +111,34 @@ def _parse_docstring_for_markdown(docstring: str, format_args: dict) -> (str, st
     if not docstring:
         return "", "", ""
 
-    # Split markdown-only content
     cleaned_doc = inspect.cleandoc(docstring)
-    parts = cleaned_doc.split('\n---\n', 1)
+
+    parts = cleaned_doc.split('\f', 1)
     doc_part = parts[0]
     markdown_only_part = parts[1] if len(parts) > 1 else ""
 
-    # Format placeholders, removing paragraph breaks for markdown
     try:
-        formatted_doc = doc_part.replace('\b', '').format(**format_args)
+        formatted_doc = doc_part.format(**format_args)
     except KeyError:
         formatted_doc = doc_part
 
-    # Split description and examples
     example_parts = re.split(r'\n\s*Examples?:\s*\n', formatted_doc, 1, re.IGNORECASE)
     description = example_parts[0].strip()
     examples = example_parts[1].strip() if len(example_parts) > 1 else ""
-    # Fix double newlines in examples caused by \n\n from \b\n
-    examples = re.sub(r'\n\s*\n', '\n\n', examples)
+
+    # Fix double newlines in examples
+    examples = examples.replace('\b\n', '')
+
+    paragraphs = description.strip('\b\n').split('\n\n')
+    paragraphs = [p for p in paragraphs if p.strip()]
+
+    processed_paragraphs = []
+    for p in paragraphs:
+        if '\b' in p:
+            processed_paragraphs.append(p.replace('\b\n', ''))
+        else:
+            processed_paragraphs.append(re.sub(r'\s+', ' ', p.strip()))
+    description = '\n\n'.join(processed_paragraphs)
 
     return description, examples, markdown_only_part
 
@@ -107,8 +147,6 @@ class HdxCommand(click.Command):
     """A custom click.Command."""
 
     def to_markdown(self, ctx: click.Context) -> str:
-        """Generates Markdown documentation for a command."""
-        # Update metavar before any text is generated
         resource = ctx.parent.command.name if ctx.parent else self.name
         for param in self.get_params(ctx):
             if isinstance(param, click.Argument) and param.name == "resource_name":
@@ -122,52 +160,39 @@ class HdxCommand(click.Command):
         format_args = _create_format_args(ctx)
         description, examples_str, markdown_only_content = _parse_docstring_for_markdown(self.help, format_args)
 
+        # Description
         if description:
             md_parts.append(f"{description}\n")
 
+        # Usage
         usage_line = self.get_usage(ctx).replace('Usage: ', '')
+        # if usage_line is too long, click adds '\n' at some point. It cleans it up.
+        usage_line = re.sub(r'\s*\n\s*', ' ', usage_line).strip()
         md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
 
-        opts = [p.get_help_record(ctx) for p in self.get_params(ctx) if
-                p.get_help_record(ctx) and '--help' not in p.opts]
-        if opts:
-            md_parts.append("**Options**\n| Option | Description |\n|:-------|:------------|")
-            for opt, desc in opts:
-                try:
-                    formatted_desc = desc.format(**format_args)
-                except KeyError:
-                    formatted_desc = desc
-                sanitized_desc = formatted_desc.replace('|', '\\|').replace('\n', ' ')
-                md_parts.append(f"| `{opt}` | {sanitized_desc} |")
-            md_parts.append("")
+        # Options
+        md_parts.append(_generate_options_table(self, ctx))
 
+        # Examples
         if examples_str:
             md_parts.append("**Examples**\n")
-            cleaned_examples = inspect.cleandoc(examples_str)
-            md_parts.append(f"```bash\n{cleaned_examples}\n```\n")
+            md_parts.append(f"```bash\n{inspect.cleandoc(examples_str)}\n```\n")
 
+        # Markdown-only content
         if markdown_only_content:
-            md_parts.append(f"\n{inspect.cleandoc(markdown_only_content)}\n")
+            md_parts.append(f"{inspect.cleandoc(markdown_only_content)}\n")
 
         return "\n".join(md_parts)
 
     def get_help(self, ctx: click.Context) -> str:
-        """Formats the command's help text with dynamic placeholders, ignoring markdown-only content."""
+        """Formats the command's help text, letting Click handle truncation via '\\f'."""
         # Update metavar before calling super().get_help()
         resource = ctx.parent.command.name if ctx.parent else self.name
         for param in self.params:
             if isinstance(param, click.Argument) and param.name == "resource_name":
                 param.metavar = f"{resource.replace('-', '_').upper()}_NAME"
 
-        # Temporarily use only the help-relevant part of the docstring
-        original_help = self.help
-        if original_help:
-            self.help = inspect.cleandoc(original_help).split('\n---\n', 1)[0]
-
-        # Click default, well-formatted help generation
         help_text = super().get_help(ctx)
-        self.help = original_help
-
         if not help_text:
             return ""
 
@@ -191,53 +216,47 @@ class HdxGroup(click.Group):
         format_args = _create_format_args(ctx)
         description, _, markdown_only_content = _parse_docstring_for_markdown(self.help, format_args)
 
+        # Description
         if description:
             md_parts.append(f"{description}\n")
 
+        # Usage
         usage_line = self.get_usage(ctx).replace('Usage: ', '')
+        # if usage_line is too long, click adds '\n' at some point. It cleans it up.
+        usage_line = re.sub(r'\s*\n\s*', ' ', usage_line).strip()
         md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
 
-        opts = [p.get_help_record(ctx) for p in self.get_params(ctx) if
-                p.get_help_record(ctx) and '--help' not in p.opts]
-        if opts:
-            md_parts.append("**Options**\n| Option | Description |\n|:-------|:------------|")
-            for opt, desc in opts:
-                try:
-                    formatted_desc = desc.format(**format_args)
-                except KeyError:
-                    formatted_desc = desc
-                sanitized_desc = formatted_desc.replace('|', '\\|').replace('\n', ' ')
-                md_parts.append(f"| `{opt}` | {sanitized_desc} |")
-            md_parts.append("")
+        # Options
+        md_parts.append(_generate_options_table(self, ctx))
 
+        # Markdown-only content
         if markdown_only_content:
-            md_parts.append(f"\n{inspect.cleandoc(markdown_only_content)}\n")
+            md_parts.append(f"{inspect.cleandoc(markdown_only_content)}\n")
 
-        # Render subcommands
         direct_commands_md, subgroups_md = [], []
         for cmd_name in self.list_commands(ctx):
             cmd = self.get_command(ctx, cmd_name)
-            if not cmd or cmd.hidden: continue
+            if not cmd or cmd.hidden:
+                continue
+
             sub_ctx = click.Context(cmd, info_name=cmd_name, parent=ctx)
             cmd_md = cmd.to_markdown(sub_ctx)
             (subgroups_md if isinstance(cmd, click.Group) else direct_commands_md).append(cmd_md)
 
-        if direct_commands_md: md_parts.append("\n\n".join(direct_commands_md))
+        if direct_commands_md:
+            md_parts.append("\n\n".join(direct_commands_md))
+
         if subgroups_md:
-            if direct_commands_md: md_parts.append("\n\n")
+            if direct_commands_md:
+                md_parts.append("\n\n")
+
             md_parts.append("\n\n".join(subgroups_md))
 
         return "\n".join(md_parts)
 
     def get_help(self, ctx: click.Context) -> str:
-        """Formats the group's help text with dynamic placeholders."""
-        original_help = self.help
-        if original_help:
-            self.help = inspect.cleandoc(original_help).split('\n---\n', 1)[0]
-
+        """Formats the group's help text, letting Click handle truncation via '\\f'."""
         help_text = super().get_help(ctx)
-        self.help = original_help
-
         if not help_text:
             return ""
 
@@ -247,35 +266,3 @@ class HdxGroup(click.Group):
         except KeyError as e:
             logger.debug(f"Error formatting help for group '{self.name}': {e}.")
             return help_text
-
-    def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        """Writes all the sub-commands into the formatter, replacing placeholders."""
-        commands = []
-        for subcommand in self.list_commands(ctx):
-            cmd = self.get_command(ctx, subcommand)
-            if cmd is None or cmd.hidden: continue
-
-            short_help = cmd.get_short_help_str(limit=formatter.width)
-            format_args = _create_format_args(click.Context(cmd, parent=ctx))
-            try:
-                formatted_short_help = short_help.format(**format_args)
-            except KeyError:
-                formatted_short_help = short_help
-
-            commands.append((subcommand, formatted_short_help))
-
-        if commands:
-            with formatter.section("Commands"):
-                formatter.write_dl(commands)
-
-    def invoke(self, ctx: click.Context):
-        is_help_for_subcommand = any(arg in ctx.help_option_names for arg in ctx.args)
-        if is_help_for_subcommand:
-            original_callback = self.callback
-            self.callback = None
-            try:
-                return super().invoke(ctx)
-            finally:
-                self.callback = original_callback
-        else:
-            return super().invoke(ctx)
