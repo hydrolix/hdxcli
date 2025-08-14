@@ -4,6 +4,7 @@ from pathlib import Path
 import click
 
 from hdx_cli.auth.context_builder import load_user_context
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_transform
 from hdx_cli.cli_interface.transform.comparator.engine import TransformComparator
 from hdx_cli.config.paths import PROFILE_CONFIG_FILE
@@ -57,7 +58,7 @@ def _load_transform_spec(
     )
 
 
-@click.command(name="compare")
+@click.command(cls=HdxCommand, name="compare")
 @click.argument("transform_a_spec", metavar="TRANSFORM_A")
 @click.argument("transform_b_spec", metavar="TRANSFORM_B")
 @click.option(
@@ -76,7 +77,7 @@ def compare(
     """Compares two transforms, showing differences in their settings.
 
     Transforms can be specified as a local JSON file path or as a reference
-    to a transform on a cluster in the format: `project_name.table_name.transform_name``.
+    to a transform on a cluster in the format: `project_name.table_name.transform_name`.
 
     When comparing a transform on a different cluster, use `--profile-b` to
     specify the profile details for `TRANSFORM_B`.
