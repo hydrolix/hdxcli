@@ -5,6 +5,7 @@ from typing import Optional
 
 import click
 
+from .compare import compare
 from ...library_api.common.exceptions import CommandLineException
 from ...library_api.common.logging import get_logger
 from ...library_api.ddl.common_algo import (
@@ -61,6 +62,10 @@ logger = get_logger()
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def transform(ctx: click.Context, project_name: str, table_name: str, transform_name: str):
+    # The 'compare' command handles its own resource loading (local files or cluster)
+    if ctx.invoked_subcommand == 'compare':
+        return
+
     user_profile = ctx.parent.obj["usercontext"]
     ProfileUserContext.update_context(
         user_profile, projectname=project_name, tablename=table_name, transformname=transform_name
@@ -244,3 +249,4 @@ transform.add_command(command_list)
 transform.add_command(command_show)
 transform.add_command(command_settings_with_force, "settings")
 transform.add_command(migrate)
+transform.add_command(compare)
