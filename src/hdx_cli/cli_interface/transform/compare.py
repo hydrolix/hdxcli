@@ -9,7 +9,7 @@ from hdx_cli.cli_interface.transform.comparator.engine import TransformComparato
 from hdx_cli.config.paths import PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
-from hdx_cli.library_api.utility.file_handling import load_json_settings_file
+from hdx_cli.library_api.utility.file_handling import read_json_from_file
 from hdx_cli.models import ProfileUserContext, ProfileLoadContext
 
 logger = get_logger()
@@ -40,7 +40,7 @@ def _load_transform_spec(
     Returns a tuple of (transform_data, description)."""
     if Path(specifier).is_file() and specifier.endswith('.json'):
         logger.debug(f"Loading transform from local file: {specifier}")
-        return load_json_settings_file(None, None, specifier), f"local file: {specifier}"
+        return read_json_from_file(specifier), f"local file: {specifier}"
 
     # Check for cluster reference format: project.table.transform
     parts = specifier.split('.')
