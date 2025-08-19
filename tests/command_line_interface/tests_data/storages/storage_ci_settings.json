@@ -1,8 +1,9 @@
 {
     "settings": {
-        "bucket_path": "/cli/",
-        "bucket_name": "qe-multi-bucket-1",
-        "region": "us-central1",
-        "cloud": "gcp"
+        "bucket_path": "/new-bucket/",
+        "bucket_name": "hdx-cli-2",
+        "region": "us-sea-9",
+        "cloud": "linode",
+        "endpoint": "https://us-sea-9.linodeobjects.com"
     }
 }
