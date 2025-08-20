@@ -186,10 +186,10 @@ def test_approval_run_all(test_data: Tuple[List[str], str, str]):
     tc_runner.run()
 
 
-_load_test_suite_file = partial(_load_toml_file_with_extension, expected_extension=".ts")
+_load_test_suite_file = partial(_load_toml_file_with_extension, expected_extension=".toml")
 
 
-THE_TESTS = _load_test_suite_file(HDXCLI_TEST_CASES_DIR / "test_read_only_flows.ts")
+THE_TESTS = _load_test_suite_file(HDXCLI_TEST_CASES_DIR / "test_read_only_flows.toml")
 
 
 def _parse_expected_output(tst):
