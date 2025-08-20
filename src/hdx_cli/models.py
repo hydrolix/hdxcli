@@ -62,6 +62,7 @@ class ProfileUserContext:
     rolename: Optional[str] = None
     credentialname: Optional[str] = None
     service_accountname: Optional[str] = None
+    rowpolicyname: Optional[str] = None
 
     @property
     def profilename(self) -> str:

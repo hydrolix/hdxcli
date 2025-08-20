@@ -75,6 +75,12 @@ def find_transforms(user_ctx: ProfileUserContext) -> list[dict]:
         [("projects", user_ctx.projectname), ("tables", user_ctx.tablename), ("transforms", None)],
     )
 
+def find_rowpolicies(user_ctx: ProfileUserContext) -> list[dict]:
+    return access_resource(
+        user_ctx,
+        [("projects", user_ctx.projectname), ("tables", user_ctx.tablename), ("rowpolicies", None)],
+    )
+
 
 def find_views(user_ctx: ProfileUserContext) -> list[dict]:
     return access_resource(

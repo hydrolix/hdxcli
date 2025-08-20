@@ -20,6 +20,7 @@
 #
 # - setup (optional): a setup list of commands executed before running the commands_under_test
 # - teardown (optional): list with teardown commands
+
 global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main table --project test_ci_project create test_ci_table",
                 "python3 -m hdx_cli.main table --project test_ci_project create test_ci_table_csv",
@@ -34,6 +35,7 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table_zip create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/zip_transform.json test_zip_transform",
                 "python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table_zlib create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/zlib_transform.json test_zlib_transform",
                 "python3 -m hdx_cli.main view --project test_ci_project --table test_ci_table create -f {HDXCLI_TESTS_DIR}/tests_data/views/view_settings.json test_ci_view",
+                "python3 -m hdx_cli.main row-policy --project test_ci_project --table test_ci_table create row_policy_ci_test --filter 1 --role operator",
                 "python3 -m hdx_cli.main dictionary --project test_ci_project files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_file.csv test_ci_dictionary_file",
                 "python3 -m hdx_cli.main dictionary --project test_ci_project create {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_settings.json test_ci_dictionary_file test_ci_dictionary",
                 # "python3 -m hdx_cli.main job batch --project test_ci_project --table test_ci_table ingest test_ci_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_ci_settings.json",
@@ -45,8 +47,7 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main role create test_ci_role --permission change_table",
                 "python3 -m hdx_cli.main user invite send test_ci_invite_user@hydolix.io --role test_ci_role",
                 "python3 -m hdx_cli.main service-account create test_ci_service_account --role read_only",
-                "python3 -m hdx_cli.main unset"
-                ]
+                "python3 -m hdx_cli.main unset"]
 
 global_teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_ci_storage",
                    "python3 -m hdx_cli.main project delete --disable-confirmation-prompt test_ci_project",
@@ -54,7 +55,6 @@ global_teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmatio
                    "python3 -m hdx_cli.main user delete --disable-confirmation-prompt test_ci_invite_user@hydolix.io",
                    "python3 -m hdx_cli.main service-account delete --disable-confirmation-prompt test_ci_service_account",
                    "python3 -m hdx_cli.main unset"]
-
 
 
 ######################################################## Project ########################################################
@@ -117,7 +117,7 @@ expected_output = 'Created table test_table'
 [[test]]
 name = "Tables can be deleted"
 setup = ["python3 -m hdx_cli.main set test_ci_project",
-		     "python3 -m hdx_cli.main table create test_table"]
+                     "python3 -m hdx_cli.main table create test_table"]
 commands_under_test = ["python3 -m hdx_cli.main table delete --disable-confirmation-prompt test_table"]
 teardown = ["python3 -m hdx_cli.main unset"]
 expected_output = 'Deleted test_table'
@@ -146,7 +146,7 @@ name = "Table description can be modified"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table settings description 'Modified-with-hdxcli-tool'"]
 teardown = ["python3 -m hdx_cli.main table settings description 'Created-with-hdxcli-tool'",
-			      "python3 -m hdx_cli.main unset"]
+                              "python3 -m hdx_cli.main unset"]
 expected_output = 'Updated test_ci_table description'
 
 [[test]]
@@ -154,7 +154,7 @@ name = "Table merge setting can be modified"
 setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 commands_under_test = ["python3 -m hdx_cli.main table settings settings.merge.enabled false"]
 teardown = ["python3 -m hdx_cli.main table settings settings.merge.enabled true",
-			      "python3 -m hdx_cli.main unset"]
+                              "python3 -m hdx_cli.main unset"]
 expected_output = 'Updated test_ci_table settings.merge.enabled'
 
 [[test]]
@@ -291,6 +291,59 @@ teardown = ["python3 -m hdx_cli.main unset"]
 expected_output_expr = '"name" in result and "test_ci_view" in result'
 
 
+#################################################### Row Policies #####################################################
+[[test]]
+name = "Row policies can be created"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main row-policy create row_policy_test --filter 1 --role operator"]
+teardown = ["python3 -m hdx_cli.main row-policy delete --disable-confirmation-prompt row_policy_test",
+            "python3 -m hdx_cli.main unset"]
+expected_output = "Created row policy row_policy_test"
+
+[[test]]
+name = "Row policies can be deleted"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
+         "python3 -m hdx_cli.main row-policy create row_policy_test --filter 1 --role operator"]
+commands_under_test = ["python3 -m hdx_cli.main row-policy delete --disable-confirmation-prompt row_policy_test"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output = 'Deleted row_policy_test'
+
+[[test]]
+name = "Row policies can be listed"
+commands_under_test = ["python3 -m hdx_cli.main row-policy --project test_ci_project --table test_ci_table list"]
+expected_output_expr = '"row_policy_ci_test" in result'
+
+[[test]]
+name = "Row policy settings can be shown"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main row-policy --row-policy row_policy_ci_test settings"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output_expr = '"name" in result and "string" in result and "row_policy_ci_test" in result'
+
+[[test]]
+name = "Row policies can be shown"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main row-policy show row_policy_ci_test"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output_expr = '"name" in result and "row_policy_ci_test" in result and "filter" in result'
+
+[[test]]
+name = "Row policy allows add roles"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
+commands_under_test = ["python3 -m hdx_cli.main row-policy add-role row_policy_ci_test --role super_admin"]
+teardown = ["python3 -m hdx_cli.main row-policy remove-role row_policy_ci_test --role super_admin",
+            "python3 -m hdx_cli.main unset"]
+expected_output = "Added roles for row policy 'row_policy_ci_test'"
+
+[[test]]
+name = "Row policy allows remove roles"
+setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
+         "python3 -m hdx_cli.main row-policy add-role row_policy_ci_test --role super_admin"]
+commands_under_test = ["python3 -m hdx_cli.main row-policy remove-role row_policy_ci_test --role super_admin"]
+teardown = ["python3 -m hdx_cli.main unset"]
+expected_output = "Removed roles for row policy 'row_policy_ci_test'"
+
+
 ###################################################### Column #######################################################
 [[test]]
 name = "Columns can be listed"
@@ -330,7 +383,7 @@ expected_output = "Deleted new_column_v2"
 # setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 # commands_under_test = ["python3 -m hdx_cli.main sources kafka create {HDXCLI_TESTS_DIR}/tests_data/sources/kafka_source_settings.json test_kafka_source"]
 # teardown = ["python3 -m hdx_cli.main sources kafka delete --disable-confirmation-prompt test_kafka_source",
-# 			      "python3 -m hdx_cli.main unset"]
+#                             "python3 -m hdx_cli.main unset"]
 # expected_output = 'Created source test_kafka_source'
 
 # [[test]]
@@ -379,7 +432,7 @@ expected_output = "Deleted new_column_v2"
 # [[test]]
 # name = "Kinesis sources can be deleted"
 # setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-# 		     "python3 -m hdx_cli.main sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_kinesis_source"]
+#                    "python3 -m hdx_cli.main sources kinesis create {HDXCLI_TESTS_DIR}/tests_data/sources/kinesis_source_settings.json test_kinesis_source"]
 # commands_under_test = ["python3 -m hdx_cli.main sources kinesis delete --disable-confirmation-prompt test_kinesis_source"]
 # teardown = ["python3 -m hdx_cli.main unset"]
 # expected_output = 'Deleted test_kinesis_source'
@@ -422,13 +475,13 @@ expected_output = "Deleted new_column_v2"
 # setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table"]
 # commands_under_test = ["python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
 # teardown = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source",
-# 			      "python3 -m hdx_cli.main unset"]
+#                             "python3 -m hdx_cli.main unset"]
 # expected_output = 'Created source test_siem_source'
 
 # [[test]]
 # name = "SIEM sources can be deleted"
 # setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-# 		     "python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
+#                    "python3 -m hdx_cli.main sources siem create {HDXCLI_TESTS_DIR}/tests_data/sources/siem_source_settings.json test_siem_source"]
 # commands_under_test = ["python3 -m hdx_cli.main sources siem delete --disable-confirmation-prompt test_siem_source"]
 # teardown = ["python3 -m hdx_cli.main unset"]
 # expected_output = 'Deleted test_siem_source'
@@ -490,13 +543,12 @@ expected_output_expr = '"name" in result and "test_ci_storage" in result and "se
 [[test]]
 name = "Storage cloud can be shown"
 commands_under_test = ["python3 -m hdx_cli.main storage --storage test_ci_storage settings settings.cloud"]
-expected_output = 'settings.cloud: gcp'
+expected_output = 'settings.cloud: linode'
 
 [[test]]
-name = "Storage cloud can be modified"
-commands_under_test = ["python3 -m hdx_cli.main storage --storage test_ci_storage settings settings.cloud aws"]
-teardown = ["python3 -m hdx_cli.main storage --storage test_ci_storage settings settings.cloud gcp"]
-expected_output = 'Updated test_ci_storage settings.cloud'
+name = "Storage description can be modified"
+commands_under_test = ['python3 -m hdx_cli.main storage --storage test_ci_storage settings description "Updated-with-hdxcli-tool"']
+expected_output = 'Updated test_ci_storage description'
 
 [[test]]
 name = "Storages can be shown"
@@ -518,7 +570,7 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 # commands_under_test = ["python3 -m hdx_cli.main job batch --transform test_ci_transform ingest test_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_settings.json"]
 # teardown = ["python3 -m hdx_cli.main job batch cancel test_batch_job",
 #             "python3 -m hdx_cli.main job batch delete --disable-confirmation-prompt test_batch_job",
-# 			      "python3 -m hdx_cli.main unset"]
+#                             "python3 -m hdx_cli.main unset"]
 # expected_output = 'Started job test_batch_job'
 #
 # [[test]]
@@ -544,8 +596,8 @@ expected_output_expr = 'not result.startswith("Error:") and "name" in result and
 # [[test]]
 # name = "Batch jobs can be deleted"
 # setup = ["python3 -m hdx_cli.main set test_ci_project test_ci_table",
-# 		     "python3 -m hdx_cli.main job batch --transform test_ci_transform ingest test_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_settings.json",
-# 		     "python3 -m hdx_cli.main job batch cancel test_batch_job"]
+#                    "python3 -m hdx_cli.main job batch --transform test_ci_transform ingest test_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_settings.json",
+#                    "python3 -m hdx_cli.main job batch cancel test_batch_job"]
 # commands_under_test = ["python3 -m hdx_cli.main job batch delete test_batch_job --disable-confirmation-prompt"]
 # teardown = ["python3 -m hdx_cli.main unset"]
 # expected_output = 'Deleted test_batch_job'
@@ -609,7 +661,7 @@ expected_output = 'Created function test_function'
 [[test]]
 name = "Functions can be deleted"
 setup = ["python3 -m hdx_cli.main set test_ci_project",
-		     "python3 -m hdx_cli.main function create -s '(x,k,b)->k*x+b' test_function"]
+                     "python3 -m hdx_cli.main function create -s '(x,k,b)->k*x+b' test_function"]
 commands_under_test = ["python3 -m hdx_cli.main function delete --disable-confirmation-prompt test_function"]
 teardown = ["python3 -m hdx_cli.main unset"]
 expected_output = 'Deleted test_function'

@@ -25,6 +25,7 @@ from hdx_cli.cli_interface.stream import commands as stream_
 from hdx_cli.cli_interface.svc_account import commands as service_account_
 from hdx_cli.cli_interface.table import commands as table_
 from hdx_cli.cli_interface.transform import commands as transform_
+from hdx_cli.cli_interface.row_policy import commands as row_policy_
 from hdx_cli.cli_interface.column import commands as column_
 from hdx_cli.cli_interface.user import commands as user_
 from hdx_cli.cli_interface.view import commands as view_
@@ -168,6 +169,7 @@ hdx_cli.add_command(project_.project)
 hdx_cli.add_command(table_.table)
 hdx_cli.add_command(shadow_.shadow)
 hdx_cli.add_command(transform_.transform)
+hdx_cli.add_command(row_policy_.row_policy)
 hdx_cli.add_command(view_.view)
 hdx_cli.add_command(column_.column)
 hdx_cli.add_command(set_commands.set_default_resources)

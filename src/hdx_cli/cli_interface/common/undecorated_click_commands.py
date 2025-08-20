@@ -398,6 +398,14 @@ def basic_column(ctx: click.Context):
     )
 
 
+def basic_row_policy(ctx: click.Context):
+    _prepare_table_subresource_context(
+        ctx,
+        plural_resource_name="rowpolicies",
+        singular_resource_name="rowpolicy",
+    )
+
+
 class KeyAbsent:
     """Show absent key into the settings output"""
 
