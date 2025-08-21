@@ -1,7 +1,8 @@
+import inspect
+import re
+
 import click
 import inflect
-import re
-import inspect
 
 from hdx_cli.library_api.common.logging import get_logger
 
@@ -27,6 +28,7 @@ _RESOURCE_CONTEXT_OPTIONS = {
     "dictionary": ["project"],
     "shadow": ["project"],
     "transform": ["project", "table"],
+    "row-policy": ["project", "table"],
     "view": ["project", "table"],
     "column": ["project", "table"],
     "kinesis": ["project", "table"],
@@ -38,8 +40,11 @@ _RESOURCE_CONTEXT_OPTIONS = {
 
 def _generate_options_table(command: click.Command, ctx: click.Context) -> str:
     """Generates a Markdown table for a command's options."""
-    opts = [p.get_help_record(ctx) for p in command.get_params(ctx) if
-            p.get_help_record(ctx) and '--help' not in p.opts]
+    opts = [
+        p.get_help_record(ctx)
+        for p in command.get_params(ctx)
+        if p.get_help_record(ctx) and "--help" not in p.opts
+    ]
 
     if not opts:
         return ""
@@ -49,15 +54,15 @@ def _generate_options_table(command: click.Command, ctx: click.Context) -> str:
         "**Options**",
         "",  # Adds a blank line before the table
         "| Option | Description |",
-        "|:-------|:------------|"
+        "|:-------|:------------|",
     ]
     for opt, desc in opts:
         try:
             formatted_desc = desc.format(**format_args)
         except KeyError:
             formatted_desc = desc
-        sanitized_desc = formatted_desc.replace('|', '\\|').replace('\n', ' ')
-        sanitized_opt = opt.replace('|', '\\|')
+        sanitized_desc = formatted_desc.replace("|", "\\|").replace("\n", " ")
+        sanitized_opt = opt.replace("|", "\\|")
         table_parts.append(f"| `{sanitized_opt}` | {sanitized_desc} |")
 
     table_parts.append("")  # Adds a blank line after the table
@@ -98,8 +103,8 @@ def _create_format_args(ctx: click.Context) -> dict:
         singular_form = "file"
 
     return {
-        "resource": resource.replace('-', ' '),
-        "resource_plural": _inflect_engine.plural(singular_form).replace('-', ' '),
+        "resource": resource.replace("-", " "),
+        "resource_plural": _inflect_engine.plural(singular_form).replace("-", " "),
         "parent_command": ctx.parent.command_path if ctx.parent else "hdxcli",
         "example_name": f"my_{resource.replace('-', '_')}",
         "full_command_prefix": _get_full_command_prefix(ctx),
@@ -113,7 +118,7 @@ def _parse_docstring_for_markdown(docstring: str, format_args: dict) -> (str, st
 
     cleaned_doc = inspect.cleandoc(docstring)
 
-    parts = cleaned_doc.split('\f', 1)
+    parts = cleaned_doc.split("\f", 1)
     doc_part = parts[0]
     markdown_only_part = parts[1] if len(parts) > 1 else ""
 
@@ -122,23 +127,23 @@ def _parse_docstring_for_markdown(docstring: str, format_args: dict) -> (str, st
     except KeyError:
         formatted_doc = doc_part
 
-    example_parts = re.split(r'\n\s*Examples?:\s*\n', formatted_doc, 1, re.IGNORECASE)
+    example_parts = re.split(r"\n\s*Examples?:\s*\n", formatted_doc, 1, re.IGNORECASE)
     description = example_parts[0].strip()
     examples = example_parts[1].strip() if len(example_parts) > 1 else ""
 
     # Fix double newlines in examples
-    examples = examples.replace('\b\n', '')
+    examples = examples.replace("\b\n", "")
 
-    paragraphs = description.strip('\b\n').split('\n\n')
+    paragraphs = description.strip("\b\n").split("\n\n")
     paragraphs = [p for p in paragraphs if p.strip()]
 
     processed_paragraphs = []
     for p in paragraphs:
-        if '\b' in p:
-            processed_paragraphs.append(p.replace('\b\n', ''))
+        if "\b" in p:
+            processed_paragraphs.append(p.replace("\b\n", ""))
         else:
-            processed_paragraphs.append(re.sub(r'\s+', ' ', p.strip()))
-    description = '\n\n'.join(processed_paragraphs)
+            processed_paragraphs.append(re.sub(r"\s+", " ", p.strip()))
+    description = "\n\n".join(processed_paragraphs)
 
     return description, examples, markdown_only_part
 
@@ -153,21 +158,23 @@ class HdxCommand(click.Command):
                 param.metavar = f"{resource.replace('-', '_').upper()}_NAME"
 
         depth = _get_depth(ctx)
-        heading = '#' * depth
-        command_title = self.name.replace('-', ' ').replace('_', ' ').title()
+        heading = "#" * depth
+        command_title = self.name.replace("-", " ").replace("_", " ").title()
         md_parts = [f"{heading} {command_title}\n"]
 
         format_args = _create_format_args(ctx)
-        description, examples_str, markdown_only_content = _parse_docstring_for_markdown(self.help, format_args)
+        description, examples_str, markdown_only_content = _parse_docstring_for_markdown(
+            self.help, format_args
+        )
 
         # Description
         if description:
             md_parts.append(f"{description}\n")
 
         # Usage
-        usage_line = self.get_usage(ctx).replace('Usage: ', '')
+        usage_line = self.get_usage(ctx).replace("Usage: ", "")
         # if usage_line is too long, click adds '\n' at some point. It cleans it up.
-        usage_line = re.sub(r'\s*\n\s*', ' ', usage_line).strip()
+        usage_line = re.sub(r"\s*\n\s*", " ", usage_line).strip()
         md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
 
         # Options
@@ -209,21 +216,23 @@ class HdxGroup(click.Group):
 
     def to_markdown(self, ctx: click.Context) -> str:
         depth = _get_depth(ctx)
-        heading = '#' * depth
-        group_title = self.name.replace('_', ' ').title()
+        heading = "#" * depth
+        group_title = self.name.replace("_", " ").title()
         md_parts = [f"{heading} {group_title}\n"]
 
         format_args = _create_format_args(ctx)
-        description, _, markdown_only_content = _parse_docstring_for_markdown(self.help, format_args)
+        description, _, markdown_only_content = _parse_docstring_for_markdown(
+            self.help, format_args
+        )
 
         # Description
         if description:
             md_parts.append(f"{description}\n")
 
         # Usage
-        usage_line = self.get_usage(ctx).replace('Usage: ', '')
+        usage_line = self.get_usage(ctx).replace("Usage: ", "")
         # if usage_line is too long, click adds '\n' at some point. It cleans it up.
-        usage_line = re.sub(r'\s*\n\s*', ' ', usage_line).strip()
+        usage_line = re.sub(r"\s*\n\s*", " ", usage_line).strip()
         md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
 
         # Options
