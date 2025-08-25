@@ -35,7 +35,6 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table_zip create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/zip_transform.json test_zip_transform",
                 "python3 -m hdx_cli.main transform --project test_ci_project --table test_ci_table_zlib create -f {HDXCLI_TESTS_DIR}/tests_data/transforms/zlib_transform.json test_zlib_transform",
                 "python3 -m hdx_cli.main view --project test_ci_project --table test_ci_table create -f {HDXCLI_TESTS_DIR}/tests_data/views/view_settings.json test_ci_view",
-                "python3 -m hdx_cli.main row-policy --project test_ci_project --table test_ci_table create row_policy_ci_test --filter 1 --role operator",
                 "python3 -m hdx_cli.main dictionary --project test_ci_project files upload -t verbatim {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_file.csv test_ci_dictionary_file",
                 "python3 -m hdx_cli.main dictionary --project test_ci_project create {HDXCLI_TESTS_DIR}/tests_data/dictionaries/dictionary_settings.json test_ci_dictionary_file test_ci_dictionary",
                 # "python3 -m hdx_cli.main job batch --project test_ci_project --table test_ci_table ingest test_ci_batch_job {HDXCLI_TESTS_DIR}/tests_data/batch-jobs/batch_job_ci_settings.json",
@@ -47,6 +46,7 @@ global_setup = ["python3 -m hdx_cli.main project create test_ci_project",
                 "python3 -m hdx_cli.main role create test_ci_role --permission change_table",
                 "python3 -m hdx_cli.main user invite send test_ci_invite_user@hydolix.io --role test_ci_role",
                 "python3 -m hdx_cli.main service-account create test_ci_service_account --role read_only",
+                "python3 -m hdx_cli.main row-policy --project test_ci_project --table test_ci_table create row_policy_ci_test --filter 1 --role operator",
                 "python3 -m hdx_cli.main unset"]
 
 global_teardown = ["python3 -m hdx_cli.main storage delete --disable-confirmation-prompt test_ci_storage",
@@ -735,6 +735,12 @@ expected_output = 'Deleted test_dictionary_file'
 name = "Dictionary files can be listed"
 commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project files list"]
 expected_output = 'test_ci_dictionary_file'
+
+[[test]]
+name = "Dictionary file can be downloaded"
+commands_under_test = ["python3 -m hdx_cli.main dictionary --project test_ci_project files download test_ci_dictionary_file"]
+expected_output_re = '.*?Dictionary file saved to:*.'
+
 
 ######################################################## Role ##########################################################
 

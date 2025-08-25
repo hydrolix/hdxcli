@@ -23,6 +23,7 @@ from ..common.rest_operations import delete as command_delete
 from ..common.rest_operations import list_ as command_list
 from ..common.rest_operations import show as command_show
 from ..common.undecorated_click_commands import basic_create, basic_create_file, basic_delete
+from .operations import download_dictionary_file
 
 logger = get_logger()
 
@@ -217,11 +218,50 @@ def migrate_dictionary(
     logger.info("All resources migrated successfully")
 
 
+@click.command(name="download")
+@click.argument("dictionary_filename", metavar="DICTIONARY_FILENAME")
+@click.option(
+    "--output",
+    "-o",
+    "output_path",
+    help="Path to save the file, including the new filename. "
+    "If not provided, saves to the current directory with the original name.",
+    type=click.Path(dir_okay=False, writable=True),
+    default=None,
+)
+@click.pass_context
+@report_error_and_exit(exctype=Exception)
+def download_file(ctx: click.Context, dictionary_filename: str, output_path: str):
+    """
+    Download a dictionary data file to your local machine.
+    This command retrieves a dictionary file and saves it
+    to a specified path, or the current directory by default.
+
+    \b
+    Examples:
+      # Download 'countries' to the current directory
+      hdxcli dictionary --project my_proj files download countries
+
+    \b
+      # Download 'countries' but save it as 'country_list.csv' in the current dir
+      hdxcli dictionary --project my_proj files download countries.csv -o country_list.csv
+
+    \b
+      # Download 'countries' to a specific 'data' folder with 'countries.csv' as the new filename
+      hdxcli dictionary --project my_proj files download countries.csv -o ./data/countries.csv
+    """
+    profile = ctx.parent.obj["usercontext"]
+    # The resource path is for 'files', which is what the operation function expects
+    resource_path = ctx.parent.obj["resource_path"]
+    download_dictionary_file(profile, resource_path, dictionary_filename, output_path)
+
+
 dictionary.add_command(create_dict, name="create")
 dictionary.add_command(files)
 files.add_command(upload_file_dict, name="upload")
 files.add_command(command_list)
 files.add_command(dict_file_delete, name="delete")
+files.add_command(download_file)
 
 dictionary.add_command(command_list)
 dictionary.add_command(command_delete)
