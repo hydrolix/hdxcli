@@ -1,20 +1,21 @@
 import click
 
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.migration.resource_migrations import migrate_resource_config
-from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
 from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
 from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
 from hdx_cli.library_api.common.exceptions import LogicException
 from hdx_cli.library_api.common.generic_resource import access_resource
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import (
-    report_error_and_exit,
     ensure_logged_in,
+    no_rollback_option,
+    report_error_and_exit,
+    skip_group_logic_on_help,
     target_cluster_options,
-    no_rollback_option
 )
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
 from hdx_cli.models import ProfileUserContext
@@ -38,6 +39,7 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
+@skip_group_logic_on_help
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def function(ctx: click.Context, project_name: str, function_name: str):
@@ -149,12 +151,18 @@ def migrate(
     if not source_profile.functionname:
         raise click.BadParameter(
             "A source function must be specified with the --function option.",
-            param_hint="--function"
+            param_hint="--function",
         )
 
     has_target_profile = target_profile is not None
-    has_all_cluster_options = all([target_cluster_hostname, target_cluster_username,
-                                   target_cluster_password, target_cluster_uri_scheme])
+    has_all_cluster_options = all(
+        [
+            target_cluster_hostname,
+            target_cluster_username,
+            target_cluster_password,
+            target_cluster_uri_scheme,
+        ]
+    )
     if not has_target_profile and not has_all_cluster_options:
         raise click.BadParameter(
             "Either provide a --target-profile or all four target cluster options."

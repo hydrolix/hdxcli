@@ -1,21 +1,23 @@
 import click
 
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.migration.resource_migrations import migrate_resource_config
-from hdx_cli.cli_interface.common.undecorated_click_commands import basic_transform, basic_create
+from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
+from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
-from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
-from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_transform
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import (
-    report_error_and_exit,
     ensure_logged_in,
+    no_rollback_option,
+    report_error_and_exit,
+    skip_group_logic_on_help,
     target_cluster_options,
-    no_rollback_option
 )
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
 from hdx_cli.models import ProfileUserContext
+
 from .compare import compare
 
 logger = get_logger()
@@ -45,6 +47,7 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
+@skip_group_logic_on_help
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def transform(ctx: click.Context, project_name: str, table_name: str, transform_name: str):
@@ -52,7 +55,7 @@ def transform(ctx: click.Context, project_name: str, table_name: str, transform_
     migrate transforms. A project and table context is required for
     all operations."""
     # The 'compare' command handles its own resource loading (local files or cluster)
-    if ctx.invoked_subcommand == 'compare':
+    if ctx.invoked_subcommand == "compare":
         return
 
     user_profile = ctx.parent.obj["usercontext"]
@@ -78,7 +81,7 @@ def transform(ctx: click.Context, project_name: str, table_name: str, transform_
     is_flag=True,
     default=False,
     help='This flag allows adding the "force_operation" parameter to the request.',
-    hidden=True
+    hidden=True,
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)

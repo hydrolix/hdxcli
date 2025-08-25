@@ -4,11 +4,11 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
-from hdx_cli.cli_interface.common.undecorated_click_commands import basic_transform, basic_create
-from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_transform
 from hdx_cli.library_api.common import rest_operations as rest_ops
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import ensure_logged_in, report_error_and_exit
 from hdx_cli.models import ProfileLoadContext, ProfileUserContext
 
 logger = get_logger()
@@ -35,6 +35,7 @@ def integration(ctx: click.Context):
 
 @click.group(cls=HdxGroup)
 @report_error_and_exit(exctype=Exception)
+@click.pass_context
 @ensure_logged_in
 def transform(ctx: click.Context):
     """Apply pre-built public transforms to your tables."""
@@ -63,7 +64,7 @@ def _github_list(ctx: click.Context):
 
 @click.command(cls=HdxCommand, name="list")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
+# @report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context):
     """List available integration {resource_plural}.
 
@@ -110,17 +111,9 @@ def _basic_show(ctx: click.Context, transform_name: str, indent: bool = False):
 @click.argument("integration_transform_name")
 @click.argument("transform_name")
 @click.option(
-    "--project",
-    "project_name",
-    required=True,
-    help="The project to apply the transform to."
+    "--project", "project_name", required=True, help="The project to apply the transform to."
 )
-@click.option(
-    "--table",
-    "table_name",
-    required=True,
-    help="The table to apply the transform to."
-)
+@click.option("--table", "table_name", required=True, help="The table to apply the transform to.")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def apply(

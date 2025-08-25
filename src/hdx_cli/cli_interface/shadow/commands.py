@@ -5,19 +5,20 @@ from urllib.parse import urlparse
 import click
 
 from hdx_cli.cli_interface.common.cached_operations import find_tables, find_transforms
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.undecorated_click_commands import (
-    basic_show,
-    basic_delete,
-    basic_update,
     basic_create,
+    basic_delete,
+    basic_show,
+    basic_update,
 )
 from hdx_cli.library_api.common.exceptions import LogicException
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import (
-    report_error_and_exit,
-    ensure_logged_in,
     dynamic_confirmation_prompt,
+    ensure_logged_in,
+    report_error_and_exit,
+    skip_group_logic_on_help,
 )
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
 from hdx_cli.models import ProfileUserContext
@@ -34,6 +35,7 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
+@skip_group_logic_on_help
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def shadow(ctx: click.Context, project_name: str):
@@ -138,9 +140,7 @@ def create(
     user_profile.tablename = source_table
     source_table_id = json.loads(basic_show(user_profile, resource_path, source_table)).get("uuid")
     source_transform = json.loads(
-        basic_show(
-            user_profile, f"{resource_path}{source_table_id}/transforms/", source_transform
-        )
+        basic_show(user_profile, f"{resource_path}{source_table_id}/transforms/", source_transform)
     )
     source_transform_path = (
         f'{resource_path}{source_table_id}/transforms/{source_transform.get("uuid")}/'
@@ -156,7 +156,9 @@ def create(
     if table_settings and not table_settings.get("settings"):
         table_settings = {"settings": table_settings}
 
-    shadow_table = basic_create(user_profile, resource_path, shadow_table_name, body=table_settings).json()
+    shadow_table = basic_create(
+        user_profile, resource_path, shadow_table_name, body=table_settings
+    ).json()
     shadow_table_id = shadow_table.get("uuid")
     logger.info(f"Created shadow table '{shadow_table_name}'")
 
@@ -180,10 +182,10 @@ def create(
 
 
 _confirmation_prompt = partial(
- dynamic_confirmation_prompt,
- prompt="Please type 'delete this resource' to delete: ",
- confirmation_message="delete this resource",
- fail_message="Incorrect prompt input: resource was not deleted",
+    dynamic_confirmation_prompt,
+    prompt="Please type 'delete this resource' to delete: ",
+    confirmation_message="delete this resource",
+    fail_message="Incorrect prompt input: resource was not deleted",
 )
 
 

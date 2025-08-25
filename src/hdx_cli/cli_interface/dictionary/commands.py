@@ -1,23 +1,32 @@
 import click
 
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.migration.resource_migrations import migrate_resource_config
-from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_create_file, basic_delete
 from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
 from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
-from hdx_cli.library_api.common.exceptions import ResourceNotFoundException, MissingSettingsException
+from hdx_cli.cli_interface.common.undecorated_click_commands import (
+    basic_create,
+    basic_create_file,
+    basic_delete,
+)
+from hdx_cli.library_api.common.exceptions import (
+    MissingSettingsException,
+    ResourceNotFoundException,
+)
 from hdx_cli.library_api.common.generic_resource import access_resource
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import (
-    report_error_and_exit,
     ensure_logged_in,
+    no_rollback_option,
+    report_error_and_exit,
+    skip_group_logic_on_help,
     target_cluster_options,
-    no_rollback_option
 )
 from hdx_cli.library_api.utility.file_handling import read_bytes_from_file, read_json_from_file
 from hdx_cli.models import ProfileUserContext
+
 from .operations import download_dictionary_file
 
 logger = get_logger()
@@ -39,6 +48,7 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
+@skip_group_logic_on_help
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def dictionary(ctx: click.Context, project_name: str, dictionary_name: str):
@@ -151,7 +161,12 @@ def migrate(
 
     has_target_profile = target_profile is not None
     has_all_cluster_options = all(
-        [target_cluster_hostname, target_cluster_username, target_cluster_password, target_cluster_uri_scheme]
+        [
+            target_cluster_hostname,
+            target_cluster_username,
+            target_cluster_password,
+            target_cluster_uri_scheme,
+        ]
     )
 
     if not has_target_profile and not has_all_cluster_options:
@@ -177,7 +192,7 @@ def migrate(
     logger.info("All resources migrated successfully")
 
 
-@click.command(name="download")
+@click.command(cls=HdxCommand, name="download")
 @click.argument("dictionary_filename", metavar="DICTIONARY_FILENAME")
 @click.option(
     "--output",
@@ -217,6 +232,7 @@ def download_file(ctx: click.Context, dictionary_filename: str, output_path: str
 
 @click.group(cls=HdxGroup)
 @click.pass_context
+@skip_group_logic_on_help
 @report_error_and_exit(exctype=Exception)
 def files(ctx: click.Context):
     """Manage dictionary data files."""
@@ -229,13 +245,13 @@ def files(ctx: click.Context):
 @click.argument(
     "file_path_to_upload",
     metavar="FILE_PATH_TO_UPLOAD",
-    type=click.Path(exists=True, readable=True)
+    type=click.Path(exists=True, readable=True),
 )
 @click.argument("dict_file_name", metavar="DICT_FILE_NAME")
 @click.option(
     "--body-from-file-type",
     "-t",
-    type=click.Choice(('json', 'verbatim'), case_sensitive=False),
+    type=click.Choice(("json", "verbatim"), case_sensitive=False),
     help="How to interpret the body from the file. Defaults to 'json'.",
     default="json",
 )
