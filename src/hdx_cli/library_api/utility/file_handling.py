@@ -1,4 +1,5 @@
 import json
+import os
 
 import click
 
@@ -36,3 +37,19 @@ def load_bytes_file(ctx, param, value):
         raise click.BadParameter(f"File '{value}' not found.") from e
     except IOError as e:
         raise click.BadParameter(f"Error reading from file '{value}'.") from e
+
+
+def write_bytes_to_file(file_path: str, content: bytes):
+    """Writes bytes content to a specified file path."""
+    try:
+        # Ensure the target directory exists before writing
+        parent_dir = os.path.dirname(file_path)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
+
+        with open(file_path, "wb") as data_file:
+            data_file.write(content)
+    except IOError as e:
+        raise click.BadParameter(f"Error writing to file '{file_path}'.") from e
+    except Exception as e:
+        raise click.ClickException(f"An unexpected error occurred while writing file: {e}")
