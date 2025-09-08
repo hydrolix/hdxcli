@@ -1068,6 +1068,18 @@ commands_under_test = ["python3 -m hdx_cli.main unset"]
 expected_output = "Profile 'default' unset project/table"
 
 
+################################################## API Defaults ##################################################
+[[test]]
+name = "All defaults API settings can be shown"
+commands_under_test = ["python3 -m hdx_cli.main show-defaults"]
+expected_output_expr = '"Project Defaults" in result and "Table Defaults" in result and "Transforms Defaults" in result'
+
+[[test]]
+name = "Defaults API settings for project can be shown"
+commands_under_test = ["python3 -m hdx_cli.main show-defaults project"]
+expected_output_expr = '"Project Defaults" in result and "Table Defaults" not in result and "Transforms Defaults" not in result'
+
+
 ################################################## Resource Summary ##################################################
 [[test]]
 name = "Resource summary from config blob endpoint can be shown"
