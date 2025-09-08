@@ -5,18 +5,21 @@ from trogon import tui
 
 from hdx_cli.auth.context_builder import load_user_context
 from hdx_cli.cli_interface.check_health import commands as check_health_
-from hdx_cli.cli_interface.resource_summary import commands as resource_summary_
+from hdx_cli.cli_interface.column import commands as column_
 from hdx_cli.cli_interface.credential import commands as credentials_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
 from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.integration import commands as integration_
 from hdx_cli.cli_interface.job import commands as job_
+from hdx_cli.cli_interface.logs import commands as logs_
 from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.pool import commands as pool_
 from hdx_cli.cli_interface.profile import commands as profile_
 from hdx_cli.cli_interface.project import commands as project_
 from hdx_cli.cli_interface.query_option import commands as query_option_
+from hdx_cli.cli_interface.resource_summary import commands as resource_summary_
 from hdx_cli.cli_interface.role import commands as role_
+from hdx_cli.cli_interface.row_policy import commands as row_policy_
 from hdx_cli.cli_interface.set import commands as set_commands
 from hdx_cli.cli_interface.shadow import commands as shadow_
 from hdx_cli.cli_interface.sources import commands as sources_
@@ -25,8 +28,6 @@ from hdx_cli.cli_interface.stream import commands as stream_
 from hdx_cli.cli_interface.svc_account import commands as service_account_
 from hdx_cli.cli_interface.table import commands as table_
 from hdx_cli.cli_interface.transform import commands as transform_
-from hdx_cli.cli_interface.row_policy import commands as row_policy_
-from hdx_cli.cli_interface.column import commands as column_
 from hdx_cli.cli_interface.user import commands as user_
 from hdx_cli.cli_interface.view import commands as view_
 from hdx_cli.config.initial_setup import first_time_use_config, is_first_time_use
@@ -191,6 +192,7 @@ hdx_cli.add_command(query_option_.query_option)
 hdx_cli.add_command(credentials_.credential)
 hdx_cli.add_command(check_health_.check_health)
 hdx_cli.add_command(resource_summary_.resource_summary)
+hdx_cli.add_command(logs_.logs)
 hdx_cli.add_command(version)
 
 
