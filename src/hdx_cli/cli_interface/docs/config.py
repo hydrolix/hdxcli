@@ -55,6 +55,7 @@ DOC_STRUCTURE: List[Dict[str, Any]] = [
             "pool",
             "integration",
             "query-option",
+            "show-defaults",
             "resource-summary",
         ],
         "frontmatter": {
