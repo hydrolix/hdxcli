@@ -1,7 +1,11 @@
 from typing import Optional, Union
 
 import click
+from rich.console import Console
+from rich.rule import Rule
+from rich.table import Table
 
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_get
 from hdx_cli.library_api.common.exceptions import ConfigurationNotFoundException
 from hdx_cli.library_api.common.logging import get_logger
@@ -9,6 +13,7 @@ from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
+console = Console()
 
 
 def get_resource_count(profile: ProfileUserContext, path: str) -> int:
@@ -27,37 +32,34 @@ def get_resource_count(profile: ProfileUserContext, path: str) -> int:
     return 0
 
 
-@click.command(
-    name="resource-summary",
-)
+@click.command(cls=HdxCommand, name="resource-summary")
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
-def resource_summary(
-        ctx: click.Context,
-):
-    """
-    Summarizes the count of resources accessible to the current user.
+def resource_summary(ctx: click.Context):
+    """Summarize the count of all resources in the organization.
+    This command provides a quick overview of the total number of projects,
+    tables, transforms, views, and other key resources that the current
+    user has permission to view.
 
-    This command provides a list of the number of projects,
-    tables, transforms, views, and other resources that your user
-    has permission to view.
+    \b
+    Examples:
+      # Display a summary of all resources
+      {full_command_prefix} resource-summary
     """
     profile = ctx.parent.obj["usercontext"]
     resource_map = _resource_summary(profile)
     if not resource_map:
         return
 
-    click.echo("----------------")
-    click.echo("Resource Summary")
-    click.echo("----------------")
-
-    # Calculate the longest key name for alignment
-    max_len = max(len(name) for name in resource_map.keys()) if resource_map else 0
+    console.print(Rule("Resource Summary", style="dim", characters="─"))
+    summary_table = Table(show_header=False, box=None, padding=(0, 0), pad_edge=False)
+    summary_table.add_column(style="dim", no_wrap=True)
+    summary_table.add_column()
 
     for resource_name, count in resource_map.items():
-        label = f"{resource_name}:"
-        click.echo(f"{label:<{max_len + 2}} {count}")
+        summary_table.add_row(f"{resource_name}:", str(count))
+    console.print(summary_table)
 
 
 def _resource_summary(profile: ProfileUserContext) -> Optional[dict]:

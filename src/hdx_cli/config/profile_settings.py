@@ -2,6 +2,7 @@ import os
 from typing import Optional, Union, overload
 
 import toml
+from InquirerPy import inquirer
 
 from hdx_cli.auth.session import delete_session_file
 from hdx_cli.config.paths import PROFILE_CONFIG_FILE
@@ -20,41 +21,22 @@ def profile_config_from_standard_input(
     hostname: Optional[str] = None, scheme: Optional[str] = None
 ) -> Optional[BasicProfileConfig]:
     try:
-        # Get hostname
-        default_hostname_prompt = f" (default: {hostname})" if hostname else ""
-        while True:
-            logger.info(f"Enter the host address for the profile{default_hostname_prompt}: [!n]")
-            raw_input = input("").strip()
-            if not raw_input and hostname:
-                input_hostname = hostname
-            else:
-                input_hostname = raw_input
+        input_hostname = inquirer.text(
+            message="Enter the host address for the profile:",
+            default=hostname or "",
+            validate=is_valid_hostname,
+            invalid_message="Invalid host name format. Please, try again.",
+        ).execute()
 
-            if is_valid_hostname(input_hostname):
-                break
-            else:
-                logger.info("Invalid host name. Please, try again.")
+        use_tls = inquirer.confirm(
+            message="Use TLS (https) for connection?",
+            default=scheme == "https" if scheme else True,
+        ).execute()
 
-        # Get scheme (TLS/HTTPS)
-        default_scheme_prompt = f" (default: {scheme})" if scheme else ""
-        while True:
-            logger.info(f"Use TLS (https) for connection? (Y/n){default_scheme_prompt}: [!n]")
-            choice = input("").strip().lower()
-            if choice in ("yes", "y"):
-                input_scheme = "https"
-                break
-            elif choice in ("no", "n"):
-                input_scheme = "http"
-                break
-            elif not choice and scheme:
-                input_scheme = scheme
-                break
-            else:
-                logger.info("Invalid input. Please enter 'yes' or 'no'.")
-
+        input_scheme = "https" if use_tls else "http"
         return BasicProfileConfig(hostname=input_hostname, scheme=input_scheme)
-    except (KeyboardInterrupt, EOFError) as e:
-        logger.debug(f"Configuration process cancelled by user: {e}")
+    except KeyboardInterrupt:
+        logger.debug("Configuration process cancelled by user.")
     except HdxCliException as e:
         logger.debug(f"An error occurred during configuration: {e}")
     return None

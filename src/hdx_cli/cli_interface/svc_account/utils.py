@@ -1,13 +1,15 @@
+import json
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 import jwt
 
+from hdx_cli.auth.session import save_session_data
 from hdx_cli.cli_interface.common.cached_operations import find_roles
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_delete
 from hdx_cli.library_api.common.exceptions import LogicException, ResourceNotFoundException
-from hdx_cli.models import ProfileUserContext
+from hdx_cli.models import ProfileUserContext, AuthInfo
 
 
 def _parse_duration_to_iso(duration: str) -> Optional[str]:
@@ -38,7 +40,7 @@ def _parse_duration_to_iso(duration: str) -> Optional[str]:
         raise ValueError("Invalid duration unit.")
 
     future_date = now + delta
-    # Format to ISO 8601 with 'Z' for UTC
+    # Format to ISO 8601
     return future_date.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 
@@ -55,27 +57,39 @@ def create_service_account_token(
         body["expiry"] = expiry_iso
 
     response_data = basic_create(profile, resource_path, body=body).json()
-
-    token_str = response_data.get("token")
-    if not isinstance(token_str, str):
-        raise LogicException("Invalid token format in API response: expected a JWT string.")
-
     try:
-        # Decode JWT to extract expiration info
+        token_str = response_data["token"]
         decoded_payload = jwt.decode(token_str, options={"verify_signature": False})
-
         iat = decoded_payload.get("iat", 0)
         exp = decoded_payload.get("exp", 0)
         expires_in = exp - iat if exp and iat else 0
 
-        # Normalize the output
         return {
             "access_token": token_str,
             "expires_in": int(expires_in),
             "token_type": "Bearer",
         }
-    except jwt.PyJWTError as e:
-        raise LogicException(f"Failed to decode JWT: {e}")
+
+    except (TypeError, KeyError, jwt.PyJWTError) as e:
+        raise LogicException(
+            f"Invalid API response or token format: {e}. Raw token response: {json.dumps(response_data)}"
+        ) from e
+
+
+def set_token_as_auth(profile: ProfileUserContext, token_dict: Dict[str, Any]):
+    """Updates the current profile to use the provided token for authentication."""
+    token_expiration_time = datetime.now() + timedelta(seconds=token_dict.get("expires_in") * 0.95)
+    auth_info = AuthInfo(
+        token=token_dict.get("access_token"),
+        expires_at=token_expiration_time,
+        token_type=token_dict.get("token_type"),
+        org_id=profile.auth.org_id,
+        username=profile.auth.username,
+        method="service_account",
+    )
+
+    profile.auth = auth_info
+    save_session_data(profile)
 
 
 def revoke_all_service_account_tokens(profile: ProfileUserContext, svc_account_id: str):

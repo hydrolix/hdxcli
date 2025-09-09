@@ -1,5 +1,5 @@
 [project]
-version = "1.0.81"
+version = "1.0.83"
 name = "hdxcli"
 requires-python = ">=3.10,<4.0"
 maintainers = [
@@ -10,7 +10,7 @@ maintainers = [
 
 [tool.poetry]
 name = "hdxcli"
-version = "1.0.81"
+version = "1.0.83"
 description = "Hydrolix command line utility to do CRUD operations on projects, tables, transforms and other resources in Hydrolix clusters"
 authors = ["German Diago Gomez <german@hydrolix.io>", "Agustin Actis <agustin@hydrolix.io>"]
 license = "Apache-2.0"
@@ -38,6 +38,7 @@ pydantic = "^2.5.3"
 tqdm = "^4.66.4"
 pyjwt = "^2.10.1"
 inquirerpy = "^0.3.4"
+inflect = "^7.5.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.1.3"

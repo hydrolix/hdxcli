@@ -50,13 +50,11 @@ class CacheDict:
         return key in self._cache_dict
 
 
-def save_session_data(user_context: ProfileUserContext, cache_dir_path: Path) -> None:
+def save_session_data(user_context: ProfileUserContext) -> None:
     """
     Save a cache file for this profile.
-    The profile cache file is saved in cache_dir_path
     """
-    if not isinstance(cache_dir_path, Path):
-        cache_dir_path = Path(cache_dir_path)
+    cache_dir_path = user_context.profile_config_file.parent
     os.makedirs(cache_dir_path, mode=0o700, exist_ok=True)
 
     expiration_time_str = user_context.token_expiration.isoformat()
@@ -76,7 +74,7 @@ def save_session_data(user_context: ProfileUserContext, cache_dir_path: Path) ->
     }
 
     cache_dict_obj = CacheDict.build_from_dict(cache_content)
-    profile_file_path = cache_dir_path / f"{user_context.profilename}"
+    profile_file_path = user_context.profile_config_file.parent / f"{user_context.profilename}"
 
     with open(profile_file_path, "w", encoding="utf-8") as f:
         cache_dict_obj.save_to_stream(f)

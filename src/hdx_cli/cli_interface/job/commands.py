@@ -1,43 +1,52 @@
 import click
 
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import (
-    confirmation_prompt,
-    ensure_logged_in,
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import (
     report_error_and_exit,
+    ensure_logged_in,
 )
-from ..common.undecorated_click_commands import basic_create
 from .alter.commands import alter as alter_command
 from .batch.commands import batch as batch_command
+from ..common.click_extensions import HdxGroup, HdxCommand
 
 logger = get_logger()
 
 
-@click.group(help="Job-related operations")
+@click.group(cls=HdxGroup)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def job(ctx: click.Context):
+    """Manage batch and alter jobs."""
     user_profile = ctx.parent.obj["usercontext"]
     org_id = user_profile.org_id
     jobs_path = f"/config/v1/orgs/{org_id}/jobs/"
     ctx.obj = {"resource_path": jobs_path, "usercontext": user_profile}
 
 
-@click.command(help="Purge all batch jobs in your org.")
+@click.command(cls=HdxCommand)
+@click.option(
+    "--yes",
+    "-y",
+    is_flag=True,
+    help="Skip confirmation prompt.",
+)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
-@confirmation_prompt(
-    prompt="Please type 'purge all jobs' to proceed: ",
-    confirmation_message="purge all jobs",
-    fail_message="Incorrect prompt input: jobs have not been purged",
-)
-def purgejobs(ctx: click.Context):
+def purgejobs(ctx: click.Context, yes: bool):
+    """Purge all batch jobs in the organization."""
+    if not yes:
+        click.confirm(
+            "Are you sure you want to purge all jobs?",
+            abort=True
+        )
+
     user_profile = ctx.parent.obj["usercontext"]
     org_id = user_profile.org_id
     purgejobs_path = f"/config/v1/orgs/{org_id}/purgejobs/"
     basic_create(user_profile, purgejobs_path)
-    logger.info("All jobs purged")
+    logger.info("All completed and failed jobs have been purged.")
 
 
 job.add_command(alter_command)

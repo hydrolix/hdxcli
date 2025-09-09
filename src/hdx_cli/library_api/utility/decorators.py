@@ -138,12 +138,10 @@ def ensure_logged_in(func):
 def with_profiles_context(func):
     @functools.wraps(func)
     def decorated_function(ctx, *args, **kwargs):
-        profile_config_file = ctx.parent.obj["profilecontext"].config_file
-        profile_configs = get_profile_configs(profile_config_file=profile_config_file)
-        profile_context = ProfileLoadContext(
-            name=kwargs.get("profile_name"),
-            config_file=profile_config_file,
-        )
+        profile_context = ctx.parent.obj["profilecontext"]
+        profile_configs = get_profile_configs(profile_config_file=profile_context.config_file)
+        if kwargs.get("profile_name"):
+            profile_context.name = kwargs.get("profile_name")
         return func(ctx, profile_context, profile_configs, *args, **kwargs)
 
     return decorated_function
@@ -159,18 +157,6 @@ def skip_group_logic_on_help(func):
         return func(*args, **kwargs)
 
     return wrapper
-
-
-def force_operation_option(func):
-    """Decorator to add the --force-operation option."""
-    func = click.option(
-        "-F",
-        "--force-operation",
-        is_flag=True,
-        default=False,
-        help='This flag allows adding the "force_operation" parameter to the request.',
-    )(func)
-    return func
 
 
 def no_rollback_option(func):
