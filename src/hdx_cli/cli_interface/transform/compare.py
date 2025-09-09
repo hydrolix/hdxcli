@@ -4,12 +4,13 @@ from pathlib import Path
 import click
 
 from hdx_cli.auth.context_builder import load_user_context
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_transform
 from hdx_cli.cli_interface.transform.comparator.engine import TransformComparator
 from hdx_cli.config.paths import PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import report_error_and_exit
-from hdx_cli.library_api.utility.file_handling import load_json_settings_file
+from hdx_cli.library_api.utility.file_handling import read_json_from_file
 from hdx_cli.models import ProfileUserContext, ProfileLoadContext
 
 logger = get_logger()
@@ -40,7 +41,7 @@ def _load_transform_spec(
     Returns a tuple of (transform_data, description)."""
     if Path(specifier).is_file() and specifier.endswith('.json'):
         logger.debug(f"Loading transform from local file: {specifier}")
-        return load_json_settings_file(None, None, specifier), f"local file: {specifier}"
+        return read_json_from_file(specifier), f"local file: {specifier}"
 
     # Check for cluster reference format: project.table.transform
     parts = specifier.split('.')
@@ -57,7 +58,7 @@ def _load_transform_spec(
     )
 
 
-@click.command(name="compare")
+@click.command(cls=HdxCommand, name="compare")
 @click.argument("transform_a_spec", metavar="TRANSFORM_A")
 @click.argument("transform_b_spec", metavar="TRANSFORM_B")
 @click.option(
@@ -76,7 +77,7 @@ def compare(
     """Compares two transforms, showing differences in their settings.
 
     Transforms can be specified as a local JSON file path or as a reference
-    to a transform on a cluster in the format: `project_name.table_name.transform_name``.
+    to a transform on a cluster in the format: `project_name.table_name.transform_name`.
 
     When comparing a transform on a different cluster, use `--profile-b` to
     specify the profile details for `TRANSFORM_B`.

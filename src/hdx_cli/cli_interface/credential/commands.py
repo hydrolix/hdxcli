@@ -1,21 +1,25 @@
-import json
-
 import click
+from InquirerPy import inquirer
+from rich.columns import Columns
+from rich.console import Console
+from rich.table import Table
 
-from ...library_api.common.generic_resource import access_resource
-from ...library_api.common.logging import get_logger
-from ...library_api.utility.decorators import ensure_logged_in, report_error_and_exit
-from ...models import ProfileUserContext
-from ..common.misc_operations import settings as command_settings
-from ..common.rest_operations import delete as command_delete
-from ..common.rest_operations import list_ as command_list
-from ..common.rest_operations import show as command_show
-from ..common.undecorated_click_commands import basic_create
+from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
+from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
+from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
+from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
+from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.library_api.common.generic_resource import access_resource
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
+console = Console()
 
 
-@click.group(help="Credential-related operations")
+@click.group(cls=HdxGroup)
 @click.option(
     "--credential",
     "credential_name",
@@ -27,6 +31,9 @@ logger = get_logger()
 @report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def credential(ctx: click.Context, credential_name: str):
+    """Provides commands to create, list, show, and delete credentials.
+    It also includes a command to list all available credential types
+    which is useful before creating a new one."""
     user_profile = ctx.parent.obj["usercontext"]
     ProfileUserContext.update_context(user_profile, credentialname=credential_name)
     org_id = user_profile.org_id
@@ -36,24 +43,41 @@ def credential(ctx: click.Context, credential_name: str):
     }
 
 
-@click.command(help="Create a new credential.")
-@click.argument("credential_name", metavar="CREDENTIAL_NAME")
-@click.argument("credential_type", metavar="CREDENTIAL_TYPE")
+@click.command(cls=HdxCommand)
+@click.argument("resource_name")
+@click.argument("credential_type")
 @click.option("--description", required=False, help="Credential description.")
 @click.option(
-    "--details",
+    "--detail",
+     "details",
     required=False,
     default=None,
-    help='Credential details as a JSON string (e.g., \'{"key1": "value1", "key2": "value2"}\').',
+    nargs=2,
+    multiple=True,
+    help="A key-value pair for a credential detail. Use multiple times for multiple details.",
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def create(
-    ctx: click.Context, credential_name: str, credential_type: str, description: str, details: str
+    ctx: click.Context,
+    resource_name: str,
+    credential_type: str,
+    description: str,
+    details: tuple,
 ):
-    """
-    Create a new credential by providing all parameters in a single command
-    or by providing them interactively.
+    """Create a new {resource}.
+    The command prompts for any required details not provided as options.
+    For fully non-interactive use, all details must be specified
+    using the `--detail` option.
+
+    \b
+    Examples:
+      # Create a {resource} interactively
+      {full_command_prefix} create {example_name} gcp-service-account
+
+    \b
+      # Create a {resource} non-interactively with key-value details
+      {full_command_prefix} create aws-prod-keys aws_access_keys --detail access_key_id "your-id" --detail secret_access_key "your-secret"
     """
     profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
@@ -69,49 +93,31 @@ def create(
     credential_type_info = credential_types[credential_type]
     required_fields = credential_type_info.get("fields", {})
 
-    # Parse JSON string for --details if provided
-    if details:
-        try:
-            details = json.loads(details)
-        except json.JSONDecodeError as exc:
-            raise click.BadParameter(
-                "Invalid format for --details. It should be a valid JSON string."
-            ) from exc
-    else:
-        details = {}
+    details = dict(details) if details else {}
 
-    # Prompt for any missing required fields
-    for field, props in required_fields.items():
-        if field not in details:
-            attempts = 0
-            while attempts < 3:
-                logger.info(
-                    f"Enter value for '{field}' "
-                    f"({'Required' if props['required'] else 'Optional'}): [!i]"
-                )
-                value = input().strip()
-                if not value and props.get("required"):
-                    logger.info(f"'{field}' is required. Please provide a value.")
-                    attempts += 1
-                elif value:
-                    details[field] = value
-                    break
-                else:
-                    break
-            else:
-                logger.info("Too many failed attempts. Canceling operation.")
-                return
+    try:
+        # Prompt for any missing required fields
+        for field, props in required_fields.items():
+            if field not in details and props.get("required"):
+                details[field] = inquirer.text(
+                    message=f"Enter value for '{field}':",
+                    validate=lambda val: bool(val),
+                    invalid_message=f"'{field}' is required. Please provide a value.",
+                ).execute()
+    except KeyboardInterrupt:
+        logger.info("\nOperation cancelled by user.")
+        return
 
     body = {
         "description": description,
         "type": credential_type,
         "details": details,
     }
-    basic_create(profile, resource_path, credential_name, body=body)
-    logger.info(f"Created credential {credential_name}")
+    basic_create(profile, resource_path, resource_name, body=body)
+    logger.info(f"Created {ctx.parent.command.name} '{resource_name}'")
 
 
-@click.command(help="List credential types.")
+@click.command(cls=HdxCommand, name="list-types")
 @click.option(
     "--cloud",
     "-c",
@@ -124,27 +130,43 @@ def create(
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
 def list_types(ctx: click.Context, cloud: str):
+    """List available {resource} types.
+
+    \b
+    Examples:
+      # List all available {resource} types, filtering by 'azure' cloud
+      {full_command_prefix} list-types --cloud azure
+    """
     profile = ctx.parent.obj["usercontext"]
     credential_types = access_resource(profile, [("credentials/types", None)])
 
     cloud = cloud.lower() if cloud else None
+
+    table = Table(show_header=True, box=None, padding=(0, 1), header_style="bold", pad_edge=False)
+    table.add_column("Name", style="dim", no_wrap=True)
+    table.add_column("Cloud")
+    table.add_column("Required Parameters")
+
     for cred, info_cred in credential_types.items():
         cloud_name = info_cred.get("cloud", "unknown")
         cloud_name = cloud_name.lower() if cloud_name else None
         if cloud and cloud_name != cloud:
             continue
 
-        logger.info(f"\nName: {cred}\nCloud: {cloud_name}")
         parameters = info_cred.get("fields", {})
-        param_lines = [
-            f"  - {name} ({'required' if details.get('required') else 'optional'})"
-            for name, details in sorted(
-                parameters.items(), key=lambda x: not x[1].get("required", False)
-            )
-        ]
+        required_params = [name for name, details in parameters.items() if details.get("required")]
 
-        if param_lines:
-            logger.info("\n".join(param_lines))
+        if not required_params:
+            table.add_row(cred, cloud_name, "[dim]No required parameters.[/dim]")
+            continue
+
+        permission_renderable = Columns(required_params, equal=True, column_first=True)
+        table.add_row(cred, cloud_name, permission_renderable)
+
+    if not table.rows:
+        logger.info(f"No credential types found for cloud '{cloud}'.")
+        return
+    console.print(table)
 
 
 credential.add_command(command_list)
@@ -152,4 +174,4 @@ credential.add_command(create)
 credential.add_command(command_delete)
 credential.add_command(command_show)
 credential.add_command(command_settings)
-credential.add_command(list_types, name="list-types")
+credential.add_command(list_types)

@@ -6,6 +6,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_get
 from hdx_cli.library_api.utility.decorators import ensure_logged_in, report_error_and_exit
 from hdx_cli.models import ProfileUserContext
@@ -109,7 +110,7 @@ def _show_defaults(profile: ProfileUserContext, categories: List[str]):
             console.print(panel)
 
 
-@click.command(name="show-defaults")
+@click.command(cls=HdxCommand, name="show-defaults")
 @click.argument("category", nargs=-1, required=False)
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
