@@ -118,11 +118,9 @@ def create(
     table_settings_path: str,
     shadow_transform_name: str,
 ):
-    """Create a new shadow table.
-
-    This command creates a new shadow table and a corresponding transform based
-    on a source table and transform. It requires the source context to be
-    specified via options.
+    """Create a new shadow table. This command creates a new shadow table
+    and a corresponding transform based on a source table and transform.
+    It requires the source context to be specified via options.
 
     \b
     Examples:
@@ -139,11 +137,11 @@ def create(
     # Set table context to fetch source transform
     user_profile.tablename = source_table
     source_table_id = json.loads(basic_show(user_profile, resource_path, source_table)).get("uuid")
-    source_transform = json.loads(
+    source_transform_obj = json.loads(
         basic_show(user_profile, f"{resource_path}{source_table_id}/transforms/", source_transform)
     )
     source_transform_path = (
-        f'{resource_path}{source_table_id}/transforms/{source_transform.get("uuid")}/'
+        f'{resource_path}{source_table_id}/transforms/{source_transform_obj.get("uuid")}/'
     )
 
     # Set names if not provided
@@ -171,12 +169,12 @@ def create(
     logger.info(f"Created transform '{shadow_transform_name}'")
 
     # Set shadow configuration into the source transform
-    source_transform["settings"]["shadow_table"] = {
+    source_transform_obj["settings"]["shadow_table"] = {
         "table_id": shadow_table_id,
         "transform_id": shadow_transform_id,
         "rate": sample_rate / 100,
     }
-    basic_update(user_profile, source_transform_path, body=source_transform)
+    basic_update(user_profile, source_transform_path, body=source_transform_obj)
     logger.info("Updated source transform with shadow configuration")
     logger.info(f"Shadow table '{shadow_table_name}' created successfully")
 
