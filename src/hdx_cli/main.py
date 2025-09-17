@@ -1,19 +1,21 @@
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import click
-from importlib.metadata import version, PackageNotFoundError
 from trogon import tui
 
 from hdx_cli.auth.context_builder import load_user_context
 from hdx_cli.cli_interface.check_health import commands as check_health_
 from hdx_cli.cli_interface.column import commands as column_
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.credential import commands as credentials_
 from hdx_cli.cli_interface.defaults import commands as defaults_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
+from hdx_cli.cli_interface.docs import commands as docs_
 from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.integration import commands as integration_
 from hdx_cli.cli_interface.job import commands as job_
+from hdx_cli.cli_interface.logs import commands as logs_
 from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.pool import commands as pool_
 from hdx_cli.cli_interface.profile import commands as profile_
@@ -32,7 +34,6 @@ from hdx_cli.cli_interface.table import commands as table_
 from hdx_cli.cli_interface.transform import commands as transform_
 from hdx_cli.cli_interface.user import commands as user_
 from hdx_cli.cli_interface.view import commands as view_
-from hdx_cli.cli_interface.docs import commands as docs_
 from hdx_cli.config.initial_setup import first_time_use_config, is_first_time_use
 from hdx_cli.library_api.common.config_constants import PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.exceptions import ConfigurationExistsException
@@ -56,6 +57,7 @@ def configure_logger(debug=False):
 
 
 # pylint: disable=line-too-long
+
 
 @tui(help="Open a Textual User Interface (TUI) for the CLI.")
 @click.group(cls=HdxGroup)
@@ -252,6 +254,7 @@ hdx_cli.add_command(resource_summary_.resource_summary)
 hdx_cli.add_command(defaults_.show_defaults)
 hdx_cli.add_command(version)
 hdx_cli.add_command(docs_.docs)
+hdx_cli.add_command(logs_.logs)
 
 
 def main():
