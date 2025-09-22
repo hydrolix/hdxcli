@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 import click
@@ -5,7 +6,31 @@ import click
 from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.library_api.utility.decorators import ensure_logged_in, report_error_and_exit
 
-from .query import show_logs_logic
+from .query import LEVELS, show_logs_logic
+
+
+def _validate_level(ctx, param, value):
+    """Validate and normalize the log level."""
+    if not value:
+        return None
+
+    for level in LEVELS:
+        if level.lower() == value.lower():
+            # Return the uppercase version
+            return level
+
+    raise click.BadParameter(f"'{value}' is not a valid level. Choose from: {', '.join(LEVELS)}")
+
+
+def _validate_service_name(ctx, param, value):
+    """Validate that the service name contains only safe characters."""
+    if not value:
+        return None
+    if not re.match(r"^[a-zA-Z0-9_.-]+$", value):
+        raise click.BadParameter(
+            f"'{value}' contains invalid characters. Use only alphanumeric, '_', '.', and '-'."
+        )
+    return value
 
 
 @click.group(cls=HdxGroup)
@@ -25,12 +50,13 @@ def logs(ctx: click.Context):
     "-s",
     "service_name",
     help="Filter logs by a specific service name.",
+    callback=_validate_service_name,
 )
 @click.option(
     "--tail",
     "-t",
     "tail_count",
-    type=click.IntRange(min=1),
+    type=click.IntRange(min=1, max=10000),
     default=10,
     help="Show the last N log entries. Defaults to 10.",
 )
@@ -38,7 +64,8 @@ def logs(ctx: click.Context):
     "--level",
     "-l",
     "level_filter",
-    help="Filter by log level (e.g., INFO, ERROR, NONE). Match is exact and case-insensitive.",
+    help=f"Filter by log level. Case-insensitive. Choices: {', '.join(LEVELS)}.",
+    callback=_validate_level,
 )
 @click.option(
     "--filter",
@@ -56,10 +83,8 @@ def show(
     filter_pattern: Optional[str],
 ):
     """Display and filter diagnostic logs from the cluster.
-
-    This command queries the logs table directly, allowing for powerful,
-    server-side filtering to help developers debug issues efficiently.
-    All provided options are combined to build a single query.
+    This command queries the logs table directly, allowing
+    filtering to help developers debug issues efficiently.
 
     \b
     Examples:

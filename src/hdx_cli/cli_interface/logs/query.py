@@ -7,11 +7,28 @@ from rich.console import Console
 from rich.text import Text
 
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_get
-from hdx_cli.library_api.common.exceptions import LogicException
+from hdx_cli.library_api.common.exceptions import HdxCliException, LogicException
 from hdx_cli.models import ProfileUserContext
 
 PAGER_THRESHOLD = 20
 console = Console(soft_wrap=True)
+
+# Static list of levels for user input validation
+LEVELS = ["INFO", "WARN", "ERROR", "TRACE", "FATAL", "NONE"]
+
+# Mapping of levels
+LEVEL_VARIATIONS = {
+    "INFO": ("info", "INFO"),
+    "WARN": ("warn", "WARN", "warning", "WARNING"),
+    "ERROR": ("error", "ERROR"),
+    "FATAL": ("fatal", "FATAL"),
+    "TRACE": ("trace", "TRACE"),
+}
+
+
+def _sanitize_for_sql(text: str) -> str:
+    """Escapes single quotes."""
+    return text.replace("'", "''")
 
 
 def _build_query(
@@ -22,14 +39,24 @@ def _build_query(
 ) -> str:
     """Constructs the SQL query string based on the provided filters."""
     select_clause = "SELECT timestamp, level, kubernetes.container_name AS service, message, error"
-
     conditions = []
+
     if service:
         conditions.append(f"service = '{service}'")
+
     if level:
-        conditions.append(f"lower(level) = '{level.lower()}'")
+        canonical_level = level.upper()
+        if canonical_level == "NONE":
+            conditions.append("level IS NULL")
+        else:
+            variations = LEVEL_VARIATIONS.get(canonical_level, ())
+            if variations:
+                in_clause = ", ".join(f"'{v}'" for v in variations)
+                conditions.append(f"level IN ({in_clause})")
+
     if text_filter:
-        conditions.append(f"message LIKE '%{text_filter}%'")
+        sanitized_filter = _sanitize_for_sql(text_filter)
+        conditions.append(f"message LIKE '%{sanitized_filter}%'")
 
     where_clause = ""
     if conditions:
