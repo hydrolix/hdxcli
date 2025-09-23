@@ -40,8 +40,7 @@ def _validate_service_name(ctx, param, value):
 def logs(ctx: click.Context):
     """Provides commands to interact with logs from the cluster."""
     user_profile = ctx.parent.obj["usercontext"]
-    resource_path = "/query/"
-    ctx.obj = {"resource_path": resource_path, "usercontext": user_profile}
+    ctx.obj = {"usercontext": user_profile}
 
 
 @logs.command(cls=HdxCommand, name="show")
@@ -100,5 +99,4 @@ def show(
       hdxcli logs show --level none
     """
     profile = ctx.parent.obj["usercontext"]
-    resource_path = ctx.parent.obj["resource_path"]
-    show_logs_logic(profile, resource_path, service_name, tail_count, level_filter, filter_pattern)
+    show_logs_logic(profile, service_name, tail_count, level_filter, filter_pattern)
