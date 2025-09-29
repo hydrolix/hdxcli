@@ -6,16 +6,16 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from hdx_cli.cli_interface.common.cached_operations import find_users, find_invites_user
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.cached_operations import find_invites_user, find_users
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.undecorated_click_commands import (
-    basic_show,
+    basic_create,
     basic_delete,
-    basic_create
+    basic_show,
 )
 from hdx_cli.library_api.common.exceptions import LogicException
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import ensure_logged_in, report_error_and_exit, dynamic_confirmation_prompt
+from hdx_cli.library_api.utility.decorators import dynamic_confirmation_prompt, ensure_logged_in
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
@@ -42,7 +42,6 @@ def user(ctx: click.Context, user_email: str):
 
 @click.command(cls=HdxCommand, name="list")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_users(ctx: click.Context):
     """List all {resource_plural}.
 
@@ -84,7 +83,6 @@ def list_users(ctx: click.Context):
     help="Output in indented JSON format.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def show(ctx: click.Context, resource_email: str, indent: bool):
     """Show details for a specific {resource}.
 
@@ -130,7 +128,6 @@ _confirmation_prompt = partial(
 )
 @click.argument("resource_name", metavar="USER_EMAIL")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: bool):
     """Permanently deletes the specified {resource}. This action
     is irreversible.
@@ -161,7 +158,6 @@ def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: 
     help="Role to assign. Can be used multiple times.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def assign(ctx: click.Context, resource_email: str, roles: list):
     """Assign one or more roles to a {resource}.
     This command adds roles to an existing {resource}.
@@ -173,9 +169,9 @@ def assign(ctx: click.Context, resource_email: str, roles: list):
     """
     profile = ctx.parent.obj.get("usercontext")
     resource_path = ctx.parent.obj.get("resource_path")
-    user_uuid = json.loads(basic_show(profile, resource_path, resource_email, filter_field="email")).get(
-        "uuid"
-    )
+    user_uuid = json.loads(
+        basic_show(profile, resource_path, resource_email, filter_field="email")
+    ).get("uuid")
 
     resource_path = f"{resource_path}{user_uuid}/add_roles/"
     body = {"roles": roles}
@@ -195,7 +191,6 @@ def assign(ctx: click.Context, resource_email: str, roles: list):
     help="Role to remove. Can be used multiple times.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def remove(ctx: click.Context, resource_email: str, roles: list):
     """Remove one or more roles from a {resource}.
     This command removes existing roles from a {resource}.
@@ -258,7 +253,6 @@ def invite(ctx: click.Context, user_email: str):
     help="Role to assign to the new user. Can be used multiple times.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def send(ctx: click.Context, resource_email: str, roles: Tuple[str]):
     """Create and send a new {resource}.
     Sends an email invitation to a new user with a specific set of roles.
@@ -280,7 +274,6 @@ def send(ctx: click.Context, resource_email: str, roles: Tuple[str]):
 @click.command(cls=HdxCommand)
 @click.argument("resource_email", metavar="INVITE_EMAIL")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def resend(ctx: click.Context, resource_email: str):
     """Resend an existing {resource}.
     Resends an invitation to a user, typically when the original invitation
@@ -293,9 +286,9 @@ def resend(ctx: click.Context, resource_email: str):
     """
     resource_path = ctx.parent.obj.get("resource_path")
     profile = ctx.parent.obj.get("usercontext")
-    invite_id = json.loads(basic_show(profile, resource_path, resource_email, filter_field="email")).get(
-        "id"
-    )
+    invite_id = json.loads(
+        basic_show(profile, resource_path, resource_email, filter_field="email")
+    ).get("id")
     resource_path = f"{resource_path}{invite_id}/resend_invite/"
     basic_create(profile, resource_path)
     logger.info(f"Resent invitation to {resource_email}")
@@ -304,7 +297,6 @@ def resend(ctx: click.Context, resource_email: str):
 @click.command(cls=HdxCommand, name="list")
 @click.option("-p", "--pending", is_flag=True, default=False, help="List only pending invitations.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_invites(ctx: click.Context, pending: bool):
     """List all {resource_plural}.
 

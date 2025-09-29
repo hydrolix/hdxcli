@@ -985,7 +985,7 @@ expected_output = "Removed role(s) from 'test_ci_service_account'"
 [[test]]
 name = "Generating a token with an invalid duration format fails gracefully"
 commands_under_test = ["python3 -m hdx_cli.main service-account generate-token test_ci_service_account --duration 30x"]
-expected_output = "Error: Invalid duration format: '30x'. Use 'd' (days), 'h' (hours), 'm' (minutes), or 'y' (years)."
+expected_output_expr = "'Invalid value for' in result and '--duration' in result"
 
 
 ################################################### query-options ####################################################

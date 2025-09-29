@@ -1,7 +1,6 @@
 import atexit
 import functools
 import pickle
-import sys
 from functools import wraps
 from pathlib import Path
 
@@ -10,33 +9,10 @@ import toml
 
 from ...auth.context_builder import load_user_context
 from ...config.paths import PROFILE_CONFIG_FILE
-from ...models import ProfileLoadContext
-from ..common.exceptions import HdxCliException, HttpException
+from ..common.exceptions import HdxCliException
 from ..common.logging import get_logger
-from .json_util import http_error_pretty_format
 
 logger = get_logger()
-
-
-def report_error_and_exit(exctype=Exception, exit_code=-1):
-    def report_deco(func):
-        @wraps(func)
-        def report_wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except click.Abort:
-                raise
-            except exctype as exc:
-                logger.debug(f"{exc}")
-                if isinstance(exc, HttpException):
-                    logger.error(f"Error: {http_error_pretty_format(exc)}")
-                else:
-                    logger.error(f"Error: {exc}")
-                sys.exit(exit_code)
-
-        return report_wrapper
-
-    return report_deco
 
 
 def dynamic_confirmation_prompt(prompt, confirmation_message, fail_message, *, prompt_active=False):
@@ -145,18 +121,6 @@ def with_profiles_context(func):
         return func(ctx, profile_context, profile_configs, *args, **kwargs)
 
     return decorated_function
-
-
-def skip_group_logic_on_help(func):
-    """Decorator to skip group logic if --help is in sys.argv."""
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if "--help" in sys.argv:
-            return
-        return func(*args, **kwargs)
-
-    return wrapper
 
 
 def no_rollback_option(func):

@@ -5,8 +5,9 @@ from hdx_cli.cli_interface.common.undecorated_click_commands import basic_update
 from hdx_cli.library_api.common.exceptions import ResourceNotFoundException
 from hdx_cli.library_api.common.generic_resource import access_resource_detailed
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.models import ProfileUserContext
+
 from . import const, utils
 from .cleaner import table as table_cleaner
 
@@ -33,7 +34,6 @@ logger = get_logger()
     help="Attempt to automatically repair detected issues.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def check_health(
     ctx: click.Context,

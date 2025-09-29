@@ -4,15 +4,15 @@ from rich.columns import Columns
 from rich.console import Console
 from rich.table import Table
 
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
-from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
 from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
 from hdx_cli.library_api.common.generic_resource import access_resource
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
@@ -28,7 +28,6 @@ console = Console()
     help="Perform operation on the passed credential.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def credential(ctx: click.Context, credential_name: str):
     """Provides commands to create, list, show, and delete credentials.
@@ -49,7 +48,7 @@ def credential(ctx: click.Context, credential_name: str):
 @click.option("--description", required=False, help="Credential description.")
 @click.option(
     "--detail",
-     "details",
+    "details",
     required=False,
     default=None,
     nargs=2,
@@ -57,7 +56,6 @@ def credential(ctx: click.Context, credential_name: str):
     help="A key-value pair for a credential detail. Use multiple times for multiple details.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(
     ctx: click.Context,
     resource_name: str,
@@ -128,7 +126,6 @@ def create(
     help="Filter the credential types by a specific cloud.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_types(ctx: click.Context, cloud: str):
     """List available {resource} types.
 

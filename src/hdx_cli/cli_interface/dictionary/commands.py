@@ -20,8 +20,6 @@ from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import (
     ensure_logged_in,
     no_rollback_option,
-    report_error_and_exit,
-    skip_group_logic_on_help,
     target_cluster_options,
 )
 from hdx_cli.library_api.utility.file_handling import read_bytes_from_file, read_json_from_file
@@ -48,8 +46,6 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
-@skip_group_logic_on_help
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def dictionary(ctx: click.Context, project_name: str, dictionary_name: str):
     """This group of commands allows creating, listing, showing, deleting,
@@ -83,7 +79,6 @@ def dictionary(ctx: click.Context, project_name: str, dictionary_name: str):
 @click.argument("dict_file_name", metavar="DICT_FILE_NAME")
 @click.argument("resource_name")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(
     ctx: click.Context,
     dict_settings_file_path: str,
@@ -124,7 +119,6 @@ def create(
 @target_cluster_options
 @no_rollback_option
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def migrate(
     ctx: click.Context,
     target_project_name: str,
@@ -204,7 +198,6 @@ def migrate(
     default=None,
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def download_file(ctx: click.Context, dictionary_filename: str, output_path: str):
     """
     Download a dictionary data file to your local machine.
@@ -232,8 +225,6 @@ def download_file(ctx: click.Context, dictionary_filename: str, output_path: str
 
 @click.group(cls=HdxGroup)
 @click.pass_context
-@skip_group_logic_on_help
-@report_error_and_exit(exctype=Exception)
 def files(ctx: click.Context):
     """Manage dictionary data files."""
     user_profile = ctx.parent.obj["usercontext"]
@@ -256,7 +247,6 @@ def files(ctx: click.Context):
     default="json",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def files_upload(
     ctx: click.Context,
     file_path_to_upload: str,
@@ -286,7 +276,6 @@ def files_upload(
 @click.command(cls=HdxCommand)
 @click.argument("file_name", metavar="FILE_NAME")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def files_delete(ctx: click.Context, file_name: str):
     """Delete a dictionary data file.
 

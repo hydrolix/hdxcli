@@ -4,15 +4,14 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from hdx_cli.cli_interface.common.cached_operations import find_transforms, find_batch_jobs
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
-from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_show
+from hdx_cli.cli_interface.common.cached_operations import find_batch_jobs, find_transforms
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
 from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_show
 from hdx_cli.library_api.common.exceptions import ResourceNotFoundException
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
 from hdx_cli.models import ProfileUserContext
 
@@ -42,34 +41,22 @@ def batch(ctx: click.Context, batch_name: str):
 
 @batch.command(cls=HdxCommand)
 @click.argument("job_name")
-@click.argument(
-    "settings_file_path",
-    type=click.Path(exists=True, readable=True)
-)
-@click.option(
-    "--project",
-    "project_name",
-    help="Override the project for the ingest job."
-)
-@click.option(
-    "--table",
-    "table_name",
-    help="Override the table for the ingest job."
-)
+@click.argument("settings_file_path", type=click.Path(exists=True, readable=True))
+@click.option("--project", "project_name", help="Override the project for the ingest job.")
+@click.option("--table", "table_name", help="Override the table for the ingest job.")
 @click.option(
     "--transform",
     "transform_name",
     help="Override the transform to use. Defaults to the table's default transform.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def ingest(
     ctx: click.Context,
     job_name: str,
     settings_file_path: str,
     project_name: str,
     table_name: str,
-    transform_name: str
+    transform_name: str,
 ):
     """Create an ingest job from a settings file.
 
@@ -94,17 +81,23 @@ def ingest(
     if project_name and table_name:
         body["settings"]["source"]["table"] = f"{project_name}.{table_name}"
     elif project_name or table_name:
-        raise click.BadOptionUsage("project", "Both --project and --table must be provided together.")
+        raise click.BadOptionUsage(
+            "project", "Both --project and --table must be provided together."
+        )
 
     # Determine the transform to use
-    final_project, final_table = body["settings"]["source"]["table"].split('.')
-    ProfileUserContext.update_context(user_profile, projectname=final_project, tablename=final_table)
+    final_project, final_table = body["settings"]["source"]["table"].split(".")
+    ProfileUserContext.update_context(
+        user_profile, projectname=final_project, tablename=final_table
+    )
 
     if not transform_name:
         if not (transform_name := body["settings"]["source"].get("transform")):
             transforms_list = find_transforms(user_profile)
             try:
-                transform_name = [t["name"] for t in transforms_list if t["settings"]["is_default"]][0]
+                transform_name = [
+                    t["name"] for t in transforms_list if t["settings"]["is_default"]
+                ][0]
             except (IndexError, KeyError) as exc:
                 raise ResourceNotFoundException(
                     "No default transform found for the table and no --transform was provided."
@@ -117,7 +110,6 @@ def ingest(
 
 @batch.command(cls=HdxCommand, name="list")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context):
     """List all batch jobs.
 
@@ -149,7 +141,6 @@ def list_(ctx: click.Context):
 @batch.command(cls=HdxCommand)
 @click.argument("job_name")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def cancel(ctx: click.Context, job_name: str):
     """Cancel a running batch job.
 
@@ -169,7 +160,6 @@ def cancel(ctx: click.Context, job_name: str):
 @batch.command(cls=HdxCommand)
 @click.argument("job_name")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def retry(ctx, job_name: str):
     """Retry a failed batch job.
 

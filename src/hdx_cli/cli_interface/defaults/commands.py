@@ -8,7 +8,7 @@ from rich.text import Text
 
 from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_get
-from hdx_cli.library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.models import ProfileUserContext
 
 console = Console()
@@ -113,7 +113,6 @@ def _show_defaults(profile: ProfileUserContext, categories: List[str]):
 @click.command(cls=HdxCommand, name="show-defaults")
 @click.argument("category", nargs=-1, required=False)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def show_defaults(ctx: click.Context, category: List[str]):
     """Show default settings for various resources.

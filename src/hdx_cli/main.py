@@ -1,16 +1,17 @@
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import click
-from importlib.metadata import version, PackageNotFoundError
 from trogon import tui
 
 from hdx_cli.auth.context_builder import load_user_context
 from hdx_cli.cli_interface.check_health import commands as check_health_
 from hdx_cli.cli_interface.column import commands as column_
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCliGroup, HdxCommand
 from hdx_cli.cli_interface.credential import commands as credentials_
 from hdx_cli.cli_interface.defaults import commands as defaults_
 from hdx_cli.cli_interface.dictionary import commands as dictionary_
+from hdx_cli.cli_interface.docs import commands as docs_
 from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.integration import commands as integration_
 from hdx_cli.cli_interface.job import commands as job_
@@ -32,12 +33,10 @@ from hdx_cli.cli_interface.table import commands as table_
 from hdx_cli.cli_interface.transform import commands as transform_
 from hdx_cli.cli_interface.user import commands as user_
 from hdx_cli.cli_interface.view import commands as view_
-from hdx_cli.cli_interface.docs import commands as docs_
 from hdx_cli.config.initial_setup import first_time_use_config, is_first_time_use
 from hdx_cli.library_api.common.config_constants import PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.exceptions import ConfigurationExistsException
 from hdx_cli.library_api.common.logging import get_logger, set_debug_logger, set_info_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.models import DEFAULT_TIMEOUT, ProfileLoadContext
 
 try:
@@ -57,8 +56,9 @@ def configure_logger(debug=False):
 
 # pylint: disable=line-too-long
 
+
 @tui(help="Open a Textual User Interface (TUI) for the CLI.")
-@click.group(cls=HdxGroup)
+@click.group(cls=HdxCliGroup)
 @click.option(
     "--profile",
     metavar="PROFILENAME",
@@ -112,7 +112,6 @@ def configure_logger(debug=False):
     "debug messages for troubleshooting purposes.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def hdx_cli(
     ctx,
     profile: str,
@@ -149,7 +148,7 @@ def hdx_cli(
     else:
         profile_context = ProfileLoadContext(profile, profile_config_file)
 
-    ctx.obj = {"profilecontext": profile_context}
+    ctx.obj = {"profilecontext": profile_context, "DEBUG": debug}
     user_options = {
         "username": username,
         "password": password,
@@ -162,7 +161,6 @@ def hdx_cli(
 
 
 @click.command(cls=HdxCommand, name="init")
-@report_error_and_exit(exctype=Exception)
 def init():
     """
     Initialize the HDXCLI configuration for first-time use.

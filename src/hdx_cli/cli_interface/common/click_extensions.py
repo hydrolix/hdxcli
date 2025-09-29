@@ -1,10 +1,13 @@
 import inspect
 import re
+import sys
 
 import click
 import inflect
 
+from hdx_cli.library_api.common.exceptions import HdxCliException, HttpException
 from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.json_util import http_error_pretty_format
 
 _inflect_engine = inflect.engine()
 logger = get_logger()
@@ -152,11 +155,7 @@ class HdxCommand(click.Command):
     """A custom click.Command."""
 
     def to_markdown(self, ctx: click.Context) -> str:
-        resource = ctx.parent.command.name if ctx.parent else self.name
-        for param in self.get_params(ctx):
-            if isinstance(param, click.Argument) and param.name == "resource_name":
-                param.metavar = f"{resource.replace('-', '_').upper()}_NAME"
-
+        self._update_resource_name_metavar(ctx)
         depth = _get_depth(ctx)
         heading = "#" * depth
         command_title = self.name.replace("-", " ").replace("_", " ").title()
@@ -191,14 +190,29 @@ class HdxCommand(click.Command):
 
         return "\n".join(md_parts)
 
-    def get_help(self, ctx: click.Context) -> str:
-        """Formats the command's help text, letting Click handle truncation via '\\f'."""
-        # Update metavar before calling super().get_help()
+    def _update_resource_name_metavar(self, ctx: click.Context):
+        """
+        Dynamically updates the metavar for the 'resource_name' argument
+        based on the parent group's name (e.g., 'project').
+        """
+        # Determine the resource name from the parent command group (e.g., 'project', 'table')
         resource = ctx.parent.command.name if ctx.parent else self.name
         for param in self.params:
             if isinstance(param, click.Argument) and param.name == "resource_name":
                 param.metavar = f"{resource.replace('-', '_').upper()}_NAME"
 
+    def get_usage(self, ctx: click.Context) -> str:
+        """
+        Overrides the default get_usage to ensure the resource_name
+        metavar is updated before the usage string is generated.
+        """
+        self._update_resource_name_metavar(ctx)
+        return super().get_usage(ctx)
+
+    def get_help(self, ctx: click.Context) -> str:
+        """Formats the command's help text, letting Click handle truncation via '\\f'."""
+        # Update metavar before calling super().get_help()
+        self._update_resource_name_metavar(ctx)
         help_text = super().get_help(ctx)
         if not help_text:
             return ""
@@ -213,6 +227,23 @@ class HdxCommand(click.Command):
 
 class HdxGroup(click.Group):
     """A custom click.Group."""
+
+    def invoke(self, ctx: click.Context):
+        """
+        Overrides default invocation to skip the group's callback if a help
+        option is present, preventing validation errors on required options.
+        """
+        if "--help" in sys.argv or "-h" in sys.argv:
+            original_callback = self.callback
+            self.callback = None
+            try:
+                return super().invoke(ctx)
+            finally:
+                # Restore the callback to ensure the group object's state is not permanently altered.
+                self.callback = original_callback
+        else:
+            # No help option found, proceed with the standard invocation.
+            return super().invoke(ctx)
 
     def to_markdown(self, ctx: click.Context) -> str:
         depth = _get_depth(ctx)
@@ -275,3 +306,35 @@ class HdxGroup(click.Group):
         except KeyError as e:
             logger.debug(f"Error formatting help for group '{self.name}': {e}.")
             return help_text
+
+
+class HdxCliGroup(HdxGroup):
+    """
+    A custom click.Group that extends HdxGroup to add centralized,
+    debug-friendly exception handling for the entire CLI application.
+    """
+
+    def main(self, *args, **kwargs):
+        try:
+            return super().main(*args, **kwargs)
+        except KeyboardInterrupt:
+            click.echo("\nAborted by user.", err=True)
+            sys.exit(1)
+        except Exception as e:
+            if "--debug" in sys.argv:
+                # Re-raise the original exception for debugging purposes
+                raise
+
+            if isinstance(e, (click.Abort, click.ClickException)):
+                sys.exit(1)
+            elif isinstance(e, HttpException):
+                message = http_error_pretty_format(e)
+                click.echo(f"Error: {message}", err=True)
+            elif isinstance(e, HdxCliException):
+                click.echo(f"Error: {e}", err=True)
+            else:
+                # For all unexpected exceptions, display the error directly.
+                click.echo(f"Error: {e}", err=True)
+                click.echo("Use --debug to see full traceback.", err=True)
+
+            sys.exit(1)

@@ -1,10 +1,11 @@
-import click
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from importlib.metadata import version, PackageNotFoundError
+
+import click
 
 from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit
+
 from .config import DOC_STRUCTURE
 
 logger = get_logger()
@@ -17,13 +18,12 @@ except PackageNotFoundError:
 
 @click.command(cls=HdxCommand, name="docs")
 @click.argument(
-    'target_dir',
+    "target_dir",
     type=click.Path(file_okay=False, writable=True, resolve_path=True),
     required=True,
 )
-@click.argument('resource', metavar="RESOURCE_NAME", required=False)
+@click.argument("resource", metavar="RESOURCE_NAME", required=False)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def docs(ctx: click.Context, target_dir: str, resource: str = None):
     """
     Generate and export CLI documentation in Markdown format.
@@ -69,7 +69,7 @@ def _generate_full_docs(root_ctx: click.Context, output_path: Path):
         frontmatter_parts = ["---"]
         for key, value in frontmatter_data.items():
             if isinstance(value, bool):
-                frontmatter_parts.append(f'{key}: {str(value).lower()}')
+                frontmatter_parts.append(f"{key}: {str(value).lower()}")
             else:
                 frontmatter_parts.append(f'{key}: "{value}"')
         frontmatter_parts.append("---")
@@ -83,7 +83,7 @@ def _generate_full_docs(root_ctx: click.Context, output_path: Path):
         body_parts = []
         for command_name in command_names:
             command = root_ctx.command.get_command(root_ctx, command_name)
-            if command and hasattr(command, 'to_markdown'):
+            if command and hasattr(command, "to_markdown"):
                 cmd_ctx = click.Context(command, info_name=command_name, parent=root_ctx)
                 md_content = command.to_markdown(cmd_ctx)
                 body_parts.append(md_content)
@@ -105,19 +105,21 @@ def _generate_single_resource_doc(root_ctx: click.Context, resource_name: str, o
     if not command:
         raise click.UsageError(f"Error: Command or group '{resource_name}' not found.")
 
-    if hasattr(command, 'to_markdown'):
+    if hasattr(command, "to_markdown"):
         md_content = command.to_markdown(cmd_ctx)
         version_line = f"> _hdxcli v{VERSION}_"
 
-        lines = md_content.split('\n')
+        lines = md_content.split("\n")
         lines.insert(1, f"\n{version_line}\n")
-        final_md_content = '\n'.join(lines)
+        final_md_content = "\n".join(lines)
 
         file_path = output_path / f"{resource_name}.md"
         file_path.write_text(final_md_content, encoding="utf-8")
         logger.info(f"Successfully generated documentation for '{resource_name}' at '{file_path}'.")
     else:
-        logger.warning(f"Warning: Resource '{resource_name}' does not support documentation export.")
+        logger.warning(
+            f"Warning: Resource '{resource_name}' does not support documentation export."
+        )
 
 
 def _find_command_recursively(ctx: click.Context, name: str):

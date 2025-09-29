@@ -8,7 +8,7 @@ from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_transform
 from hdx_cli.library_api.common import rest_operations as rest_ops
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.models import ProfileLoadContext, ProfileUserContext
 
 logger = get_logger()
@@ -34,7 +34,6 @@ def integration(ctx: click.Context):
 
 
 @click.group(cls=HdxGroup)
-@report_error_and_exit(exctype=Exception)
 @click.pass_context
 @ensure_logged_in
 def transform(ctx: click.Context):
@@ -64,7 +63,6 @@ def _github_list(ctx: click.Context):
 
 @click.command(cls=HdxCommand, name="list")
 @click.pass_context
-# @report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context):
     """List available integration {resource_plural}.
 
@@ -115,7 +113,6 @@ def _basic_show(ctx: click.Context, transform_name: str, indent: bool = False):
 )
 @click.option("--table", "table_name", required=True, help="The table to apply the transform to.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def apply(
     ctx: click.Context,
     integration_transform_name: str,
@@ -158,7 +155,6 @@ def apply(
     help="Number of spaces for indentation in the output.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def show(ctx: click.Context, resource_name: str, indent: bool):
     """Show the definition of a public integration {resource}.
 

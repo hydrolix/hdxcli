@@ -9,7 +9,7 @@ from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_get
 from hdx_cli.library_api.common.exceptions import ConfigurationNotFoundException
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
@@ -23,7 +23,7 @@ def get_resource_count(profile: ProfileUserContext, path: str) -> int:
         return 0
 
     if isinstance(response_data, dict):
-        return response_data.get('count', 0)
+        return response_data.get("count", 0)
 
     if isinstance(response_data, list):
         return len(response_data)
@@ -34,7 +34,6 @@ def get_resource_count(profile: ProfileUserContext, path: str) -> int:
 
 @click.command(cls=HdxCommand, name="resource-summary")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def resource_summary(ctx: click.Context):
     """Summarize the count of all resources in the organization.
@@ -78,12 +77,8 @@ def _resource_summary(profile: ProfileUserContext) -> Optional[dict]:
     final_counts["Users & SA"] = get_resource_count(profile, "/config/v1/users/")
     final_counts["Roles"] = get_resource_count(profile, "/config/v1/roles/")
 
-    alter_jobs_count = get_resource_count(
-        profile, f"/config/v1/orgs/{profile.org_id}/jobs/alter/"
-    )
-    batch_jobs_count = get_resource_count(
-        profile, f"/config/v1/orgs/{profile.org_id}/jobs/batch/"
-    )
+    alter_jobs_count = get_resource_count(profile, f"/config/v1/orgs/{profile.org_id}/jobs/alter/")
+    batch_jobs_count = get_resource_count(profile, f"/config/v1/orgs/{profile.org_id}/jobs/batch/")
     final_counts["Jobs"] = alter_jobs_count + batch_jobs_count
 
     return final_counts

@@ -6,11 +6,7 @@ from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_column, basic_create
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import (
-    ensure_logged_in,
-    report_error_and_exit,
-    skip_group_logic_on_help,
-)
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
@@ -39,8 +35,6 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
-@skip_group_logic_on_help
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def column(ctx: click.Context, project_name: str, table_name: str, column_name: str):
     """Commands to manage table columns.
@@ -62,7 +56,6 @@ def column(ctx: click.Context, project_name: str, table_name: str, column_name: 
 @click.command(cls=HdxCommand, name="add-name")
 @click.argument("new_name", metavar="NEW_NAME", required=True)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def add_name(ctx: click.Context, new_name: str):
     """Assigns an additional name to an existing {resource}.
     Requires `--project`, `--table`, and `--column` options to be set.
@@ -98,7 +91,6 @@ def add_name(ctx: click.Context, new_name: str):
 @click.argument("alias_name", metavar="ALIAS_NAME", required=True)
 @click.argument("expression", metavar="EXPRESSION", required=True)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def add_alias(ctx: click.Context, alias_name: str, expression: str):
     """Creates a new {resource} defined by an expression.
     Requires `--project` and `--table` options to be set.

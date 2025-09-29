@@ -1,26 +1,28 @@
 import json
-from typing import Dict, Any, Tuple
+from typing import Any, Dict, Tuple
 
 import click
 from rich.console import Console
 from rich.table import Table
 
-from .utils import (
-    create_service_account_token,
-    create_service_account,
-    validate_roles_exist,
-    update_roles,
-    revoke_all_service_account_tokens,
-    set_token_as_auth,
-)
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.cached_operations import find_service_accounts, find_users
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
-from hdx_cli.cli_interface.common.cached_operations import find_service_accounts, find_users
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_show
 from hdx_cli.library_api.common.exceptions import LogicException, ResourceNotFoundException
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.models import ProfileUserContext
+
+from .utils import (
+    create_service_account,
+    create_service_account_token,
+    revoke_all_service_account_tokens,
+    set_token_as_auth,
+    update_roles,
+    validate_duration_format,
+    validate_roles_exist,
+)
 
 console = Console()
 
@@ -51,7 +53,6 @@ def _print_token_details(token_data: Dict[str, Any]):
     help="Perform an operation on the specified service account.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def service_account(ctx: click.Context, service_account_name: str):
     """Service accounts are non-human users designed for
@@ -84,15 +85,15 @@ def service_account(ctx: click.Context, service_account_name: str):
     default=None,
     metavar="[DURATION]",
     help="Generate a token after creation. Optionally, provide a duration (e.g., '30d', '1y').",
+    callback=validate_duration_format,
 )
 @click.option(
     "--set-as-auth",
     is_flag=True,
     help="Set the generated token as the authentication method for the current profile. "
-         "This will overwrite any existing credentials.",
+    "This will overwrite any existing credentials.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(
     ctx: click.Context,
     resource_name: str,
@@ -127,9 +128,9 @@ def create(
         if not svc_account_id:
             raise LogicException("Could not retrieve UUID after service account creation.")
 
-        token_data = create_service_account_token(user_profile,
-                                                  svc_account_id,
-                                                  duration=generate_token_duration)
+        token_data = create_service_account_token(
+            user_profile, svc_account_id, duration=generate_token_duration
+        )
         click.echo("\nToken successfully generated:")
         _print_token_details(token_data)
 
@@ -142,7 +143,6 @@ def create(
 
 @click.command(cls=HdxCommand, name="list")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_service_account(ctx: click.Context):
     """List all available {resource_plural}.
     Displays a table with the names of all {resource_plural} and the roles
@@ -180,6 +180,7 @@ def list_service_account(ctx: click.Context):
     "--duration",
     metavar="DURATION",
     help="Set token lifetime (e.g., '30d', '12h', '1y'). If not set, the API default is used.",
+    callback=validate_duration_format,
 )
 @click.option(
     "--json",
@@ -191,10 +192,9 @@ def list_service_account(ctx: click.Context):
     "--set-as-auth",
     is_flag=True,
     help="Set the generated token as the authentication method for the current profile. "
-         "This will overwrite any existing credentials.",
+    "This will overwrite any existing credentials.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def generate_token(
     ctx: click.Context,
     resource_name: str,
@@ -245,7 +245,6 @@ def generate_token(
     help="Bypass the confirmation prompt.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def revoke_tokens(ctx: click.Context, resource_name: str, yes: bool):
     """Revoke all active tokens for a {resource}.
 
@@ -289,7 +288,6 @@ def revoke_tokens(ctx: click.Context, resource_name: str, yes: bool):
     help="Role(s) to assign. Can be used multiple times.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def assign_role(ctx: click.Context, resource_name: str, roles: Tuple[str]):
     """Assign one or more roles to a {resource}.
 
@@ -323,7 +321,6 @@ def assign_role(ctx: click.Context, resource_name: str, roles: Tuple[str]):
     help="Role(s) to remove. Can be used multiple times.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def remove_role(ctx: click.Context, resource_name: str, roles_to_remove: Tuple[str]):
     """Remove one or more roles from a {resource}.
 

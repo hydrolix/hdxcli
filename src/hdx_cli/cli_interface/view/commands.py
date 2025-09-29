@@ -7,11 +7,7 @@ from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_view
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import (
-    ensure_logged_in,
-    report_error_and_exit,
-    skip_group_logic_on_help,
-)
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
 from hdx_cli.models import ProfileUserContext
 
@@ -42,8 +38,6 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
-@skip_group_logic_on_help
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def view(ctx: click.Context, project_name: str, table_name: str, view_name: str):
     """This group of commands allows to create, list, show, delete, and
@@ -67,7 +61,6 @@ def view(ctx: click.Context, project_name: str, table_name: str, view_name: str)
     required=True,
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context, resource_name: str, settings_filename: str):
     """Creates a new {resource} from a JSON configuration file
     in the specified project and table.

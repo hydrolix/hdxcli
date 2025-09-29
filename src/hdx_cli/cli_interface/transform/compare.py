@@ -9,18 +9,14 @@ from hdx_cli.cli_interface.common.undecorated_click_commands import basic_transf
 from hdx_cli.cli_interface.transform.comparator.engine import TransformComparator
 from hdx_cli.config.paths import PROFILE_CONFIG_FILE
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
-from hdx_cli.models import ProfileUserContext, ProfileLoadContext
+from hdx_cli.models import ProfileLoadContext, ProfileUserContext
 
 logger = get_logger()
 
 
 def _fetch_transform_from_cluster(
-    ctx: click.Context,
-    project_name: str,
-    table_name: str,
-    transform_name: str
+    ctx: click.Context, project_name: str, table_name: str, transform_name: str
 ) -> dict:
     """Fetches a single transform's configuration from
     the cluster. Returns the configuration as a dictionary."""
@@ -39,16 +35,18 @@ def _load_transform_spec(
     """Loads a transform from a local file path or a cluster reference.
     A cluster reference is in the format 'project.table.transform'.
     Returns a tuple of (transform_data, description)."""
-    if Path(specifier).is_file() and specifier.endswith('.json'):
+    if Path(specifier).is_file() and specifier.endswith(".json"):
         logger.debug(f"Loading transform from local file: {specifier}")
         return read_json_from_file(specifier), f"local file: {specifier}"
 
     # Check for cluster reference format: project.table.transform
-    parts = specifier.split('.')
+    parts = specifier.split(".")
     if len(parts) == 3:
         project, table, transform = parts
         user_profile = ctx.parent.obj["usercontext"]
-        logger.debug(f"Fetching transform '{transform}' from cluster '{user_profile.profilename}'...")
+        logger.debug(
+            f"Fetching transform '{transform}' from cluster '{user_profile.profilename}'..."
+        )
         data = _fetch_transform_from_cluster(ctx, project, table, transform)
         return data, f"cluster '{user_profile.profilename}': {specifier}"
 
@@ -67,13 +65,7 @@ def _load_transform_spec(
     metavar="PROFILE_NAME",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
-def compare(
-    ctx_a: click.Context,
-    transform_a_spec: str,
-    transform_b_spec: str,
-    profile_b: str
-):
+def compare(ctx_a: click.Context, transform_a_spec: str, transform_b_spec: str, profile_b: str):
     """Compares two transforms, showing differences in their settings.
 
     Transforms can be specified as a local JSON file path or as a reference

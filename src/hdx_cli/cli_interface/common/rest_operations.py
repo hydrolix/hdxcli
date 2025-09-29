@@ -4,15 +4,15 @@ import click
 
 from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import (
+    basic_activity,
     basic_delete,
     basic_list,
     basic_show,
-    basic_activity,
-    basic_stats
+    basic_stats,
 )
 from hdx_cli.library_api.common.exceptions import LogicException
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import dynamic_confirmation_prompt, report_error_and_exit
+from hdx_cli.library_api.utility.decorators import dynamic_confirmation_prompt
 
 logger = get_logger()
 
@@ -35,7 +35,6 @@ _confirmation_prompt = partial(
 )
 @click.argument("resource_name")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: bool) -> None:
     """Delete a specific {resource}.
 
@@ -60,7 +59,6 @@ def delete(ctx: click.Context, resource_name: str, disable_confirmation_prompt: 
 @click.option("--page", "-p", type=int, default=1, help="Page number.")
 @click.option("--page-size", "-s", type=int, default=None, help="Number of items per page.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context, page: int, page_size: int) -> None:
     """List all available {resource_plural}.
 
@@ -81,7 +79,6 @@ def list_(ctx: click.Context, page: int, page_size: int) -> None:
 @click.argument("resource_name", required=False, default=None)
 @click.option("-i", "--indent", is_flag=True, default=False, help="Indent the output.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def show(ctx: click.Context, resource_name: str, indent: bool) -> None:
     """Show details for a specific {resource}.
 
@@ -114,7 +111,6 @@ def show(ctx: click.Context, resource_name: str, indent: bool) -> None:
 @click.option("--page", "-p", type=int, default=1, help="Page number.")
 @click.option("--page-size", "-s", type=int, default=None, help="Number of items per page.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def activity(ctx: click.Context, resource_name: str, page: int, page_size: int) -> None:
     """Shows the log of recent activities for the provided {resource}.
 
@@ -144,8 +140,7 @@ def activity(ctx: click.Context, resource_name: str, page: int, page_size: int) 
 @click.argument("resource_name", required=False, default=None)
 @click.option("-i", "--indent", is_flag=True, default=False, help="Indent the output.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
-def stats(ctx: click.Context, resource_name:str, indent: bool) -> None:
+def stats(ctx: click.Context, resource_name: str, indent: bool) -> None:
     """Shows usage and other statistics for the provided {resource}.
 
     \b

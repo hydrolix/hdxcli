@@ -1,13 +1,13 @@
 import click
 
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
-from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
 from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
@@ -21,7 +21,6 @@ logger = get_logger()
     help="Use or override pool set in the profile.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def pool(ctx: click.Context, pool_name: str):
     """Commands to create, list, and manage resource pools for
@@ -85,7 +84,6 @@ def _build_pool_payload(
     default=0.5,
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(
     ctx: click.Context,
     pool_name: str,

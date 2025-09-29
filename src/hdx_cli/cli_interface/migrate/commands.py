@@ -7,12 +7,12 @@ from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.migrate.data import migrate_data
 from hdx_cli.cli_interface.migrate.helpers import MigrationData, get_catalog
 from hdx_cli.cli_interface.migrate.rc.rc_manager import RcloneAPIConfig
-from hdx_cli.cli_interface.migrate.resources import get_resources, create_resources
+from hdx_cli.cli_interface.migrate.resources import create_resources, get_resources
 from hdx_cli.cli_interface.migrate.validator import validations
 from hdx_cli.config.profile_settings import is_valid_hostname
 from hdx_cli.library_api.common.exceptions import InvalidHostnameException
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 
 logger = get_logger()
 
@@ -22,14 +22,12 @@ class CustomDateTime(click.Option):
         return ", ".join(self.opts), self.help
 
 
-@report_error_and_exit(exctype=Exception)
 def validate_tablename_format(ctx, param, value):
     if value is None or len(value.split(".")) != 2:
         raise click.BadParameter(f"'{value}' is not in the 'project_name.table_name' format.")
     return value
 
 
-@report_error_and_exit(exctype=Exception)
 def validate_hostname(ctx, params, hostname: str) -> str:
     if hostname and not is_valid_hostname(hostname):
         raise InvalidHostnameException("Invalid host name format.")
@@ -158,7 +156,6 @@ def validate_hostname(ctx, params, hostname: str) -> str:
     hidden=True,
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def migrate(
     ctx: click.Context,
@@ -236,7 +233,9 @@ def migrate(
     """
     source_profile = ctx.parent.obj["usercontext"]
     has_target_profile = target_profile_name is not None
-    has_all_cluster_options = all([target_hostname, target_username, target_password, target_uri_scheme])
+    has_all_cluster_options = all(
+        [target_hostname, target_username, target_password, target_uri_scheme]
+    )
 
     if not has_target_profile and not has_all_cluster_options:
         raise click.BadParameter(
@@ -317,7 +316,7 @@ def migrate(
             source_data,
             reuse_partitions,
             migrate_functions=with_functions,
-            migrate_dictionaries=with_dictionaries
+            migrate_dictionaries=with_dictionaries,
         )
     if only != "resources":
         migrate_data(

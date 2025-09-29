@@ -1,11 +1,11 @@
 import click
 
 from hdx_cli.cli_interface.common.cached_operations import find_transforms
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
-from hdx_cli.library_api.common.exceptions import ResourceNotFoundException, LogicException
+from hdx_cli.library_api.common.exceptions import LogicException, ResourceNotFoundException
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import ensure_logged_in, report_error_and_exit
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.library_api.utility.file_handling import read_bytes_from_file
 from hdx_cli.models import ProfileUserContext
 
@@ -55,12 +55,9 @@ def stream(ctx: click.Context, project_name: str, table_name: str, transform_nam
 
 @click.command(cls=HdxCommand)
 @click.argument(
-    "data_file_path",
-    metavar="DATA_FILE_PATH",
-    type=click.Path(exists=True, readable=True)
+    "data_file_path", metavar="DATA_FILE_PATH", type=click.Path(exists=True, readable=True)
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def ingest(ctx: click.Context, data_file_path: str):
     """Ingest data from a file into a table.
 
@@ -80,8 +77,9 @@ def ingest(ctx: click.Context, data_file_path: str):
     resource_path = ctx.parent.obj["resource_path"]
     user_profile = ctx.parent.obj["usercontext"]
     if not user_profile.projectname or not user_profile.tablename:
-        raise LogicException("A project and table must be specified "
-                             "via options or set in the current profile.")
+        raise LogicException(
+            "A project and table must be specified " "via options or set in the current profile."
+        )
 
     stream_data_bytes = read_bytes_from_file(data_file_path)
 
@@ -91,14 +89,19 @@ def ingest(ctx: click.Context, data_file_path: str):
 
     transform_to_use = None
     if explicit_transform_name:
-        transform_to_use = next((t for t in transforms_list if t["name"] == explicit_transform_name), None)
+        transform_to_use = next(
+            (t for t in transforms_list if t["name"] == explicit_transform_name), None
+        )
         if not transform_to_use:
             raise ResourceNotFoundException(f"Transform '{explicit_transform_name}' not found.")
     else:
-        transform_to_use = next((t for t in transforms_list if t.get("settings", {}).get("is_default")), None)
+        transform_to_use = next(
+            (t for t in transforms_list if t.get("settings", {}).get("is_default")), None
+        )
         if not transform_to_use:
             raise ResourceNotFoundException(
-                "No default transform found for the table. Please specify one with --transform.")
+                "No default transform found for the table. Please specify one with --transform."
+            )
 
     transform_name = transform_to_use["name"]
     transform_type = transform_to_use["type"]

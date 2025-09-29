@@ -7,7 +7,6 @@ from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
 from hdx_cli.library_api.common.exceptions import HdxCliException
 from hdx_cli.library_api.common.generic_resource import access_resource_detailed
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
 
 logger = get_logger()
@@ -39,7 +38,6 @@ def any_source_impl(ctx: click.Context, source_name: str):
     type=click.Path(exists=True, readable=True),
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context, settings_filename: str, resource_name: str):
     """Creates a new {resource} source from a JSON configuration file.
 

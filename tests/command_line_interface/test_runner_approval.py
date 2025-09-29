@@ -144,11 +144,13 @@ class ApprovalTestCaseRunner:
         try:
             for command in self._setup_steps:
                 command_capture = " ".join(command)
-                result_obj = sp.run(command, capture_output=True, check=True)
+                sp.run(command, capture_output=True, check=True)
             for command in input_commands:
                 command_capture = " ".join(command)
                 result_obj = sp.run(command, capture_output=True, check=False)
-                result = result_obj.stdout.rstrip().decode("utf-8")
+                stdout_res = result_obj.stdout.decode("utf-8").rstrip()
+                stderr_res = result_obj.stderr.decode("utf-8").rstrip()
+                result = stdout_res + stderr_res
         except HdxCliException:
             pytest.fail(
                 f"An exception occurred when trying to run '{self._name}'. Command: "

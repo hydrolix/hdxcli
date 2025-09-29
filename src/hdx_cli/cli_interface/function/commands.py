@@ -13,8 +13,6 @@ from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import (
     ensure_logged_in,
     no_rollback_option,
-    report_error_and_exit,
-    skip_group_logic_on_help,
     target_cluster_options,
 )
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
@@ -39,8 +37,6 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
-@skip_group_logic_on_help
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def function(ctx: click.Context, project_name: str, function_name: str):
     """This group of commands allows creating, listing, showing, deleting,
@@ -78,7 +74,6 @@ def function(ctx: click.Context, project_name: str, function_name: str):
 )
 @click.option("--inline-sql", "-s", help="Use inline sql in the command-line", default=None)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context, resource_name: str, sql_from_file: str, inline_sql: str):
     """A {resource} can be created either from an inline SQL string
     or from a JSON file containing the {resource} definition.
@@ -119,7 +114,6 @@ def create(ctx: click.Context, resource_name: str, sql_from_file: str, inline_sq
 @target_cluster_options
 @no_rollback_option
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def migrate(
     ctx: click.Context,
     target_project_name: str,

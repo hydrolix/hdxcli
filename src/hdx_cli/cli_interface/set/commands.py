@@ -3,7 +3,7 @@ import click
 from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.config.profile_settings import load_static_profile_config, save_profile_config
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, with_profiles_context
+from hdx_cli.library_api.utility.decorators import with_profiles_context
 from hdx_cli.models import ProfileLoadContext, ProfileUserContext
 
 logger = get_logger()
@@ -13,7 +13,6 @@ logger = get_logger()
 @click.argument("project_name", metavar="PROJECT_NAME", required=True)
 @click.argument("table_name", metavar="TABLE_NAME", required=False, default=None)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @with_profiles_context
 def set_context(
     ctx: click.Context,
@@ -47,7 +46,6 @@ def set_context(
 
 @click.command(cls=HdxCommand, name="unset")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @with_profiles_context
 def unset_context(
     ctx: click.Context,

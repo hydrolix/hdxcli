@@ -1,15 +1,37 @@
 import json
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
+import click
 import jwt
 
 from hdx_cli.auth.session import save_session_data
 from hdx_cli.cli_interface.common.cached_operations import find_roles
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_delete
 from hdx_cli.library_api.common.exceptions import LogicException, ResourceNotFoundException
-from hdx_cli.models import ProfileUserContext, AuthInfo
+from hdx_cli.models import AuthInfo, ProfileUserContext
+
+
+def validate_duration_format(ctx, param, value):
+    """
+    Validate duration string format (e.g., '30d', '1y').
+    Allows None (option not passed) and empty string (flag without value).
+    """
+    if value is None:
+        return None
+    elif value == "":
+        return ""
+
+    # Validate format
+    match = re.match(r"^(\d+)([dhmy])$", value.lower())
+    if not match:
+        raise click.BadParameter(
+            f"'{value}'. Use a number followed by "
+            "'d' (days), 'h' (hours), 'm' (minutes), or 'y' (years)."
+        )
+
+    return value
 
 
 def _parse_duration_to_iso(duration: str) -> Optional[str]:
@@ -18,12 +40,8 @@ def _parse_duration_to_iso(duration: str) -> Optional[str]:
         return None
 
     match = re.match(r"(\d+)([dhmy])", duration.lower())
-    if not match:
-        raise ValueError(
-            f"Invalid duration format: '{duration}'. Use 'd' (days), 'h' (hours), "
-            f"'m' (minutes), or 'y' (years)."
-        )
 
+    # Assume a match because the callback validated it
     value, unit = int(match.group(1)), match.group(2)
     now = datetime.now(timezone.utc)
 
@@ -33,11 +51,8 @@ def _parse_duration_to_iso(duration: str) -> Optional[str]:
         delta = timedelta(hours=value)
     elif unit == "m":
         delta = timedelta(minutes=value)
-    elif unit == "y":
+    else:  # unit == "y"
         delta = timedelta(days=value * 365)
-    else:
-        # This path should not be reachable due to the regex
-        raise ValueError("Invalid duration unit.")
 
     future_date = now + delta
     # Format to ISO 8601

@@ -1,20 +1,19 @@
 import click
 
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.migration.resource_migrations import migrate_resource_config
-from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
 from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
 from hdx_cli.cli_interface.common.rest_operations import activity as command_activity
 from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
 from hdx_cli.cli_interface.common.rest_operations import stats as command_stats
+from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
 from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import (
-    report_error_and_exit,
     ensure_logged_in,
-    target_cluster_options,
     no_rollback_option,
+    target_cluster_options,
 )
 from hdx_cli.models import ProfileUserContext
 
@@ -30,7 +29,6 @@ logger = get_logger()
     help="Use or override project set in the profile.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def project(ctx: click.Context, project_name: str):
     """Provides commands to create, list, show, delete, and migrate
@@ -45,7 +43,6 @@ def project(ctx: click.Context, project_name: str):
 @click.command(cls=HdxCommand)
 @click.argument("resource_name")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context, resource_name: str):
     """Creates a new, empty {resource} in your Hydrolix cluster.
 
@@ -86,7 +83,6 @@ def create(ctx: click.Context, resource_name: str):
     help="Migrate functions associated with the project.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def migrate(
     ctx: click.Context,
     new_project_name: str,
@@ -129,12 +125,19 @@ def migrate(
     source_profile = ctx.parent.obj["usercontext"]
 
     if not source_profile.projectname:
-        raise click.BadParameter("A source project must be specified with the --project option.",
-                                 param_hint="--project")
+        raise click.BadParameter(
+            "A source project must be specified with the --project option.", param_hint="--project"
+        )
 
     has_target_profile = target_profile is not None
-    has_all_cluster_options = all([target_cluster_hostname, target_cluster_username,
-                                   target_cluster_password, target_cluster_uri_scheme])
+    has_all_cluster_options = all(
+        [
+            target_cluster_hostname,
+            target_cluster_username,
+            target_cluster_password,
+            target_cluster_uri_scheme,
+        ]
+    )
     if not has_target_profile and not has_all_cluster_options:
         raise click.BadParameter(
             "Either provide a --target-profile or all four target cluster options."

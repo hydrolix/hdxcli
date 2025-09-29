@@ -1,20 +1,20 @@
 from typing import Optional
 from urllib.parse import urlparse
+
+import click
 from rich.console import Console
 from rich.table import Table
 
-import click
-
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.undecorated_click_commands import (
     basic_get,
-    basic_update,
     basic_options,
+    basic_update,
 )
 from hdx_cli.library_api.common.exceptions import QueryOptionNotFound
 from hdx_cli.library_api.common.generic_resource import access_resource_detailed
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
 from hdx_cli.models import ProfileUserContext
 
@@ -23,10 +23,10 @@ console = Console()
 
 
 def _build_resource_path(
-        profile: ProfileUserContext,
-        org_id: str,
-        project_name: Optional[str],
-        table_name: Optional[str],
+    profile: ProfileUserContext,
+    org_id: str,
+    project_name: Optional[str],
+    table_name: Optional[str],
 ) -> str:
     """Build the resource path based on the provided scope."""
     # Table-level scope (most specific)
@@ -39,9 +39,7 @@ def _build_resource_path(
 
     # Project-level scope
     elif project_name:
-        _, resource_url = access_resource_detailed(
-            profile, [("projects", project_name)]
-        )
+        _, resource_url = access_resource_detailed(profile, [("projects", project_name)])
         base_path = urlparse(resource_url).path
         return f"{base_path}query_options/"
 
@@ -53,7 +51,6 @@ def _build_resource_path(
 @click.option("--project", "project_name", help="Target a specific project by name.")
 @click.option("--table", "table_name", help="Target a specific table by name.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def query_option(ctx: click.Context, project_name: Optional[str], table_name: Optional[str]):
     """Manage default query options.
@@ -95,7 +92,6 @@ def query_option(ctx: click.Context, project_name: Optional[str], table_name: Op
     help="Set query options from a JSON file.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def set_(ctx: click.Context, options_to_set: tuple, from_file_path: str):
     """Set one or more query options for the specified scope.
     Options can be set individually using `--option`,
@@ -115,9 +111,7 @@ def set_(ctx: click.Context, options_to_set: tuple, from_file_path: str):
       {full_command_prefix} set --from-file ./options.json
     """
     if not options_to_set and not from_file_path:
-        raise click.BadParameter(
-         "Provide at least one --option or use the --from-file flag."
-        )
+        raise click.BadParameter("Provide at least one --option or use the --from-file flag.")
 
     if options_to_set and from_file_path:
         raise click.BadParameter("Cannot use arguments and --from-file simultaneously.")
@@ -158,7 +152,6 @@ def set_(ctx: click.Context, options_to_set: tuple, from_file_path: str):
 @click.argument("query_option_name", required=False)
 @click.option("--all", "all_options", is_flag=True, help="Unset all query options for the scope.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def unset(ctx: click.Context, query_option_name: Optional[str], all_options: bool):
     """Unset one or more query options for the specified scope.
     Unset a single option by name, or unset all options
@@ -202,7 +195,6 @@ def unset(ctx: click.Context, query_option_name: Optional[str], all_options: boo
 
 @click.command(cls=HdxCommand, name="list")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context):
     """List the configured query options for the current scope.
 
@@ -241,7 +233,12 @@ def list_(ctx: click.Context):
 def _available_query_options(profile: ProfileUserContext, resource_path: str) -> dict:
     """Fetch available query options via OPTIONS request."""
     response = basic_options(profile, resource_path, action="PUT")
-    return response.get("settings", {}).get("children", {}).get("default_query_options", {}).get("children", {})
+    return (
+        response.get("settings", {})
+        .get("children", {})
+        .get("default_query_options", {})
+        .get("children", {})
+    )
 
 
 query_option.add_command(set_)

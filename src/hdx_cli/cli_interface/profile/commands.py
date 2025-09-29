@@ -6,24 +6,21 @@ from hdx_cli.auth.session import delete_session_file
 from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.profile.utils import get_profile_from_context
 from hdx_cli.config.profile_settings import (
-    profile_config_from_standard_input, 
-    save_profile_config,
-    delete_profile_config, 
-    is_valid_scheme, 
+    delete_profile_config,
     is_valid_hostname,
+    is_valid_scheme,
+    profile_config_from_standard_input,
+    save_profile_config,
 )
 from hdx_cli.library_api.common.exceptions import (
-    InvalidHostnameException,
-    InvalidSchemeException, 
-    ProfileExistsException, 
     HdxCliException,
+    InvalidHostnameException,
+    InvalidSchemeException,
+    ProfileExistsException,
 )
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import (
-    report_error_and_exit, 
-    with_profiles_context,
-)
-from hdx_cli.models import ProfileLoadContext, ProfileUserContext, BasicProfileConfig
+from hdx_cli.library_api.utility.decorators import with_profiles_context
+from hdx_cli.models import BasicProfileConfig, ProfileLoadContext, ProfileUserContext
 
 logger = get_logger()
 console = Console()
@@ -39,7 +36,6 @@ def profile(ctx: click.Context):
 @click.command(cls=HdxCommand, name="show")
 @click.argument("profile_name")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @with_profiles_context
 def profile_show(
     ctx: click.Context,
@@ -68,7 +64,6 @@ def profile_show(
 
 @click.command(cls=HdxCommand, name="list")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @with_profiles_context
 def profile_list(ctx: click.Context, profile_context, config_profiles):
     """List all available {resource_plural}.
@@ -91,7 +86,6 @@ def profile_list(ctx: click.Context, profile_context, config_profiles):
 @click.command(cls=HdxCommand, name="edit")
 @click.argument("profile_name")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @with_profiles_context
 def profile_edit(
     ctx: click.Context,
@@ -137,7 +131,6 @@ def profile_edit(
     help="Protocol for the connection.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @with_profiles_context
 def profile_add(
     ctx: click.Context,
@@ -161,7 +154,7 @@ def profile_add(
     """
     if profile_name in config_profiles:
         raise ProfileExistsException(f"Profile '{profile_name}' already exists.")
-    
+
     if hostname and scheme:
         if not is_valid_hostname(hostname):
             raise InvalidHostnameException("Invalid host name format.")
@@ -197,7 +190,6 @@ def profile_add(
     help="Skip confirmation prompt.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @with_profiles_context
 def profile_delete(
     ctx: click.Context,
@@ -237,7 +229,6 @@ def profile_delete(
     help="Skip confirmation prompt.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @with_profiles_context
 def profile_logout(
     ctx: click.Context,

@@ -16,11 +16,7 @@ from hdx_cli.cli_interface.common.undecorated_click_commands import (
 )
 from hdx_cli.library_api.common.exceptions import CommandLineException, LogicException
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import (
-    ensure_logged_in,
-    report_error_and_exit,
-    skip_group_logic_on_help,
-)
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
@@ -49,8 +45,6 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
-@skip_group_logic_on_help
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def row_policy(ctx: click.Context, project_name: str, table_name: str, row_policy_name: str):
     """Manages Row-Level security policies for tables.
@@ -92,7 +86,6 @@ def row_policy(ctx: click.Context, project_name: str, table_name: str, row_polic
     help="Role to associate with this policy. Can be specified multiple times.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(
     ctx: click.Context,
     resource_name: str,
@@ -129,7 +122,6 @@ def create(
 
 @click.command(cls=HdxCommand, name="list")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context):
     """Lists all {resource_plural} for a given table.
     Displays a summary of all {resource_plural}, including their name, filter
@@ -204,7 +196,6 @@ def _role_operation(ctx: click.Context, policy_name: str, roles: list[str], oper
     help="Role to add. Can be specified multiple times.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def add_role(ctx: click.Context, resource_name: str, roles: list[str]):
     """Adds one or more roles to an existing {resource}.
     This command associates roles with a {resource}, granting the
@@ -233,7 +224,6 @@ def add_role(ctx: click.Context, resource_name: str, roles: list[str]):
     help="Role to remove. Can be specified multiple times.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def remove_role(ctx: click.Context, resource_name: str, roles: list[str]):
     """Removes one or more roles from an existing {resource}.
     This command disassociates roles from a {resource}, revoking the

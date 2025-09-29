@@ -2,31 +2,32 @@ import json
 import uuid
 
 import click
-from rich.console import Console
 from rich.columns import Columns
+from rich.console import Console
 from rich.table import Table
 
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
-from hdx_cli.cli_interface.common.cached_operations import find_users, find_permissions
+from hdx_cli.cli_interface.common.cached_operations import find_permissions, find_users
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
+from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
+from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
+from hdx_cli.cli_interface.common.rest_operations import show as command_show
 from hdx_cli.cli_interface.common.undecorated_click_commands import (
     basic_create,
     basic_show,
     basic_update,
 )
-from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
-from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
-from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.library_api.common.exceptions import LogicException, ResourceNotFoundException
+from hdx_cli.library_api.common.logging import get_logger
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
+from hdx_cli.models import ProfileUserContext
+
 from .utils import (
-    get_available_scope_type_list,
-    get_role_data_from_standard_input,
     Policy,
     Role,
+    get_available_scope_type_list,
+    get_role_data_from_standard_input,
     modify_role_data_from_standard_input,
 )
-from hdx_cli.library_api.common.exceptions import ResourceNotFoundException, LogicException
-from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
-from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
 console = Console()
@@ -41,7 +42,6 @@ console = Console()
     help="Perform operation on the passed role.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def role(ctx: click.Context, role_name: str):
     """Commands to create, edit, and manage user roles and
@@ -110,7 +110,6 @@ def validate_scope_type(ctx, param, value):
     help="Enter interactive mode to be guided through role creation.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(
     ctx: click.Context,
     resource_name: str,
@@ -147,9 +146,13 @@ def create(
         role_obj = get_role_data_from_standard_input(profile, resource_path, resource_name)
     elif permissions:
         if scope_type and not scope_id:
-            raise click.BadOptionUsage("scope_id", "--scope-id is required when --scope-type is used.")
+            raise click.BadOptionUsage(
+                "scope_id", "--scope-id is required when --scope-type is used."
+            )
         if scope_id and not scope_type:
-            raise click.BadOptionUsage("scope_type", "--scope-type is required when --scope-id is used.")
+            raise click.BadOptionUsage(
+                "scope_type", "--scope-type is required when --scope-id is used."
+            )
         policy_obj = Policy(scope_type=scope_type, scope_id=scope_id, permissions=list(permissions))
         role_obj = Role(name=resource_name, policies=[policy_obj])
     else:
@@ -174,7 +177,6 @@ def create(
 @click.command(cls=HdxCommand)
 @click.argument("resource_name")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def edit(ctx: click.Context, resource_name: str):
     """Modify an existing {resource} interactively.
 
@@ -217,7 +219,6 @@ def edit(ctx: click.Context, resource_name: str):
     help="Specify users to add to a role (can be used multiple times).",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def add_user(ctx: click.Context, resource_name: str, users):
     """Add one or more users to a {resource}.
 
@@ -243,7 +244,6 @@ def add_user(ctx: click.Context, resource_name: str, users):
     help="Specify users to remove from a role (can be used multiple times).",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def remove_user(ctx: click.Context, resource_name: str, users):
     """Remove one or more users from a {resource}.
 
@@ -269,7 +269,6 @@ def remove_user(ctx: click.Context, resource_name: str, users):
     help="Filter the permissions by a specific scope type.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_permissions(ctx: click.Context, scope_type: str):
     """Lists all available permissions that can be assigned
     to a role, optionally filtered by a scope type.

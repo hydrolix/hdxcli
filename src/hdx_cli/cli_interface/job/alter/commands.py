@@ -5,13 +5,16 @@ from rich.console import Console
 from rich.table import Table
 
 from hdx_cli.cli_interface.common.cached_operations import find_alter_jobs
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
-from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create, basic_show, basic_list
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
+from hdx_cli.cli_interface.common.undecorated_click_commands import (
+    basic_create,
+    basic_list,
+    basic_show,
+)
 from hdx_cli.library_api.common.exceptions import LogicException
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit
 from hdx_cli.library_api.utility.functions import heuristically_get_resource_kind
 from hdx_cli.models import ProfileUserContext
 
@@ -27,7 +30,6 @@ console = Console()
     help="Perform an operation on the passed job name.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def alter(ctx: click.Context, alter_name: str):
     """Manage alter jobs."""
     user_profile = ctx.parent.obj["usercontext"]
@@ -38,7 +40,6 @@ def alter(ctx: click.Context, alter_name: str):
 
 @alter.group(cls=HdxGroup)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(ctx: click.Context):
     """Create a new alter job."""
     user_profile = ctx.parent.obj["usercontext"]
@@ -56,7 +57,6 @@ def create(ctx: click.Context):
 @click.option("--value", required=True, help="The new value for the column.")
 @click.option("--where", required=True, help="The WHERE clause for the update operation.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create_update(ctx: click.Context, table: str, column: str, value, where: str):
     """Create a job to update specific rows in a table.
 
@@ -73,12 +73,9 @@ def create_update(ctx: click.Context, table: str, column: str, value, where: str
 
 
 @create.command(cls=HdxCommand, name="delete")
-@click.option(
-    "--table", required=True, help="The table to alter, e.g., my_proj.my_tbl."
-)
+@click.option("--table", required=True, help="The table to alter, e.g., my_proj.my_tbl.")
 @click.option("--where", required=True, help="The WHERE clause for the delete operation.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create_delete(ctx: click.Context, table: str, where: str):
     """Create a job to delete specific rows from a table.
 
@@ -99,7 +96,6 @@ def create_delete(ctx: click.Context, table: str, where: str):
 @click.option("--project", "project_name", default=None, help="Filter alter jobs by project name.")
 @click.option("--table", "table_name", default=None, help="Filter alter jobs by table name.")
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def list_(ctx: click.Context, status: str, project_name: str, table_name: str):
     """List all alter jobs.
 
@@ -115,7 +111,6 @@ def list_(ctx: click.Context, status: str, project_name: str, table_name: str):
 @alter.command(cls=HdxCommand)
 @click.argument("job_name", required=False)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def commit(ctx: click.Context, job_name: str):
     """Commit changes made by an alter job.
 
@@ -133,7 +128,6 @@ def commit(ctx: click.Context, job_name: str):
 @alter.command(cls=HdxCommand)
 @click.argument("job_name", required=False)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def cancel(ctx: click.Context, job_name: str):
     """Cancel an ongoing alter job.
 
@@ -151,7 +145,6 @@ def cancel(ctx: click.Context, job_name: str):
 @alter.command(cls=HdxCommand)
 @click.argument("job_name", required=False)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def retry(ctx: click.Context, job_name: str):
     """Retry a failed alter job.
 
@@ -169,7 +162,6 @@ def retry(ctx: click.Context, job_name: str):
 @alter.command(cls=HdxCommand)
 @click.argument("job_name", required=False)
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def verify(ctx: click.Context, job_name: str):
     """Verify the status of an alter job.
 

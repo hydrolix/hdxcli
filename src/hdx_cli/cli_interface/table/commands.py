@@ -17,8 +17,6 @@ from hdx_cli.library_api.common.logging import get_logger
 from hdx_cli.library_api.utility.decorators import (
     ensure_logged_in,
     no_rollback_option,
-    report_error_and_exit,
-    skip_group_logic_on_help,
     target_cluster_options,
 )
 from hdx_cli.library_api.utility.file_handling import read_json_from_file, read_plain_file
@@ -43,8 +41,6 @@ logger = get_logger()
     default=None,
 )
 @click.pass_context
-@skip_group_logic_on_help
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def table(ctx: click.Context, project_name: str, table_name: str):
     """This group of commands allows to create, list, show, delete, truncate,
@@ -100,7 +96,6 @@ def table(ctx: click.Context, project_name: str, table_name: str):
     help="Path to a JSON file with additional table settings.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(
     ctx: click.Context,
     resource_name: str,
@@ -176,7 +171,6 @@ def _truncate_table(profile: ProfileUserContext, resource_path: str, resource_na
     help="Bypass the confirmation prompt.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def truncate(ctx: click.Context, resource_name: str, yes: bool):
     """Remove all data from a {resource}.
 
@@ -214,7 +208,6 @@ def truncate(ctx: click.Context, resource_name: str, yes: bool):
     help="Migrate only the table, skipping its associated transforms.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def migrate(
     ctx: click.Context,
     target_project_name: str,

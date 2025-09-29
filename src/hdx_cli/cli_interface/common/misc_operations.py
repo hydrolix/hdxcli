@@ -5,7 +5,6 @@ import click
 
 from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_settings
-from hdx_cli.library_api.utility.decorators import report_error_and_exit
 
 
 def _value_formatter(value: str) -> Any:
@@ -32,10 +31,9 @@ def _value_formatter(value: str) -> Any:
     "--force",
     is_flag=True,
     default=False,
-    help='This flag allows adding the `force_operation` parameter to the request.',
+    help="This flag allows adding the `force_operation` parameter to the request.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def settings(ctx: click.Context, key: str | None, value: str | None, force: bool):
     """List, get, or set key-value settings for a specific {resource}.
 

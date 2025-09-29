@@ -1,22 +1,21 @@
 import click
 
-from hdx_cli.cli_interface.common.click_extensions import HdxGroup, HdxCommand
+from hdx_cli.cli_interface.common.click_extensions import HdxCommand, HdxGroup
 from hdx_cli.cli_interface.common.misc_operations import settings as command_settings
+from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.rest_operations import list_ as command_list
 from hdx_cli.cli_interface.common.rest_operations import show as command_show
-from hdx_cli.cli_interface.common.rest_operations import delete as command_delete
 from hdx_cli.cli_interface.common.undecorated_click_commands import basic_create
 from hdx_cli.library_api.common.exceptions import ResourceNotFoundException
 from hdx_cli.library_api.common.generic_resource import access_resource
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.decorators import ensure_logged_in
 from hdx_cli.library_api.utility.file_handling import read_json_from_file
 from hdx_cli.models import ProfileUserContext
 
 logger = get_logger()
 
 
-@report_error_and_exit(exctype=Exception)
 def get_credential_id(ctx, param, value):
     if value is None:
         return value
@@ -38,7 +37,6 @@ def get_credential_id(ctx, param, value):
     help="Perform operation on the passed storage.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 @ensure_logged_in
 def storage(ctx: click.Context, storage_name: str):
     """This group of commands allows to create, list,
@@ -104,7 +102,6 @@ def storage(ctx: click.Context, storage_name: str):
     help="I/O performance mode for the storage bucket.",
 )
 @click.pass_context
-@report_error_and_exit(exctype=Exception)
 def create(
     ctx: click.Context,
     resource_name: str,
