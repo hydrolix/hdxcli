@@ -1,4 +1,5 @@
 import click
+from click.core import ParameterSource
 from InquirerPy import prompt
 from InquirerPy.validator import EmptyInputValidator
 
@@ -17,6 +18,18 @@ from ...models import ProfileUserContext
 from .operations import download_dictionary_file
 
 logger = get_logger()
+
+
+def _warn_on_deprecated_file_type(ctx, param, value):
+    """Callback to show a deprecation warning for the file_type option."""
+    source = ctx.get_parameter_source(param.name)
+    if source is ParameterSource.COMMANDLINE:
+        warning = (
+            f"Warning: The '--{param.name}' option is deprecated "
+            "and will be removed in a future version. It has no effect."
+        )
+        click.secho(warning, err=True, fg="yellow")
+    return value
 
 
 def _delete_file_logic(profile: ProfileUserContext, resource_path: str, file_name: str):
@@ -65,8 +78,11 @@ def files_group(ctx: click.Context):
     "--body-from-file-type",
     "-t",
     type=click.Choice(("json", "verbatim"), case_sensitive=False),
-    help="How to interpret the body from the file. Defaults to 'json'.",
     default="json",
+    help="[DEPRECATED] This option has no effect and will be removed.",
+    hidden=True,
+    callback=_warn_on_deprecated_file_type,
+    is_eager=True,
 )
 @click.pass_context
 @report_error_and_exit(exctype=Exception)
@@ -81,7 +97,11 @@ def upload(
     \b
     Examples:
       # Upload a local CSV file to be used as a data source for a dictionary
-      hdxcli dictionary --project my_project files upload ./local_countries.csv countries -t verbatim
+      hdxcli dictionary --project my_project files upload ./countries.csv countries
+
+    \b
+      # Upload a local JSON file to be used as a data source for a dictionary
+      hdxcli dictionary --project my_project files upload ./cities.json cities
     """
     profile = ctx.parent.obj["usercontext"]
     resource_path = ctx.parent.obj["resource_path"]
