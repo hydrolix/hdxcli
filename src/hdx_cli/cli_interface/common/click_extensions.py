@@ -177,7 +177,8 @@ class HdxCommand(click.Command):
         usage_line = self.get_usage(ctx).replace("Usage: ", "")
         # if usage_line is too long, click adds '\n' at some point. It cleans it up.
         usage_line = re.sub(r"\s*\n\s*", " ", usage_line).strip()
-        md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
+        subheading = "#" * (depth + 1)
+        md_parts.append(f"{subheading} Usage\n\n```bash\n{usage_line}\n```\n")
 
         # Options
         options = _generate_options_table(self, ctx)
@@ -186,7 +187,7 @@ class HdxCommand(click.Command):
 
         # Examples
         if examples_str:
-            md_parts.append("**Examples**\n")
+            md_parts.append("{subheading} Examples\n")
             md_parts.append(f"```bash\n{inspect.cleandoc(examples_str)}\n```\n")
 
         # Markdown-only content
@@ -237,7 +238,8 @@ class HdxGroup(click.Group):
         usage_line = self.get_usage(ctx).replace("Usage: ", "")
         # if usage_line is too long, click adds '\n' at some point. It cleans it up.
         usage_line = re.sub(r"\s*\n\s*", " ", usage_line).strip()
-        md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
+        subheading = "#" * (depth + 1)
+        md_parts.append(f"{subheading} Usage\n\n```bash\n{usage_line}\n```\n")
 
         # Options
         options = _generate_options_table(self, ctx)
