@@ -175,10 +175,11 @@ def init():
     will exit with an error to prevent overwriting settings.
 
     \f
-    **Example Output**
+    Example Output
 
     The following is a sample of the interactive `init` session:
-    ```
+
+    ```shell
     $ hdxcli init
     No configuration found for your Hydrolix cluster.
     Let's create the 'default' profile to get you started.
