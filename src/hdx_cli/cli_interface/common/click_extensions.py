@@ -253,13 +253,10 @@ class HdxGroup(click.Group):
             (subgroups_md if isinstance(cmd, click.Group) else direct_commands_md).append(cmd_md)
 
         if direct_commands_md:
-            md_parts.append("\n\n".join(direct_commands_md))
+            md_parts.append("\n".join(direct_commands_md))
 
         if subgroups_md:
-            if direct_commands_md:
-                md_parts.append("\n\n")
-
-            md_parts.append("\n\n".join(subgroups_md))
+            md_parts.append("\n".join(subgroups_md))
 
         return "\n".join(md_parts)
 
