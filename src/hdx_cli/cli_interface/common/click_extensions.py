@@ -47,7 +47,7 @@ def _generate_options_table(command: click.Command, ctx: click.Context) -> str:
     ]
 
     if not opts:
-        return ""
+        return None
 
     format_args = _create_format_args(ctx)
     table_parts = [
@@ -178,7 +178,9 @@ class HdxCommand(click.Command):
         md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
 
         # Options
-        md_parts.append(_generate_options_table(self, ctx))
+        options = _generate_options_table(self, ctx)
+        if options is not None:
+            md_parts.append(options)
 
         # Examples
         if examples_str:
@@ -236,7 +238,9 @@ class HdxGroup(click.Group):
         md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
 
         # Options
-        md_parts.append(_generate_options_table(self, ctx))
+        options = _generate_options_table(self, ctx)
+        if options is not None:
+            md_parts.append(options)
 
         # Markdown-only content
         if markdown_only_content:
