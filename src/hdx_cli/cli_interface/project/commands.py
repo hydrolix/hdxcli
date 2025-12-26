@@ -110,6 +110,8 @@ def migrate(
 
     \b
     Options allow for customizing the migration:
+
+    \b
     - `--dictionaries`: Include associated dictionaries.
     - `--functions`: Include associated functions.
     - `--only`: Migrate only the {resource}, skipping all dependencies.
