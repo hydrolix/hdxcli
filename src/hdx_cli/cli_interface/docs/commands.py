@@ -75,7 +75,7 @@ def _generate_full_docs(root_ctx: click.Context, output_path: Path):
         frontmatter_parts.append("---")
 
         frontmatter = "\n".join(frontmatter_parts)
-        version_line = f"> _hdxcli v{VERSION}_"
+        version_line = f"Documentation covers _hdxcli v{VERSION}_"
 
         # The markdown file starts with the frontmatter and the version line
         final_md_content = f"{frontmatter}\n\n{version_line}\n\n"
@@ -88,7 +88,7 @@ def _generate_full_docs(root_ctx: click.Context, output_path: Path):
                 md_content = command.to_markdown(cmd_ctx)
                 body_parts.append(md_content)
 
-        final_md_content += "\n\n---\n\n".join(body_parts)
+        final_md_content += "\n---\n\n".join(body_parts)
 
         file_path = output_path / group_filename
         file_path.write_text(final_md_content, encoding="utf-8")
