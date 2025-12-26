@@ -121,8 +121,9 @@ def create(
 
     \b
     A {resource} can be created in two ways:
-      - Using a JSON settings file via `--settings-filename`.
-      - Providing individual settings as options (`--bucket-path`, `--bucket-name`, etc).
+
+    - Using a JSON settings file via `--settings-filename`.
+    - Providing individual settings as options (`--bucket-path`, `--bucket-name`, etc).
 
     \b
     Examples:
