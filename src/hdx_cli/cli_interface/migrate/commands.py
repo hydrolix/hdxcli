@@ -186,16 +186,19 @@ def migrate(
 
     \b
     This command orchestrates a table migration, which can involve two main stages:
+
     1. *Resource Creation*: Replicates the source project, table, and transforms
        on the target cluster. Optionally, it can also migrate associated
        functions and dictionaries.
+    \b
     2. *Data Migration*: Copies the table's data from the source storage
        to the target and updates the catalog to make the data queryable.
 
     \b
-    **Arguments**:
-      - `SOURCE_TABLE`: The source table to migrate, in 'project.table' format.
-      - `TARGET_TABLE`: The destination for the migration, in 'project.table' format.
+    Arguments:
+
+    - `SOURCE_TABLE`: The source table to migrate, in 'project.table' format.
+    - `TARGET_TABLE`: The destination for the migration, in 'project.table' format.
 
     \b
     **Key Options**:
@@ -203,19 +206,19 @@ def migrate(
       connection details (`--target-hostname`, `--target-username`, etc.).
     \b
     - Migration Scope (`--only`):
-      - *resources*: Migrates only the project, table, and other definitions.
-      - *data*: Migrates only the data, assuming resources already exist.
-      - If omitted, a full migration (resources and data) is performed.
+        - *resources*: Migrates only the project, table, and other definitions.
+        - *data*: Migrates only the data, assuming resources already exist.
+        - If omitted, a full migration (resources and data) is performed.
     \b
     - Data Handling:
-      - `--reuse-partitions`: For clusters sharing storage. Migrates the table
-        definition but reuses the existing data, avoiding a data copy.
-      - `--from-date`/`--to-date`: Filter the data to be migrated by a date range.
+        - `--reuse-partitions`: For clusters sharing storage. Migrates the table
+          definition but reuses the existing data, avoiding a data copy.
+        - `--from-date`/`--to-date`: Filter the data to be migrated by a date range.
     \b
     - Rclone Remote:
-      - `--rc-host`, `--rc-user`, `--rc-pass`: Connection details for the Rclone
-        server that will perform the data transfer. Required for any migration
-        that copies data.
+        - `--rc-host`, `--rc-user`, `--rc-pass`: Connection details for the Rclone
+          server that will perform the data transfer. Required for any migration
+          that copies data.
 
     \b
     Examples:
