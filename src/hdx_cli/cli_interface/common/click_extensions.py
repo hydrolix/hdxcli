@@ -49,9 +49,11 @@ def _generate_options_table(command: click.Command, ctx: click.Context) -> str:
     if not opts:
         return None
 
+    depth = _get_depth(ctx)
+    subheading = "#" * (depth + 1)
     format_args = _create_format_args(ctx)
     table_parts = [
-        "**Options**",
+        f"{subheading} Options",
         "",  # Adds a blank line before the table
         "| Option | Description |",
         "|:-------|:------------|",
