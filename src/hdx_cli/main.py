@@ -15,6 +15,7 @@ from hdx_cli.cli_interface.docs import commands as docs_
 from hdx_cli.cli_interface.function import commands as function_
 from hdx_cli.cli_interface.integration import commands as integration_
 from hdx_cli.cli_interface.job import commands as job_
+from hdx_cli.cli_interface.logs import commands as logs_
 from hdx_cli.cli_interface.migrate import commands as migrate_
 from hdx_cli.cli_interface.pool import commands as pool_
 from hdx_cli.cli_interface.profile import commands as profile_
@@ -250,6 +251,7 @@ hdx_cli.add_command(resource_summary_.resource_summary)
 hdx_cli.add_command(defaults_.show_defaults)
 hdx_cli.add_command(version)
 hdx_cli.add_command(docs_.docs)
+hdx_cli.add_command(logs_.logs)
 
 
 def main():

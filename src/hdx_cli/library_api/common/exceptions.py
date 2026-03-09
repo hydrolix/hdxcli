@@ -153,3 +153,27 @@ class RCloneRemoteCheckException(RCloneRemoteException):
     def __init__(self, bucket_name, cloud):
         message = f"Error checking remote connection to {bucket_name} ({cloud})."
         super().__init__(message)
+
+
+class LogsCommandException(HdxCliException):
+    """Base exception for all errors related to the 'logs' command."""
+
+    pass
+
+
+class LogsQueryException(LogsCommandException):
+    """Raised when a log query fails."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class LogsQueryTimeoutException(LogsQueryException):
+    """A specific type of query error for timeouts."""
+
+    def __init__(self, timeout: int):
+        message = (
+            f"The query timed out after {timeout} seconds. Your request may be too broad. "
+            "Try reducing the scope with --tail or other filters."
+        )
+        super().__init__(message)
