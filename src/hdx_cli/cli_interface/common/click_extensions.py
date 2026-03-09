@@ -38,7 +38,7 @@ _RESOURCE_CONTEXT_OPTIONS = {
 }
 
 
-def _generate_options_table(command: click.Command, ctx: click.Context) -> str:
+def _generate_options_table(command: click.Command, ctx: click.Context, text: str) -> str:
     """Generates a Markdown table for a command's options."""
     opts = [
         p.get_help_record(ctx)
@@ -47,11 +47,13 @@ def _generate_options_table(command: click.Command, ctx: click.Context) -> str:
     ]
 
     if not opts:
-        return ""
+        return None
 
+    depth = _get_depth(ctx)
+    subheading = "#" * (depth + 1)
     format_args = _create_format_args(ctx)
     table_parts = [
-        "**Options**",
+        f"{subheading} Options for {text}",
         "",  # Adds a blank line before the table
         "| Option | Description |",
         "|:-------|:------------|",
@@ -160,6 +162,7 @@ class HdxCommand(click.Command):
         depth = _get_depth(ctx)
         heading = "#" * depth
         command_title = self.name.replace("-", " ").replace("_", " ").title()
+        command_title += f" ({resource})"
         md_parts = [f"{heading} {command_title}\n"]
 
         format_args = _create_format_args(ctx)
@@ -175,14 +178,17 @@ class HdxCommand(click.Command):
         usage_line = self.get_usage(ctx).replace("Usage: ", "")
         # if usage_line is too long, click adds '\n' at some point. It cleans it up.
         usage_line = re.sub(r"\s*\n\s*", " ", usage_line).strip()
-        md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
+        subheading = "#" * (depth + 1)
+        md_parts.append(f"{subheading} Usage for {command_title}\n\n```bash\n{usage_line}\n```\n")
 
         # Options
-        md_parts.append(_generate_options_table(self, ctx))
+        options = _generate_options_table(self, ctx, command_title)
+        if options is not None:
+            md_parts.append(options)
 
         # Examples
         if examples_str:
-            md_parts.append("**Examples**\n")
+            md_parts.append(f"{subheading} Examples for {command_title}\n")
             md_parts.append(f"```bash\n{inspect.cleandoc(examples_str)}\n```\n")
 
         # Markdown-only content
@@ -233,10 +239,13 @@ class HdxGroup(click.Group):
         usage_line = self.get_usage(ctx).replace("Usage: ", "")
         # if usage_line is too long, click adds '\n' at some point. It cleans it up.
         usage_line = re.sub(r"\s*\n\s*", " ", usage_line).strip()
-        md_parts.append(f"**Usage**\n\n```bash\n{usage_line}\n```\n")
+        subheading = "#" * (depth + 1)
+        md_parts.append(f"{subheading} Usage for {group_title}\n\n```bash\n{usage_line}\n```\n")
 
         # Options
-        md_parts.append(_generate_options_table(self, ctx))
+        options = _generate_options_table(self, ctx, group_title)
+        if options is not None:
+            md_parts.append(options)
 
         # Markdown-only content
         if markdown_only_content:
@@ -253,13 +262,10 @@ class HdxGroup(click.Group):
             (subgroups_md if isinstance(cmd, click.Group) else direct_commands_md).append(cmd_md)
 
         if direct_commands_md:
-            md_parts.append("\n\n".join(direct_commands_md))
+            md_parts.append("\n".join(direct_commands_md))
 
         if subgroups_md:
-            if direct_commands_md:
-                md_parts.append("\n\n")
-
-            md_parts.append("\n\n".join(subgroups_md))
+            md_parts.append("\n".join(subgroups_md))
 
         return "\n".join(md_parts)
 

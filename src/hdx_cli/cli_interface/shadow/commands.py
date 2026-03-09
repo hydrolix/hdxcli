@@ -89,7 +89,7 @@ def shadow(ctx: click.Context, project_name: str):
     "shadow_table_name",
     required=False,
     default=None,
-    help="Name of the shadow table. Default: shadow_ + 'source-table-name'.",
+    help="Name of the shadow table. Default: `shadow_` + 'source-table-name'.",
 )
 @click.option(
     "--table-settings",

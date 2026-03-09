@@ -41,6 +41,7 @@ def settings(ctx: click.Context, key: str | None, value: str | None, force: bool
 
     \b
     This command operates in three modes:
+
     - *LIST*: Invoked with no arguments, it lists all settings.
     - *GET*: Invoked with only a KEY, it retrieves the value of that setting.
     - *SET*: Invoked with a KEY and a VALUE, it sets the value for that setting.
