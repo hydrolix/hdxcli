@@ -6,13 +6,18 @@ from hdx_cli.models import ProfileUserContext
 
 def is_same_bucket(settings_source: dict, settings_target: dict) -> bool:
     result = False
+    cloud_source = settings_source.get("cloud")
+    cloud_target = settings_target.get("cloud")
     if (
         settings_source.get("bucket_name") == settings_target.get("bucket_name")
         and settings_source.get("bucket_path") == settings_target.get("bucket_path")
-        and settings_source.get("region") == settings_target.get("region")
-        and settings_source.get("cloud") == settings_target.get("cloud")
+        and cloud_source == cloud_target
     ):
-        result = True
+        # Azure storage does not use region, so skip the region comparison
+        if cloud_source == "azure" or (
+            settings_source.get("region") == settings_target.get("region")
+        ):
+            result = True
     return result
 
 
