@@ -7,12 +7,12 @@ from hdx_cli.cli_interface.common.click_extensions import HdxCommand
 from hdx_cli.cli_interface.migrate.data import migrate_data
 from hdx_cli.cli_interface.migrate.helpers import MigrationData, get_catalog
 from hdx_cli.cli_interface.migrate.rc.rc_manager import RcloneAPIConfig
-from hdx_cli.cli_interface.migrate.resources import get_resources, create_resources
+from hdx_cli.cli_interface.migrate.resources import create_resources, get_resources
 from hdx_cli.cli_interface.migrate.validator import validations
 from hdx_cli.config.profile_settings import is_valid_hostname
 from hdx_cli.library_api.common.exceptions import InvalidHostnameException
 from hdx_cli.library_api.common.logging import get_logger
-from hdx_cli.library_api.utility.decorators import report_error_and_exit, ensure_logged_in
+from hdx_cli.library_api.utility.decorators import ensure_logged_in, report_error_and_exit
 
 logger = get_logger()
 
@@ -78,6 +78,14 @@ def validate_hostname(ctx, params, hostname: str) -> str:
     default=None,
     type=click.Choice(["http", "https"], case_sensitive=False),
     help="URI scheme for the target cluster (http or https).",
+)
+@click.option(
+    "--target-customer",
+    "-tc",
+    "target_customer",
+    default=None,
+    help="Name or UUID of the customer on the target cluster to assign to the migrated "
+    "project. Required by clusters v6.3+; if omitted, you are prompted to choose one.",
 )
 @click.option(
     "--allow-merge",
@@ -169,6 +177,7 @@ def migrate(
     target_username: str,
     target_password: str,
     target_uri_scheme: str,
+    target_customer: str,
     allow_merge: bool,
     only: str,
     with_functions: bool,
@@ -205,6 +214,11 @@ def migrate(
     - Target Cluster: Specify the destination with `--target-profile` or with individual
       connection details (`--target-hostname`, `--target-username`, etc.).
     \b
+    - Target Customer (`--target-customer`): Clusters v6.3+ require every project to
+      belong to a customer. Provide the target customer by name or UUID; when omitted,
+      the command lists the target's customers and prompts for one, offering to create
+      it if it does not exist.
+    \b
     - Migration Scope (`--only`):
         - *resources*: Migrates only the project, table, and other definitions.
         - *data*: Migrates only the data, assuming resources already exist.
@@ -239,7 +253,9 @@ def migrate(
     """
     source_profile = ctx.parent.obj["usercontext"]
     has_target_profile = target_profile_name is not None
-    has_all_cluster_options = all([target_hostname, target_username, target_password, target_uri_scheme])
+    has_all_cluster_options = all(
+        [target_hostname, target_username, target_password, target_uri_scheme]
+    )
 
     if not has_target_profile and not has_all_cluster_options:
         raise click.BadParameter(
@@ -320,7 +336,8 @@ def migrate(
             source_data,
             reuse_partitions,
             migrate_functions=with_functions,
-            migrate_dictionaries=with_dictionaries
+            migrate_dictionaries=with_dictionaries,
+            target_customer=target_customer,
         )
     if only != "resources":
         migrate_data(

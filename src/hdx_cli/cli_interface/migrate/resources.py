@@ -6,6 +6,13 @@ from hdx_cli.cli_interface.common.undecorated_click_commands import (
     basic_create_file,
     basic_get,
 )
+from hdx_cli.cli_interface.migrate.customer import (
+    collect_autoingest_credential_ids,
+    ensure_credential_memberships,
+    ensure_storage_memberships,
+    get_target_customer,
+    target_projects_context,
+)
 from hdx_cli.cli_interface.migrate.helpers import MigrationData, confirm_action
 from hdx_cli.cli_interface.migrate.resource_adapter import (
     adapt_resource_to_api_structure,
@@ -42,12 +49,33 @@ def create_resources(
     reuse_partitions: bool = False,
     migrate_functions: bool = False,
     migrate_dictionaries: bool = False,
+    target_customer: str = None,
 ) -> None:
     logger.info(f'{" Resource Creation ":=^50}')
     logger.info(f"Target Cluster: {target_profile.hostname}")
 
+    # CUSTOMER
+    # Since v6.3, projects belong to a customer and tables may only reference
+    # storages/credentials that are members of it. Resolve the customer and
+    # register memberships before creating anything.
+    existing_project, target_projects_path = target_projects_context(target_profile)
+    logger.info(f"{'  Target customer':<42} -> [!n]")
+    customer = get_target_customer(
+        target_profile, target_projects_path, target_customer, existing_project
+    )
+    logger.info(customer.get("name") if customer else "Not required")
+
+    if customer:
+        logger.info(f"{'  Storage registration':<42} -> [!n]")
+        message = ensure_storage_memberships(
+            target_profile, customer, source_data.table, target_data.storages
+        )
+        logger.info(message)
+
     # PROJECT
-    _create_project(target_profile, source_data.project, reuse_partitions)
+    _create_project(
+        target_profile, source_data.project, target_projects_path, customer, reuse_partitions
+    )
     target_data.project, _ = access_resource_detailed(
         target_profile, [("projects", target_profile.projectname)]
     )
@@ -63,7 +91,7 @@ def create_resources(
         _create_dictionaries(target_profile, source_profile, source_data.dictionaries)
 
     # TABLE
-    _create_table(target_profile, source_data.table, reuse_partitions)
+    _create_table(target_profile, source_data.table, reuse_partitions, customer)
     target_data.table, _ = access_resource_detailed(
         target_profile,
         [("projects", target_profile.projectname), ("tables", target_profile.tablename)],
@@ -78,13 +106,21 @@ def create_resources(
 
 
 def _create_project(
-    target_profile: ProfileUserContext, source_project_body: dict, reuse_partitions: bool
+    target_profile: ProfileUserContext,
+    source_project_body: dict,
+    target_projects_path: str,
+    customer: dict,
+    reuse_partitions: bool,
 ) -> None:
     logger.info(f"{f'  Project: {target_profile.projectname[:31]}':<42} -> [!n]")
 
-    _, target_projects_url = access_resource_detailed(target_profile, [("projects", None)])
-    target_projects_path = urlparse(target_projects_url).path
     target_project_body = copy.deepcopy(source_project_body)
+    # The source's customer/org never make sense on the target cluster.
+    # The right customer (when the target requires one) was already resolved.
+    target_project_body.pop("customer", None)
+    target_project_body.pop("org", None)
+    if customer:
+        target_project_body["customer"] = customer.get("uuid")
 
     adapted_project = adapt_resource_to_api_structure(
         target_profile, target_projects_path, target_project_body
@@ -100,9 +136,16 @@ def _create_project(
         )
         logger.info("Done")
     except HttpException as exc:
-        if exc.error_code != 400 or "already exists" not in str(exc.message):
-            raise exc
-        logger.info("Exists, skipping")
+        message = str(exc.message)
+        if exc.error_code == 400 and "already exists" in message:
+            logger.info("Exists, skipping")
+            return
+        if exc.error_code == 400 and "customer" in message:
+            raise HdxCliException(
+                f"The target cluster rejected the project creation: {message} "
+                "Use --target-customer to choose a customer on the target cluster."
+            ) from exc
+        raise exc
 
 
 def _create_functions(
@@ -215,7 +258,10 @@ def _create_dictionary_file(
 
 
 def _create_table(
-    target_profile: ProfileUserContext, source_table_body: dict, reuse_partitions: bool
+    target_profile: ProfileUserContext,
+    source_table_body: dict,
+    reuse_partitions: bool,
+    customer: dict = None,
 ) -> None:
     logger.info(f"{f'  Table: {target_profile.tablename[:33]}':<42} -> [!n]")
 
@@ -229,6 +275,12 @@ def _create_table(
         target_profile, target_tables_path, target_table_body
     )
     normalized_table = normalize_table(adapted_table, reuse_partitions)
+
+    # Autoingest credentials are only known after the interactive
+    # normalization above, so their membership check happens here.
+    if customer:
+        credential_ids = collect_autoingest_credential_ids(normalized_table)
+        ensure_credential_memberships(target_profile, customer, credential_ids)
 
     basic_create(
         target_profile, target_tables_path, target_profile.tablename, body=normalized_table
