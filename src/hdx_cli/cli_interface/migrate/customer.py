@@ -363,6 +363,17 @@ def _confirm_and_add_membership(
                 f"Insufficient permissions to register the {resource_description} "
                 f"with customer '{customer_name}'. To do it manually, {manual_remediation}."
             ) from exc
+        if exc.error_code in (404, 405):
+            # The customer add_storage/add_credential actions only exist on
+            # clusters that enforce membership (6.4+). Older clusters expose a
+            # 'customers' field but manage membership server-side (they attach
+            # the storage/credential to the customer at table-create time and do
+            # not reject non-members), so there is nothing to do here: skip.
+            logger.debug(
+                f"Membership registration is not available on this target "
+                f"({action}); it is managed automatically. Skipping."
+            )
+            return
         raise
 
 

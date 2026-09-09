@@ -189,6 +189,50 @@ class _FakeResponse:
         return self._payload
 
 
+class TestMembershipRegistration:
+    """ensure_storage_memberships against a non-member, non-default storage."""
+
+    def _setup(self, monkeypatch, create_side_effect):
+        monkeypatch.setattr(customer_module, "get_storage_default", lambda s: ("st-default", {}))
+        monkeypatch.setattr(customer_module, "confirm_action", lambda *a, **k: True)
+        monkeypatch.setattr(customer_module, "basic_create", create_side_effect)
+
+    def _run(self):
+        table_body = {
+            "settings": {
+                "storage_map": {
+                    "default_storage_id": "st-default",
+                    "column_value_mapping": {"st-9": ["1"]},
+                }
+            }
+        }
+        target_storages = [{"uuid": "st-9", "name": "S9", "customers": []}]
+        return customer_module.ensure_storage_memberships(
+            None, {"uuid": "cust-1", "name": "acme"}, table_body, target_storages
+        )
+
+    def test_404_is_skipped_not_fatal(self, monkeypatch):
+        from hdx_cli.library_api.common.exceptions import HttpException
+
+        def raise_404(*a, **k):
+            raise HttpException(404, "Not Found")
+
+        self._setup(monkeypatch, raise_404)
+        # Older clusters (6.1-6.3) lack the add_storage action; the missing
+        # endpoint must not abort the migration.
+        assert self._run() == "Done"
+
+    def test_403_still_raises(self, monkeypatch):
+        from hdx_cli.library_api.common.exceptions import HdxCliException, HttpException
+
+        def raise_403(*a, **k):
+            raise HttpException(403, "Forbidden")
+
+        self._setup(monkeypatch, raise_403)
+        with pytest.raises(HdxCliException):
+            self._run()
+
+
 class TestCreateCustomer:
     def test_uses_response_body_with_slugified_name(self, monkeypatch):
         # Server slugifies "Acme Corp" -> "Acme-Corp" and returns the real
