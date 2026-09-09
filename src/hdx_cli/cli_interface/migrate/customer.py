@@ -31,18 +31,29 @@ CI_CUSTOMER_NAMES = ("hydro", "sample_project")
 PICKER_ATTEMPTS = 3
 
 
-def project_requires_customer(profile: ProfileUserContext, projects_path: str) -> bool:
-    """Whether the target cluster requires a 'customer' on project creation.
+def customer_field_status(profile: ProfileUserContext, projects_path: str) -> tuple[bool, bool]:
+    """Whether the target's project endpoint supports and requires a customer.
 
-    Detected from the OPTIONS metadata of the projects endpoint, so pre-6.3
-    clusters (no 'customer' field) keep working without version checks.
+    Read from the OPTIONS metadata of the projects endpoint, so version
+    differences are handled without hardcoded version checks:
+
+    - ``supported`` is False on pre-6.1 clusters (no 'customer' field at all).
+    - ``required`` is True only where the server rejects a project created
+      without a customer (6.4+). Clusters where the field is present but
+      optional (6.1-6.3.x auto-assign the default customer) report False, so
+      migrations to them keep working untouched.
+
+    Both are False when the metadata cannot be fetched.
     """
     try:
         structure = basic_options(profile, projects_path)
     except (HttpException, ActionNotAvailableException) as exc:
         logger.debug(f"Could not fetch project options from target: {exc}")
-        return False
-    return "customer" in structure
+        return False, False
+    field = structure.get("customer")
+    if field is None:
+        return False, False
+    return True, bool(field.get("required"))
 
 
 def get_target_customer(
@@ -53,13 +64,16 @@ def get_target_customer(
 ) -> dict | None:
     """Resolve the Customer for the migrated project on the target cluster.
 
-    Returns the customer body (with 'uuid' and 'name'), or None when the
-    target cluster does not support customers on projects.
+    Returns the customer body (with 'uuid' and 'name'), or None when no
+    customer applies (the target does not support them, or the field is
+    optional and none was requested so the server assigns the default).
     """
     if existing_project is not None:
         return _customer_of_existing_project(profile, existing_project, customer_name_or_uuid)
 
-    if not project_requires_customer(profile, projects_path):
+    supported, required = customer_field_status(profile, projects_path)
+    if not supported:
+        # Pre-6.1 target: no customer concept at all.
         if customer_name_or_uuid:
             logger.debug(
                 "The target cluster does not support customers on projects, "
@@ -67,10 +81,18 @@ def get_target_customer(
             )
         return None
 
-    customers = list_customers(profile)
+    # The field exists. Honor an explicit choice on any such cluster (it is
+    # settable whether or not it is required).
     if customer_name_or_uuid:
-        return _resolve_or_create_from_option(profile, customers, customer_name_or_uuid)
-    return _interactive_pick_customer(profile, customers)
+        return _resolve_or_create_from_option(
+            profile, list_customers(profile), customer_name_or_uuid
+        )
+
+    # No explicit choice: only prompt when the server would otherwise reject
+    # the project. Optional-field clusters (6.1-6.3.x) auto-assign the default.
+    if not required:
+        return None
+    return _interactive_pick_customer(profile, list_customers(profile))
 
 
 def list_customers(profile: ProfileUserContext) -> list[dict]:
@@ -81,8 +103,12 @@ def list_customers(profile: ProfileUserContext) -> list[dict]:
 
 
 def find_customer(customers: list[dict], name_or_uuid: str) -> dict | None:
+    # The server slugifies customer names on create (spaces become dashes), so
+    # match the value as typed and in its slugified form. This lets a name with
+    # a space still resolve to the customer the server actually stored.
+    candidates = {name_or_uuid, name_or_uuid.replace(" ", "-")}
     for customer in customers:
-        if name_or_uuid in (customer.get("uuid"), customer.get("name")):
+        if candidates & {customer.get("uuid"), customer.get("name")}:
             return customer
     return None
 
@@ -187,7 +213,7 @@ def _interactive_pick_customer(profile: ProfileUserContext, customers: list[dict
 
 def _create_customer(profile: ProfileUserContext, customer_name: str) -> dict:
     try:
-        basic_create(profile, CUSTOMERS_PATH, customer_name)
+        response = basic_create(profile, CUSTOMERS_PATH, customer_name)
     except HttpException as exc:
         if exc.error_code in (401, 403):
             raise HdxCliException(
@@ -197,13 +223,18 @@ def _create_customer(profile: ProfileUserContext, customer_name: str) -> dict:
             ) from exc
         raise
 
-    customer = find_customer(list_customers(profile), customer_name)
-    if not customer:
+    # Use the created resource straight from the POST response: the server may
+    # have slugified the name (e.g. spaces to dashes), so reading it back by the
+    # typed name would miss it and leave the target already mutated.
+    try:
+        created = response.json()
+    except (ValueError, AttributeError):
+        created = {}
+    if not created.get("uuid"):
         raise HdxCliException(
-            f"Customer '{customer_name}' was created but could not be retrieved "
-            "from the target cluster."
+            f"Customer '{customer_name}' was created but the response did not " "include its id."
         )
-    return customer
+    return {"uuid": created["uuid"], "name": created.get("name", customer_name)}
 
 
 def collect_storage_map_ids(table_body: dict) -> set[str]:
@@ -252,8 +283,10 @@ def ensure_storage_memberships(
             # Unknown storage id: let the table creation surface the real error.
             continue
         if "customers" not in storage:
-            # The target cluster predates customer memberships.
-            return "Skipped (not supported by target)"
+            # This storage does not expose memberships; skip it and let the
+            # table creation surface any error rather than abandoning the rest.
+            logger.debug(f"Storage '{storage_id}' has no 'customers' field; skipping.")
+            continue
         if _is_member(storage, customer):
             continue
         _confirm_and_add_membership(
@@ -281,7 +314,10 @@ def ensure_credential_memberships(
             # Unknown credential id: let the table creation surface the real error.
             continue
         if "customers" not in credential:
-            return
+            # This credential does not expose memberships; skip it and keep
+            # going rather than abandoning the remaining credentials.
+            logger.debug(f"Credential '{credential_id}' has no 'customers' field; skipping.")
+            continue
         if _is_member(credential, customer):
             continue
         _confirm_and_add_membership(

@@ -115,10 +115,15 @@ def _create_project(
     logger.info(f"{f'  Project: {target_profile.projectname[:31]}':<42} -> [!n]")
 
     target_project_body = copy.deepcopy(source_project_body)
-    # The source's customer/org never make sense on the target cluster.
-    # The right customer (when the target requires one) was already resolved.
+    # The source's customer/org/deployment_id never make sense on the target
+    # cluster. The right customer (when the target requires one) was already
+    # resolved. hdx_deployment_id must be dropped explicitly: some cluster
+    # versions expose it as writable in the projects metadata, so the adapter
+    # would otherwise copy the source's value and the create fails as a
+    # duplicate; the target derives its own.
     target_project_body.pop("customer", None)
     target_project_body.pop("org", None)
+    target_project_body.pop("hdx_deployment_id", None)
     if customer:
         target_project_body["customer"] = customer.get("uuid")
 
