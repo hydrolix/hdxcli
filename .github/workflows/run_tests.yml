@@ -1,26 +1,51 @@
 name: test-hdxcli
-run-name: ${{ github.actor }} acceptance tests
-on: [push]
+run-name: ${{ github.actor }} tests
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      acceptance:
+        description: "Also run the live-cluster acceptance suite (tests/command_line_interface)"
+        type: boolean
+        default: false
 jobs:
-  run-tests:
+  # Hermetic unit tests. These cover the maintained surface (the migrate command and its
+  # helpers) and need no cluster, so they run on every push.
+  unit-tests:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4.3.0
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.10'
       - name: "Install poetry"
         run: python3 -m pip install poetry==2.0.1
       - name: "Install hdxcli dependencies"
         run: python3 -m poetry install
-      - name: "Set environment for tests"
-        run: |
-          echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
-      - name: "Run tests"
-        run: poetry run python3 -m pytest -v
+      - name: "Run unit tests"
+        run: poetry run python3 -m pytest -v tests --ignore=tests/command_line_interface
         env:
+          PYTHONPATH: ${{ github.workspace }}/src
+
+  # Live-cluster acceptance suite for the legacy CRUD commands. It requires the
+  # HDXCLI_TESTS_CLUSTER_* secrets and a reachable cluster, so it only runs on demand.
+  acceptance-tests:
+    if: github.event_name == 'workflow_dispatch' && inputs.acceptance
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+      - name: "Install poetry"
+        run: python3 -m pip install poetry==2.0.1
+      - name: "Install hdxcli dependencies"
+        run: python3 -m poetry install
+      - name: "Run acceptance tests"
+        run: poetry run python3 -m pytest -v tests/command_line_interface
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
           HDXCLI_TESTS_CLUSTER_SSL_ACTIVE: ${{secrets.HDXCLI_TESTS_CLUSTER_SSL_ACTIVE}}
           HDXCLI_TESTS_CLUSTER_PASSWORD: ${{secrets.HDXCLI_TESTS_CLUSTER_PASSWORD}}
           HDXCLI_TESTS_CLUSTER_USERNAME: ${{secrets.HDXCLI_TESTS_CLUSTER_USERNAME}}
-          PYTHONPATH: ${{env.PYTHONPATH}}
           HDXCLI_TESTS_CLUSTER_HOSTNAME: ${{secrets.HDXCLI_TESTS_CLUSTER_HOSTNAME}}
