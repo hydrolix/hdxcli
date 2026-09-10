@@ -13,7 +13,7 @@ Hydrolix clusters.
 
 ## Usage documentation
 
-See the [original README](README-general.md) for installation and usage
+See the [original README](https://github.com/hydrolix/hdxcli/blob/v1.0.84/README-general.md) for installation and usage
 instructions.
 
 > [!NOTE]
@@ -27,8 +27,8 @@ Success](mailto:support@hydrolix.io).
 
 ## License
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/hydrolix/hdxcli/blob/v1.0.84/LICENSE)
 
 This project is licensed under the terms of the **Apache License 2.0**.  You
-can find a copy of the license in the [LICENSE](LICENSE) file included in this
+can find a copy of the license in the [LICENSE](https://github.com/hydrolix/hdxcli/blob/v1.0.84/LICENSE) file included in this
 repository.
