@@ -147,6 +147,8 @@ class Catalog:
         project_id: str,
         table_id: str,
         temp_catalog: bool = False,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
     ) -> None:
         self.partitions = (
             get_catalog_from_temporal_file(project_id, table_id) if temp_catalog else []
@@ -158,6 +160,10 @@ class Catalog:
             f"{BASE_URL.format(scheme=profile.scheme, hostname=profile.hostname, org_id=profile.org_id)}"
             f"download/?project={project_id}&table={table_id}"
         )
+        if from_date:
+            download_catalog_url += f"&min_timestamp_after={from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+        if to_date:
+            download_catalog_url += f"&max_timestamp_before={to_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
         headers = {
             "Authorization": f"{profile.auth.token_type} {profile.auth.token}",
             "Accept": "application/json",
