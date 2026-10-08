@@ -34,14 +34,37 @@ def _set_metadata(metadata):
     return json.loads(metadata.replace("'", '"'))
 
 
-def save_catalog_to_temporal_file(catalog: bytes, project_id: str, table_id: str) -> None:
-    temp_dir = Path(tempfile.gettempdir())
-    file_path = temp_dir / f"{project_id}_{table_id}_catalog.csv"
-    file_path.write_bytes(catalog)
+def _temporal_file_path(
+    project_id: str,
+    table_id: str,
+    from_date: Optional[datetime] = None,
+    to_date: Optional[datetime] = None,
+) -> Path:
+    date_range = "".join(
+        f"_{label}{date.strftime('%Y%m%dT%H%M%S')}"
+        for label, date in (("from", from_date), ("to", to_date))
+        if date
+    )
+    return Path(tempfile.gettempdir()) / f"{project_id}_{table_id}{date_range}_catalog.csv"
 
 
-def get_catalog_from_temporal_file(project_id: str, table_id: str) -> list["Partition"]:
-    file_path = Path(tempfile.gettempdir()) / f"{project_id}_{table_id}_catalog.csv"
+def save_catalog_to_temporal_file(
+    catalog: bytes,
+    project_id: str,
+    table_id: str,
+    from_date: Optional[datetime] = None,
+    to_date: Optional[datetime] = None,
+) -> None:
+    _temporal_file_path(project_id, table_id, from_date, to_date).write_bytes(catalog)
+
+
+def get_catalog_from_temporal_file(
+    project_id: str,
+    table_id: str,
+    from_date: Optional[datetime] = None,
+    to_date: Optional[datetime] = None,
+) -> list["Partition"]:
+    file_path = _temporal_file_path(project_id, table_id, from_date, to_date)
     if not file_path.exists():
         return []
 
@@ -151,7 +174,9 @@ class Catalog:
         to_date: Optional[datetime] = None,
     ) -> None:
         self.partitions = (
-            get_catalog_from_temporal_file(project_id, table_id) if temp_catalog else []
+            get_catalog_from_temporal_file(project_id, table_id, from_date, to_date)
+            if temp_catalog
+            else []
         )
         if self.partitions:
             return
@@ -161,9 +186,13 @@ class Catalog:
             f"download/?project={project_id}&table={table_id}"
         )
         if from_date:
-            download_catalog_url += f"&min_timestamp_after={from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            download_catalog_url += (
+                f"&min_timestamp_after={from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            )
         if to_date:
-            download_catalog_url += f"&max_timestamp_before={to_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            download_catalog_url += (
+                f"&max_timestamp_before={to_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            )
         headers = {
             "Authorization": f"{profile.auth.token_type} {profile.auth.token}",
             "Accept": "application/json",
@@ -171,7 +200,7 @@ class Catalog:
         try:
             catalog = rest_ops.get(download_catalog_url, headers=headers, fmt="csv", timeout=180)
             self.partitions = _get_catalog_from_bytes(catalog)
-            save_catalog_to_temporal_file(catalog, project_id, table_id)
+            save_catalog_to_temporal_file(catalog, project_id, table_id, from_date, to_date)
         except HttpException as exc:
             raise HdxCliException(
                 f"Some error occurred while downloading the catalog: {exc}"
