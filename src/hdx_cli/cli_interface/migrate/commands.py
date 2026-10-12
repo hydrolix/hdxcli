@@ -303,7 +303,9 @@ def migrate(
     get_resources(source_profile, source_data)
     catalog = None
     if only != "resources":
-        catalog = get_catalog(source_profile, source_data, temp_catalog)
+        catalog = get_catalog(
+            source_profile, source_data, temp_catalog, from_date=from_date, to_date=to_date
+        )
     logger.info("")
 
     # Target

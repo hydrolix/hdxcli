@@ -36,11 +36,24 @@ class MigrationData:
         return self.table.get("uuid")
 
 
-def get_catalog(profile: ProfileUserContext, data: MigrationData, temp_catalog: bool) -> Catalog:
+def get_catalog(
+    profile: ProfileUserContext,
+    data: MigrationData,
+    temp_catalog: bool,
+    from_date=None,
+    to_date=None,
+) -> Catalog:
     project_table_name = f"{profile.projectname}.{profile.tablename}"
     logger.info(f"{f'  Catalog: {project_table_name[:31]}':<42} -> [!n]")
     catalog = Catalog()
-    catalog.download(profile, data.get_project_id(), data.get_table_id(), temp_catalog=temp_catalog)
+    catalog.download(
+        profile,
+        data.get_project_id(),
+        data.get_table_id(),
+        temp_catalog=temp_catalog,
+        from_date=from_date,
+        to_date=to_date,
+    )
     logger.info("Done")
     return catalog
 
